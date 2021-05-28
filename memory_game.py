@@ -16,10 +16,10 @@ def shuffle_grid(number_count):
     rows = 5
     columns = 9
     
-    cell_size = 130 # 각 Grid cell 별 가로, 세로 크기
-    button_size = 110 # Grid cell 내에 실제로 그려질 버튼 크기
-    screen_left_margin = 55 # 전체 스크린 왼쪽 여백
-    screen_top_margin = 20 # 전체 스크린 위쪽 여백
+    cell_size = 130 # dimension of width and length of each Grid cell
+    button_size = 110 # Actual button size to draw in Grid cell
+    screen_left_margin = 55 # Left margin of the screen
+    screen_top_margin = 20 # Top margin of the screen
 
     grid = [[0 for col in range(columns)] for row in range(rows)] # 5X 9
 
@@ -32,11 +32,11 @@ def shuffle_grid(number_count):
             grid[row_idx][col_idx] = number
             number += 1
 
-            # 현재 grid cell 위치 기준으로 x, y 위치를 구함
+            # compute the x, y location of the current grid cell
             center_x = screen_left_margin + (col_idx * cell_size) + (cell_size / 2)
             center_y = screen_top_margin + (row_idx * cell_size) + (cell_size / 2)
 
-            # 숫자 버튼 만들기
+            # make a number button
             button = pygame.Rect(0, 0, button_size, button_size)
             button.center = (center_x, center_y)
 
@@ -51,22 +51,22 @@ def display_start_screen():
 
 # display the screen of the game
 def display_game_screen():
-    global hidden
+    # global hidden
 
-    if not hidden:
-        elapsed_time = (pygame.time.get_ticks() - start_ticks) / 1000 # ms -> sec
-        if elapsed_time > display_time:
-            hidden = True
+    # if not hidden:
+    #     elapsed_time = (pygame.time.get_ticks() - start_ticks) / 1000 # ms -> sec
+    #     if elapsed_time > display_time:
+    #         hidden = True
 
     for idx, rect in enumerate(number_buttons, start=1):
-        if hidden: # 숨김 처리
+        # if hidden: # 숨김 처리
             # 버튼 사각형 그리기
-            pygame.draw.rect(screen, WHITE, rect)
-        else:
-            # 실제 숫자 텍스트
-            cell_text = game_font.render(str(idx), True, WHITE)
-            text_rect = cell_text.get_rect(center=rect.center)
-            screen.blit(cell_text, text_rect)
+        pygame.draw.rect(screen, GRAY, rect)
+        # else:
+        #     # 실제 숫자 텍스트
+        #     cell_text = game_font.render(str(idx), True, WHITE)
+        #     text_rect = cell_text.get_rect(center=rect.center)
+        #     screen.blit(cell_text, text_rect)
 
 # confirm the click position of the start button 
 def check_buttons(pos):
@@ -80,6 +80,7 @@ screen_width = 1280
 screen_height = 720
 screen = pygame.display.set_mode((screen_width,screen_height))
 pygame.display.set_caption('Memory Game')
+game_font = pygame.font.Font(None, 120) # define the font 
 
 # Start button
 start_button = pygame.Rect(0,0,120,120)
@@ -88,8 +89,9 @@ start_button.center = (120, screen_height - 120)
 # color
 BLACK = (0,0,0)
 WHITE = (255,255,255)
+GRAY = (50,50,50)
 
-number_buttons = []
+number_buttons = [] # Buttons to push by player
 
 # start or not
 start = False
