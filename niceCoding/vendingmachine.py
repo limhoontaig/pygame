@@ -27,7 +27,7 @@ def btn_exit():
 
 window = tk.Tk()
 window.title('음료 주문')
-window.geometry('300x500')
+window.geometry('300x500+500+50')
 
 frame1 = tk.Frame(window)
 frame1.pack()
