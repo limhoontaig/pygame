@@ -6,8 +6,8 @@ import pygame
 from pygame.locals import QUIT, MOUSEBUTTONDOWN
 
 WIDTH = 20
-HEIGHT = 15
-SIZE = 50
+HEIGHT = 20
+SIZE = 40
 NUM_OF_BOMBS = 50
 EMPTY = 0
 BOMB = 1
