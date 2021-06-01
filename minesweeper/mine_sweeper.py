@@ -8,7 +8,7 @@ from pygame.locals import QUIT, MOUSEBUTTONDOWN
 WIDTH = 20
 HEIGHT = 15
 SIZE = 50
-NUM_OF_BOMBS = 60
+NUM_OF_BOMBS = 50
 EMPTY = 0
 BOMB = 1
 OPENED = 2
@@ -34,7 +34,7 @@ def open_tile(field, x_pos, y_pos):
     """ 타일을 오픈 """
     global OPEN_COUNT
     if CHECKED[y_pos][x_pos]:  # 이미 확인된 타일
-        return
+        pass
 
     CHECKED[y_pos][x_pos] = True
 
