@@ -21,6 +21,7 @@ def add(item):
 
     this_price = price.get(item)
     sum += this_price
+    count(item)
     order.append(item)
     textarea.insert(tk.INSERT, item+' ')
     label1['text'] = '금액: '+str(sum) + '원'
@@ -38,9 +39,36 @@ def cancel(item):
 
     this_price = price.get(item)
     sum -= this_price
+    count(item)
     order.remove(item)
     textarea.insert(tk.INSERT, '-'+item+' ')
     label1['text'] = '금액: '+str(sum) + '원'
+
+def count(item):
+    global coffee_count
+    global latte_count
+    global smoothie_count
+    global tea_count
+    global red_tea_count
+    
+    if item == 'coffee':
+        coffee_count += 1
+        return
+    elif item == 'latte':
+        latte_count += 1
+        return
+    elif item == 'smoothie':
+        smoothie_count += 1
+        return
+    elif item == 'tea':
+        tea_count += 1
+        return
+    elif item == 'red_tea':
+        red_tea_count += 1
+        return
+    else:
+        return
+
 
 def btn_exit():
     msgbox = tk.messagebox.askquestion('확인', '주문을 마치겠습니까?')
