@@ -20,10 +20,27 @@ def add(item):
     textarea.insert(tk.INSERT, item+' ')
     label1['text'] = '금액: '+str(sum) + '원'
 
+def cancel(item):
+    global sum
+
+    if item not in price:
+        # label1['text'] ='No Drink'
+        textarea.insert(tk.INSERT, 'No drink ')
+
+    if item not in order:
+        pass
+        
+
+    this_price = price.get(item)
+    sum -= this_price
+    order.remove(item)
+    textarea.insert(tk.INSERT, '-'+item+' ')
+    label1['text'] = '금액: '+str(sum) + '원'
 
 def btn_exit():
     msgbox = tk.messagebox.askquestion('확인', '주문을 마치겠습니까?')
     if msgbox == 'yes':
+        
         exit()
 
 
@@ -40,6 +57,11 @@ tk.Button(frame1, text='latte',command=lambda: add('latte'),width=10,height=2).g
 tk.Button(frame1, text='smoothie',command=lambda: add('smoothie'),width=10,height=2).grid(row=2, column=0)
 tk.Button(frame1, text='tea',command=lambda: add('tea'),width=10,height=2).grid(row=3, column=0)
 tk.Button(frame1, text='red tea',command=lambda: add('red tea'),width=10,height=2).grid(row=4, column=0)
+tk.Button(frame1, text='coffee_cancel',command=lambda: cancel('coffee'),width=10,height=2).grid(row=0, column=1)
+tk.Button(frame1, text='latte_cancel',command=lambda: cancel('latte'),width=10,height=2).grid(row=1, column=1)
+tk.Button(frame1, text='smoothie_cancel',command=lambda: cancel('smoothie'),width=10,height=2).grid(row=2, column=1)
+tk.Button(frame1, text='tea_cancel',command=lambda: cancel('tea'),width=10,height=2).grid(row=3, column=1)
+tk.Button(frame1, text='red tea_cancel',command=lambda: cancel('red tea'),width=10,height=2).grid(row=4, column=1)
 tk.Button(frame1, text='exit',command=btn_exit,width=10,height=2).grid(row=5, column=0)
 
 label1 = tk.Label(window, text='금액: 0원',width=100, height=2,fg='blue')
