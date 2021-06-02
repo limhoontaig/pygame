@@ -4,6 +4,11 @@ from tkinter import messagebox
 price = {'coffee':3500, 'latte':4000,'smoothie':4500,'tea':3000}
 order = []
 sum = 0
+coffee_count = 0
+latte_count = 0
+smoothie_count = 0
+tea_count = 0
+red_tea_count = 0
 
 
 def add(item):
@@ -28,7 +33,7 @@ def cancel(item):
         textarea.insert(tk.INSERT, 'No drink ')
 
     if item not in order:
-        pass
+        return
         
 
     this_price = price.get(item)
@@ -62,6 +67,11 @@ tk.Button(frame1, text='latte_cancel',command=lambda: cancel('latte'),width=10,h
 tk.Button(frame1, text='smoothie_cancel',command=lambda: cancel('smoothie'),width=10,height=2).grid(row=2, column=1)
 tk.Button(frame1, text='tea_cancel',command=lambda: cancel('tea'),width=10,height=2).grid(row=3, column=1)
 tk.Button(frame1, text='red tea_cancel',command=lambda: cancel('red tea'),width=10,height=2).grid(row=4, column=1)
+tk.Label(frame1, text=coffee_count,width=10,height=2).grid(row=0, column=2)
+tk.Label(frame1, text=latte_count,width=10,height=2).grid(row=1, column=2)
+tk.Label(frame1, text=smoothie_count,width=10,height=2).grid(row=2, column=2)
+tk.Label(frame1, text=tea_count,width=10,height=2).grid(row=3, column=2)
+tk.Label(frame1, text=red_tea_count,width=10,height=2).grid(row=4, column=2)
 tk.Button(frame1, text='exit',command=btn_exit,width=10,height=2).grid(row=5, column=0)
 
 label1 = tk.Label(window, text='금액: 0원',width=100, height=2,fg='blue')
