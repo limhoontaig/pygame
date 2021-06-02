@@ -6,7 +6,22 @@ root.geometry('600x480+300+100')
 
 root.resizable(False, False) 
 
-btn1 = Button(root, text='Button 111111111111')
+label1 = Label(root,text='Good Morning!')
+label1.pack()
+
+photo = PhotoImage('gui_project/img.png')
+label2 = Label(root,image=photo)
+label2.pack()
+
+photo2 = PhotoImage('gui_project/img2.png')
+label3 = Label(root,image=photo2)
+label3.pack()
+
+def change():
+    label1.config(text='See you again!')
+
+
+btn1 = Button(root, text='Button change', command=change)
 btn1.pack()
 
 btn2 = Button(root, padx=10, pady=10, text ='Button / save the file or not?')
@@ -20,7 +35,7 @@ btn4.pack()
 
 btn5 = Button(root, padx=5, pady=3, fg='red', bg='yellow', text ='Button 5')
 
-# photo = PhotoImage(file="img.png")
+# photo = PhotoImage(file='gui_project/img.png')
 # btn6 = Button(root, image=photo,padx=5, pady=30)
 # btn6.pack()
 
