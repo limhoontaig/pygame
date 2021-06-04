@@ -1,4 +1,5 @@
 from tkinter import *
+from PIL import Image, ImageTk
 
 root = Tk()
 root.title('LHT GUI')
@@ -35,9 +36,9 @@ btn4.pack()
 
 btn5 = Button(root, padx=5, pady=3, fg='red', bg='yellow', text ='Button 5')
 
-# photo = PhotoImage(file='gui_project/img.png')
-# btn6 = Button(root, image=photo,padx=5, pady=30)
-# btn6.pack()
+photo = PhotoImage(file='img.png')
+btn6 = Button(root, image=photo, padx=5, pady=30)
+btn6.pack()
 
 def btncmd7():
     print('버튼이 동작하였어요.')
