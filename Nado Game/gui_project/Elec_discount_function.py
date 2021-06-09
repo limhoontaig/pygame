@@ -1,3 +1,4 @@
+import pandas as pd
 import tkinter.ttk as ttk
 import tkinter.messagebox as msgbox
 from tkinter import * # __all__
@@ -10,7 +11,7 @@ root.title("전기감면 자료 작성 프로그램 Produced by LHT")
 # 파일 추가
 def add_file(kind):
     files = filedialog.askopenfilename(title="엑셀 데이타 파일을 선택하세요", \
-        filetypes=(("EXCEL 파일", "*.xls"), ("EXCEL 파일", "*.xlsx"), ("모든 파일", "*.*")), \
+        filetypes=(("EXCEL 파일", "*.xls"),('EXCEL 파일', '*.xlsm'), ("EXCEL 파일", "*.xlsx"), ("모든 파일", "*.*")), \
         initialdir=r"C:\Users\Nadocoding\Desktop\PythonWorkspace\pygame_project\images")
     if kind == 'welfare':
         txt_welfare_path.delete(0,END)
@@ -56,10 +57,9 @@ def start():
     if len(txt_dest_path.get()) == 0:
         msgbox.showwarning("경고", "저장 경로를 선택하세요")
         return
+    df = pd.read_excel(f1)
+    print(df)
 
-# text_welfare_path = StringVar(Value = '')
-# text_kind_welfare_path = StringVar(Value = '')
-# text_dest_path = StringVar(Value = '')
 
 # 복지 선택 프레임
 welfare_frame = LabelFrame(root,text='한전 복지 할인 및 필수사용공제 감면자료 파일선택')
