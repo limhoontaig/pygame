@@ -34,19 +34,32 @@ def browse_dest_path():
 # 시작
 def start():
     # 각 옵션들 값을 확인
-    print("복지감면 파일 : ", text_welfare_path.get())
-    print("감면종류 파일 : ", text_kind_welfare_path.get())
-    print("저장 디렉토리 : ", text_dist_path.get())
+    print("복지감면 파일 : ", txt_welfare_path.get())
+    print("감면종류 파일 : ", txt_kind_welfare_path.get())
+    print("저장 디렉토리 : ", txt_dest_path.get())
+    f1 = txt_welfare_path.get()
+    f2 = txt_kind_welfare_path.get()
+    f3 = txt_dest_path.get()
+    
 
-#     # 파일 목록 확인
-#     if file.size() == 0:
-#         msgbox.showwarning("경고", "이미지 파일을 추가하세요")
-#         return
+    # 파일 목록 확인
+    if len(txt_welfare_path.get()) == 0:
+        msgbox.showwarning("경고", "한전 복지감면 파일을 추가하세요")
+        return
 
-#     # 저장 경로 확인
-#     if len(txt_dest_path.get()) == 0:
-#         msgbox.showwarning("경고", "저장 경로를 선택하세요")
-#         return
+    if len(txt_kind_welfare_path.get()) == 0:
+        msgbox.showwarning("경고", "한전 복지감면 종류 파일을 추가하세요")
+        return
+
+
+    # 저장 경로 확인
+    if len(txt_dest_path.get()) == 0:
+        msgbox.showwarning("경고", "저장 경로를 선택하세요")
+        return
+
+# text_welfare_path = StringVar(Value = '')
+# text_kind_welfare_path = StringVar(Value = '')
+# text_dest_path = StringVar(Value = '')
 
 # 복지 선택 프레임
 welfare_frame = LabelFrame(root,text='한전 복지 할인 및 필수사용공제 감면자료 파일선택')
