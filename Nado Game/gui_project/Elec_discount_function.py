@@ -2,12 +2,12 @@ import os
 import pandas as pd
 import tkinter.messagebox as msgbox
 from tkinter import * # __all__
-from tkinter import filedialog
+from tkinter import filedialog, ttk, font
 from datetime import datetime
 import xlwt
 
 root = Tk()
-root.geometry('600x400+300+150')
+root.geometry('650x420+300+150')
 root.title("전기감면 자료 작성 프로그램 Produced by LHT")
 
 # 파일 추가
@@ -155,20 +155,40 @@ def pd_save(discount,f4):
     #작업월을 파일이름에 넣기 위한 코드 (작업일 기준)
     now = datetime.now()
     dt1 = now.strftime("%Y")+now.strftime("%m")
-    dt1 = dt1+'ELEC_XPERP_Upload.xlsx'
+    dt1 = dt1+'ELEC_XPERP_Upload_J_K_R_S_columns.xlsx'
+    file_name = f4+'/'+dt1
     #file save
-    print(f4+'/'+dt1)
-    print(discount)
-    discount.to_excel(f4 + '/' + dt1,index=False,header=False)#,engine=io.excel.xls.writer)
-    dttemp = (f4+'/'+dt1)
-    dttemp1 = dttemp.split('.')
-    dt2 = dttemp1[0] + '.xls'
-    os.rename(dttemp, dt2)
+    if os.path.isfile(file_name):
+        os.remove(file_name)
+        discount.to_excel(file_name,index=False,header=False)
+    else:
+        discount.to_excel(file_name,index=False,header=False)
+    
+    dttemp = file_name.split('.')
+    dt2 = dttemp[0] + '.xls'
+
+    if os.path.isfile(dt2):
+        os.remove(dt2)
+        os.rename(file_name, dt2)   
+    else:
+        os.rename(file_name, dt2)
+    
     return
 
+# Title Label
+font = font.Font(family='맑은 고딕', size=15, weight='bold')
+label = Label(root,
+    text = '강남데시앙파크 아파트 관리사무소 전기감면 요금 관리 프로그램',
+    font = font, relief = 'solid', padx='10', pady='10')
+    # ,
+    # padding=(400,15),
+    # font = ('times', '25'))#,
+    #foreground = 'black')#,
+    #background='blue')
+label.pack()
 
 # 복지 선택 프레임
-welfare_frame = LabelFrame(root,text='한전 복지 할인 및 필수사용공제 감면자료 파일선택')
+welfare_frame = LabelFrame(root, text='한전 복지 할인 및 필수사용공제 감면자료 파일선택')
 welfare_frame.pack(fill="x", padx=5, pady=5, ipady=5)
 
 txt_welfare_path = Entry(welfare_frame)
@@ -176,6 +196,7 @@ txt_welfare_path.pack(side="left", fill="x", expand=True, padx=5, pady=5, ipady=
 
 btn_welfare_path = Button(welfare_frame, text="복지할인", width=10, command=lambda:add_file('welfare'))
 btn_welfare_path.pack(side="right", padx=5, pady=5)
+
 
 # 복지종류 선택 프레임
 kind_welfare_frame = LabelFrame(root,text='한전 복지 할인 종류 및 감면요금 자료 파일선택')
