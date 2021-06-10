@@ -248,3 +248,6 @@ btn_start.pack(side="right", padx=5, pady=5)
 
 root.resizable(True, True)
 root.mainloop()
+
+if __name__ == '__main__':
+    root.mainloop()
