@@ -1,10 +1,10 @@
 import os
-import io
 import pandas as pd
 import tkinter.messagebox as msgbox
 from tkinter import * # __all__
 from tkinter import filedialog
 from datetime import datetime
+import xlwt
 
 root = Tk()
 root.geometry('600x400+300+150')
@@ -43,15 +43,15 @@ def browse_dest_path():
 # 시작
 def start():
     # 각 옵션들 값을 확인
-    print("복지감면 파일 : ", txt_welfare_path.get())
-    print("감면종류 파일 : ", txt_kind_welfare_path.get())
-    print("Template 파일 : ", txt_template_path.get())
-    print("저장 디렉토리 : ", txt_dest_path.get())
+    # print("복지감면 파일 : ", txt_welfare_path.get())
+    # print("감면종류 파일 : ", txt_kind_welfare_path.get())
+    # print("Template 파일 : ", txt_template_path.get())
+    # print("저장 디렉토리 : ", txt_dest_path.get())
     f1 = txt_welfare_path.get()
     f2 = txt_kind_welfare_path.get()
     f3 = txt_template_path.get()
     f4 = txt_dest_path.get()
-    
+    print(f1,f2,f3,f4)
 
     # 파일 목록 확인
     if len(txt_welfare_path.get()) == 0:
@@ -79,6 +79,7 @@ def start():
     subset_df_f = subset_df[1]
     discount = template_make(f3,df2,subset_df_w,subset_df_f)
     pd_save(discount,f4)
+    return
     
 
     
@@ -150,27 +151,20 @@ def template_make(f3,df2,subset_df_w,subset_df_f):
     return discount
 
 def pd_save(discount,f4):
-    #dir_path = os.getcwd()
-
-    # dir_path = 'D:\\과장\\1 1 부과자료\\2021년'
-    # cwd = os.getcwd()
-    # dir_path = filedialog.askdirectory(parent=root,initialdir=dir_path,title=file_title)
-
-
-    # In[17]:
-
 
     #작업월을 파일이름에 넣기 위한 코드 (작업일 기준)
     now = datetime.now()
     dt1 = now.strftime("%Y")+now.strftime("%m")
-    dt1 = dt1+'ELEC_XPERP_Upload.xls'
+    dt1 = dt1+'ELEC_XPERP_Upload.xlsx'
     #file save
     print(f4+'/'+dt1)
     print(discount)
     discount.to_excel(f4 + '/' + dt1,index=False,header=False)#,engine=io.excel.xls.writer)
-
-    # exit() 
-
+    dttemp = (f4+'/'+dt1)
+    dttemp1 = dttemp.split('.')
+    dt2 = dttemp1[0] + '.xls'
+    os.rename(dttemp, dt2)
+    return
 
 
 # 복지 선택 프레임
@@ -209,6 +203,7 @@ path_frame = LabelFrame(root, text="XPERP 할인자료 업로드파일 저장경
 path_frame.pack(fill="x", padx=5, pady=5, ipady=5)
 
 txt_dest_path = Entry(path_frame)
+txt_dest_path.insert(0, 'D:/과장/1 1 부과자료/2021년/202106월/xperp_감면자료')
 txt_dest_path.pack(side="left", fill="x", expand=True, padx=5, pady=5, ipady=4) # 높이 변경
 
 btn_dest_path = Button(path_frame, text="찾아보기", width=10, command=browse_dest_path)
