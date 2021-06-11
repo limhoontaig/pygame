@@ -13,8 +13,7 @@ root.title("전기감면 자료 작성 프로그램 Produced by LHT")
 # 파일 추가
 def add_file(kind):
     files = filedialog.askopenfilename(title="엑셀 데이타 파일을 선택하세요", \
-        filetypes=(("EXCEL 파일", "*.xls"),('EXCEL 파일', '*.xlsm'), ("EXCEL 파일", "*.xlsx"), ("모든 파일", "*.*")), \
-        initialdir=r"C:\Users\Nadocoding\Desktop\PythonWorkspace\pygame_project\images")
+        filetypes=(("EXCEL 파일", "*.xls"),('EXCEL 파일', '*.xlsm'), ("EXCEL 파일", "*.xlsx"), ("모든 파일", "*.*")))
     if kind == 'welfare':
         txt_welfare_path.delete(0,END)
         txt_welfare_path.insert(0, files)
@@ -43,10 +42,6 @@ def browse_dest_path():
 # 시작
 def start():
     # 각 옵션들 값을 확인
-    # print("복지감면 파일 : ", txt_welfare_path.get())
-    # print("감면종류 파일 : ", txt_kind_welfare_path.get())
-    # print("Template 파일 : ", txt_template_path.get())
-    # print("저장 디렉토리 : ", txt_dest_path.get())
     f1 = txt_welfare_path.get()
     f2 = txt_kind_welfare_path.get()
     f3 = txt_template_path.get()
@@ -66,22 +61,18 @@ def start():
         msgbox.showwarning("경고", "Template File을 추가하세요")
         return
 
-
     # 저장 경로 확인
     if len(txt_dest_path.get()) == 0:
         msgbox.showwarning("경고", "저장 경로를 선택하세요")
         return
 
     df2 = welfare_calc(f1)
-    df2
     subset_df = kind_calc(f2)
     subset_df_w = subset_df[0]
     subset_df_f = subset_df[1]
     discount = template_make(f3,df2,subset_df_w,subset_df_f)
     pd_save(discount,f4)
     return
-    
-
     
 def welfare_calc(f1):
     df = pd.read_excel(f1,skiprows=2)#, dtype={'동':int, '호':int}) #,thousands=',')
@@ -180,11 +171,6 @@ font = font.Font(family='맑은 고딕', size=15, weight='bold')
 label = Label(root,
     text = '강남데시앙파크 아파트 관리사무소 전기감면 요금 관리 프로그램',
     font = font, relief = 'solid', padx='10', pady='10')
-    # ,
-    # padding=(400,15),
-    # font = ('times', '25'))#,
-    #foreground = 'black')#,
-    #background='blue')
 label.pack()
 
 # 복지 선택 프레임
@@ -196,7 +182,6 @@ txt_welfare_path.pack(side="left", fill="x", expand=True, padx=5, pady=5, ipady=
 
 btn_welfare_path = Button(welfare_frame, text="복지할인", width=10, command=lambda:add_file('welfare'))
 btn_welfare_path.pack(side="right", padx=5, pady=5)
-
 
 # 복지종류 선택 프레임
 kind_welfare_frame = LabelFrame(root,text='한전 복지 할인 종류 및 감면요금 자료 파일선택')
@@ -230,12 +215,6 @@ txt_dest_path.pack(side="left", fill="x", expand=True, padx=5, pady=5, ipady=4) 
 btn_dest_path = Button(path_frame, text="찾아보기", width=10, command=browse_dest_path)
 btn_dest_path.pack(side="right", padx=5, pady=5)
 
-# # 파일 포맷 옵션 콤보
-# opt_format = ["PNG", "JPG", "BMP"]
-# cmb_format = ttk.Combobox(frame_option, state="readonly", values=opt_format, width=10)
-# cmb_format.current(0)
-# cmb_format.pack(side="left", padx=5, pady=5)
-
 # 실행 프레임
 frame_run = Frame(root)
 frame_run.pack(fill="x", padx=5, pady=5)
@@ -248,6 +227,3 @@ btn_start.pack(side="right", padx=5, pady=5)
 
 root.resizable(True, True)
 root.mainloop()
-
-if __name__ == '__main__':
-    root.mainloop()
