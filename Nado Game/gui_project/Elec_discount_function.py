@@ -7,7 +7,7 @@ from datetime import datetime
 import xlwt
 
 root = Tk()
-root.geometry('650x420+300+150')
+root.geometry('650x650+300+150')
 root.title("전기감면 자료 작성 프로그램 Produced by LHT")
 
 # 파일 추가
@@ -46,7 +46,6 @@ def start():
     f2 = txt_kind_welfare_path.get()
     f3 = txt_template_path.get()
     f4 = txt_dest_path.get()
-    print(f1,f2,f3,f4)
 
     # 파일 목록 확인
     if len(txt_welfare_path.get()) == 0:
@@ -70,17 +69,27 @@ def start():
     subset_df = kind_calc(f2)
     subset_df_w = subset_df[0]
     subset_df_f = subset_df[1]
-    discount = template_make(f3,df2,subset_df_w,subset_df_f)
-    pd_save(discount,f4)
+    discount = discount_file(f3,df2,subset_df_w,subset_df_f)
+    pd_save(discount[0],f4)
+    print('Total 사용량 보장공제액  :',discount[1])
+    print('Total 대가족 할인 공제액 :',discount[2])
+    print('Total 복지 할인 공제액   :',discount[3])
+    
     return
     
 def welfare_calc(f1):
     df = pd.read_excel(f1,skiprows=2)#, dtype={'동':int, '호':int}) #,thousands=',')
+    new_col_names = ['동', '호', '동호명', '가구수', '계약종별', '요금적용전력', '사용량', '기본요금', '전력량요금',
+       '기후환경요금', '연료비조정액', '필수사용공제', '할인구분', '복지할인', '요금개편차액',
+       '절전할인', '자동이체인터넷', '단수', '전기요금', '부가세', '전력기금', '전기바우처', '정산',
+       '출산가구소급', '당월소계', 'TV수신료','청구금액']
+    df.columns = new_col_names
+
     df1 = df.dropna(subset=['동'])
     # Template Columns중에서 필수 Columns만 복사하여 DataFrame 생성용 Columns list 생성
-    df2col =['동','호', '필수사용\n공제', '할인\n구분','복지할인']
+    df2col =['동','호', '필수사용공제', '할인구분','복지할인']
     # df2 DataFrame columns중에서 dtype float를 int로 바꿀 Columns list 생성
-    df2col_f =['동','호', '필수사용\n공제', '복지할인']
+    df2col_f =['동','호', '필수사용공제', '복지할인']
     # SettingWithCopyWarning Error 방지를 위하여 copy() method적용
     df2 = df1[df2col].copy()
     df2[df2col_f] = df2[df2col_f].astype('int')
@@ -115,18 +124,18 @@ def kind_calc(f2):
     
     return subset_df_f, subset_df_w
 
-def template_make(f3,df2,subset_df_w,subset_df_f):
+def discount_file(f3,df2,subset_df_w,subset_df_f):
     df_x = pd.read_excel(f3,skiprows=0)
     # xperp upload template 양식의 columns list 생성
-    df_x_cl = df_x.columns.tolist()
+    # df_x_cl = df_x.columns.tolist()
     # 동호를 indexing하여 dataFrame merge 준비
     df_x.set_index(['동','호'],inplace=True)
     # discount df 생성 (Template df(df_x)에 필수사용공제(df2) merge
     discount = pd.merge(df_x, df2, how = 'outer', on = ['동','호'])
-    # 사용량 보장공제를 한전금액(필수사용\n공제) Data로 Update
-    discount['사용량보장공제'] = discount['필수사용\n공제']
+    # 사용량 보장공제를 한전금액(필수사용공제) Data로 Update
+    discount['사용량보장공제'] = discount['필수사용공제']
     # 사용량 보장공제 임시데이터 columns를 drop
-    discount = discount.drop(['필수사용\n공제','할인\n구분','복지할인'],axis=1)
+    discount = discount.drop(['필수사용공제','할인구분','복지할인'],axis=1)
     # Template df에 필수사용공제 merge
     discount = pd.merge(discount, subset_df_f, how = 'outer', on = ['동','호'])
     discount['대가족할인액'] = discount['할인요금']
@@ -137,9 +146,23 @@ def template_make(f3,df2,subset_df_w,subset_df_f):
     discount['복지할인액'] = discount['할인요금']
     discount['복지할인구분'] = discount['복지코드']
     discount = discount.drop(['복지코드','할인요금','복지구분'],axis=1)
-    #discount.to_excel('복지할인.xlsx')
-    discount.head(1)
-    return discount
+    total_사용량보장공제 = discount['사용량보장공제'].sum()
+    total_대가족할인액 = discount['대가족할인액'].sum()
+    total_복지할인액 = discount['복지할인액'].sum()
+
+    # display the result of computation
+    txt_total_사용량.delete(0,END)
+    txt_total_사용량.insert(0, total_사용량보장공제)
+
+    txt_total_대가족.delete(0,END)
+    txt_total_대가족.insert(0, total_대가족할인액)
+    
+    txt_total_복지.delete(0,END)
+    txt_total_복지.insert(0, total_복지할인액)
+    
+    
+
+    return discount, total_사용량보장공제, total_대가족할인액, total_복지할인액
 
 def pd_save(discount,f4):
 
@@ -148,6 +171,7 @@ def pd_save(discount,f4):
     dt1 = now.strftime("%Y")+now.strftime("%m")
     dt1 = dt1+'ELEC_XPERP_Upload_J_K_R_S_columns.xlsx'
     file_name = f4+'/'+dt1
+
     #file save
     if os.path.isfile(file_name):
         os.remove(file_name)
@@ -214,6 +238,37 @@ txt_dest_path.pack(side="left", fill="x", expand=True, padx=5, pady=5, ipady=4) 
 
 btn_dest_path = Button(path_frame, text="찾아보기", width=10, command=browse_dest_path)
 btn_dest_path.pack(side="right", padx=5, pady=5)
+
+# 계산결과 합계액 프레임
+사용량_frame = LabelFrame(root, text="사용량보장공제 할인요금 합계액 현황 표")
+사용량_frame.pack(fill="x", padx=5, pady=5, ipady=5)
+
+lbl_total_사용량 = Label(사용량_frame, text="사용량보장공제 총 감면금액", width=30)
+lbl_total_사용량.pack(side="left", fill="x", expand=False, padx=5, pady=5, ipady=4) # 높이 변경
+
+txt_total_사용량 = Entry(사용량_frame)
+txt_total_사용량.pack(side="right", fill="x", expand=True, padx=5, pady=5, ipady=4) # 높이 변경
+
+대가족_frame = LabelFrame(root, text="대가족 할인요금 합계액 현황 표")
+대가족_frame.pack(fill="x", padx=5, pady=5, ipady=5)
+
+lbl_total_대가족 = Label(대가족_frame, text="대가족 할인 공제 총 감면금액", width=30)
+lbl_total_대가족.pack(side="left", fill="x", expand=False, padx=5, pady=1, ipady=4) # 높이 변경
+
+txt_total_대가족 = Entry(대가족_frame)
+txt_total_대가족.pack(side="right", fill="x", expand=True, padx=5, pady=1, ipady=4) # 높이 변경
+
+복지_frame = LabelFrame(root, text="복지 할인요금 합계액 현황 표")
+복지_frame.pack(fill="x", padx=5, pady=5, ipady=4)
+
+lbl_total_복지 = Label(복지_frame, text="복지 할인 공제 총 감면금액", width=30)
+lbl_total_복지.pack(side="left", fill="x", expand=False, padx=5, pady=1, ipady=4)
+txt_total_복지 = Entry(복지_frame)
+txt_total_복지.pack(side="right", fill="x", expand=True, padx=5, pady=1, ipady=4)
+
+# btn_total_사용량 = Entry(total_frame)
+# txt_total_사용량.insert(0, '0')
+# btn_total_사용량.pack(side="right", padx=5, pady=5)
 
 # 실행 프레임
 frame_run = Frame(root)
