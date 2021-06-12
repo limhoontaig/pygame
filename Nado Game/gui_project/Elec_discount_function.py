@@ -1,14 +1,9 @@
 import os
 import pandas as pd
 import tkinter.messagebox as msgbox
-from tkinter import * # __all__
+from tkinter import *
 from tkinter import filedialog, ttk, font
 from datetime import datetime
-import xlwt
-
-root = Tk()
-root.geometry('650x650+300+150')
-root.title("전기감면 자료 작성 프로그램 Produced by LHT")
 
 # 파일 추가
 def add_file(kind):
@@ -19,16 +14,15 @@ def add_file(kind):
         txt_welfare_path.insert(0, files)
         return txt_welfare_path
 
-    elif kind == 'template':
-        txt_template_path.delete(0,END)
-        txt_template_path.insert(0, files)
-        return txt_template_path
-
-    else:
+    elif kind == 'kind':
         txt_kind_welfare_path.delete(0,END)
         txt_kind_welfare_path.insert(0, files)
         return txt_kind_welfare_path
-        # 최초에 사용자가 지정한 경로를 보여줌
+
+    else:
+        txt_template_path.delete(0,END)
+        txt_template_path.insert(0, files)
+        return txt_template_path
 
 # 저장 경로 (폴더)
 def browse_dest_path():
@@ -152,15 +146,13 @@ def discount_file(f3,df2,subset_df_w,subset_df_f):
 
     # display the result of computation
     txt_total_사용량.delete(0,END)
-    txt_total_사용량.insert(0, total_사용량보장공제)
+    txt_total_사용량.insert(0, f'{total_사용량보장공제:>20,}')
 
     txt_total_대가족.delete(0,END)
-    txt_total_대가족.insert(0, total_대가족할인액)
+    txt_total_대가족.insert(0, f'{total_대가족할인액:>20,}')
     
     txt_total_복지.delete(0,END)
-    txt_total_복지.insert(0, total_복지할인액)
-    
-    
+    txt_total_복지.insert(0, f'{total_복지할인액:>20,}')
 
     return discount, total_사용량보장공제, total_대가족할인액, total_복지할인액
 
@@ -190,6 +182,10 @@ def pd_save(discount,f4):
     
     return
 
+root = Tk()
+root.geometry('700x520+300+150')
+root.title("전기감면 자료 작성 프로그램 Produced by LHT")
+
 # Title Label
 font = font.Font(family='맑은 고딕', size=15, weight='bold')
 label = Label(root,
@@ -202,7 +198,7 @@ welfare_frame = LabelFrame(root, text='한전 복지 할인 및 필수사용공�
 welfare_frame.pack(fill="x", padx=5, pady=5, ipady=5)
 
 txt_welfare_path = Entry(welfare_frame)
-txt_welfare_path.pack(side="left", fill="x", expand=True, padx=5, pady=5, ipady=4) # 높이 변경
+txt_welfare_path.pack(side="left", fill="x", expand=True, padx=5, pady=5, ipady=4) 
 
 btn_welfare_path = Button(welfare_frame, text="복지할인", width=10, command=lambda:add_file('welfare'))
 btn_welfare_path.pack(side="right", padx=5, pady=5)
@@ -212,7 +208,7 @@ kind_welfare_frame = LabelFrame(root,text='한전 복지 할인 종류 및 감�
 kind_welfare_frame.pack(fill="x", padx=5, pady=5, ipady=5)
 
 txt_kind_welfare_path = Entry(kind_welfare_frame)
-txt_kind_welfare_path.pack(side="left", fill="x", expand=True, padx=5, pady=5, ipady=4) # 높이 변경
+txt_kind_welfare_path.pack(side="left", fill="x", expand=True, padx=5, pady=5, ipady=4) 
 
 btn_kind_welfare_path = Button(kind_welfare_frame, text="할인종류", width=10, command=lambda:add_file('kind'))
 btn_kind_welfare_path.pack(side="right", padx=5, pady=5)
@@ -223,7 +219,7 @@ template_frame.pack(fill="x", padx=5, pady=5, ipady=5)
 
 txt_template_path = Entry(template_frame)
 txt_template_path.insert(0,'D:/과장/1 1 부과자료/2021년/Templates/Elec_Template_File_for_XPERP_upload.xls')
-txt_template_path.pack(side="left", fill="x", expand=True, padx=5, pady=5, ipady=4) # 높이 변경
+txt_template_path.pack(side="left", fill="x", expand=True, padx=5, pady=5, ipady=4) 
 
 btn_template_path = Button(template_frame, text="Template", width=10, command=lambda:add_file('template'))
 btn_template_path.pack(side="right", padx=5, pady=5)
@@ -234,50 +230,41 @@ path_frame.pack(fill="x", padx=5, pady=5, ipady=5)
 
 txt_dest_path = Entry(path_frame)
 txt_dest_path.insert(0, 'D:/과장/1 1 부과자료/2021년/202106월/xperp_감면자료')
-txt_dest_path.pack(side="left", fill="x", expand=True, padx=5, pady=5, ipady=4) # 높이 변경
+txt_dest_path.pack(side="left", fill="x", expand=True, padx=5, pady=5, ipady=4)
 
-btn_dest_path = Button(path_frame, text="찾아보기", width=10, command=browse_dest_path)
+btn_dest_path = Button(path_frame, text="저장경로", width=10, command=browse_dest_path)
 btn_dest_path.pack(side="right", padx=5, pady=5)
 
 # 계산결과 합계액 프레임
-사용량_frame = LabelFrame(root, text="사용량보장공제 할인요금 합계액 현황 표")
-사용량_frame.pack(fill="x", padx=5, pady=5, ipady=5)
+total_frame = LabelFrame(root, text="공제 종류별 총 공제요금 합계액 현황표")
+total_frame.pack(fill="x", padx=5, pady=5, ipady=5)
 
-lbl_total_사용량 = Label(사용량_frame, text="사용량보장공제 총 감면금액", width=30)
-lbl_total_사용량.pack(side="left", fill="x", expand=False, padx=5, pady=5, ipady=4) # 높이 변경
+lbl_total_사용량 = Label(total_frame, text="사용량보장")
+lbl_total_사용량.pack(side="left", fill="x", expand=False, padx=5, pady=5, ipady=4) 
 
-txt_total_사용량 = Entry(사용량_frame)
-txt_total_사용량.pack(side="right", fill="x", expand=True, padx=5, pady=5, ipady=4) # 높이 변경
+txt_total_사용량 = Entry(total_frame)
+txt_total_사용량.pack(side="left", fill="x", expand=False, padx=5, pady=5, ipady=4) 
 
-대가족_frame = LabelFrame(root, text="대가족 할인요금 합계액 현황 표")
-대가족_frame.pack(fill="x", padx=5, pady=5, ipady=5)
+lbl_total_대가족 = Label(total_frame, text="대가족")
+lbl_total_대가족.pack(side="left", fill="x", expand=False, padx=5, pady=1, ipady=4) 
 
-lbl_total_대가족 = Label(대가족_frame, text="대가족 할인 공제 총 감면금액", width=30)
-lbl_total_대가족.pack(side="left", fill="x", expand=False, padx=5, pady=1, ipady=4) # 높이 변경
+txt_total_대가족 = Entry(total_frame)
+txt_total_대가족.pack(side="left", fill="x", expand=False, padx=5, pady=1, ipady=4) 
 
-txt_total_대가족 = Entry(대가족_frame)
-txt_total_대가족.pack(side="right", fill="x", expand=True, padx=5, pady=1, ipady=4) # 높이 변경
-
-복지_frame = LabelFrame(root, text="복지 할인요금 합계액 현황 표")
-복지_frame.pack(fill="x", padx=5, pady=5, ipady=4)
-
-lbl_total_복지 = Label(복지_frame, text="복지 할인 공제 총 감면금액", width=30)
+lbl_total_복지 = Label(total_frame, text="복지할인")#, width=30)
 lbl_total_복지.pack(side="left", fill="x", expand=False, padx=5, pady=1, ipady=4)
-txt_total_복지 = Entry(복지_frame)
-txt_total_복지.pack(side="right", fill="x", expand=True, padx=5, pady=1, ipady=4)
 
-# btn_total_사용량 = Entry(total_frame)
-# txt_total_사용량.insert(0, '0')
-# btn_total_사용량.pack(side="right", padx=5, pady=5)
+txt_total_복지 = Entry(total_frame)
+txt_total_복지.pack(side="left", fill="x", expand=False, padx=5, pady=1, ipady=4)
 
 # 실행 프레임
 frame_run = Frame(root)
 frame_run.pack(fill="x", padx=5, pady=5)
 
-btn_close = Button(frame_run, padx=5, pady=5, text="닫기", width=12, command=root.quit)
+btn_close = Button(frame_run, padx=5, pady=5, text="종료", width=12, command=root.quit)
 btn_close.pack(side="right", padx=5, pady=5)
 
-btn_start = Button(frame_run, padx=5, pady=5, text="시작", width=12, command=start)
+btn_start = Button(frame_run, padx=5, pady=5, text="계산시작", width=12, command=start)
 btn_start.pack(side="right", padx=5, pady=5)
 
 root.resizable(True, True)
