@@ -2,7 +2,7 @@ import os
 import pandas as pd
 import tkinter.messagebox as msgbox
 from tkinter import *
-from tkinter import filedialog, ttk, font
+from tkinter import filedialog, font
 from datetime import datetime
 
 # 파일 추가
@@ -183,14 +183,14 @@ def pd_save(discount,f4):
     return
 
 root = Tk()
-root.geometry('700x520+300+150')
+root.geometry('735x520+300+150')
 root.title("전기감면 자료 작성 프로그램 Produced by LHT")
 
 # Title Label
-font = font.Font(family='맑은 고딕', size=15, weight='bold')
+font1 = font.Font(family='맑은 고딕', size=15, weight='bold')
 label = Label(root,
     text = '강남데시앙파크 아파트 관리사무소 전기감면 요금 관리 프로그램',
-    font = font, relief = 'solid', padx='10', pady='10')
+    font = font1, relief = 'solid', padx='10', pady='10')
 label.pack()
 
 # 복지 선택 프레임
@@ -242,19 +242,19 @@ total_frame.pack(fill="x", padx=5, pady=5, ipady=5)
 lbl_total_사용량 = Label(total_frame, text="사용량보장")
 lbl_total_사용량.pack(side="left", fill="x", expand=False, padx=5, pady=5, ipady=4) 
 
-txt_total_사용량 = Entry(total_frame)
+txt_total_사용량 = Entry(total_frame, font = ('', 12, 'bold'))
 txt_total_사용량.pack(side="left", fill="x", expand=False, padx=5, pady=5, ipady=4) 
 
 lbl_total_대가족 = Label(total_frame, text="대가족")
 lbl_total_대가족.pack(side="left", fill="x", expand=False, padx=5, pady=1, ipady=4) 
 
-txt_total_대가족 = Entry(total_frame)
+txt_total_대가족 = Entry(total_frame, font = ('', 12, 'bold'))
 txt_total_대가족.pack(side="left", fill="x", expand=False, padx=5, pady=1, ipady=4) 
 
-lbl_total_복지 = Label(total_frame, text="복지할인")#, width=30)
+lbl_total_복지 = Label(total_frame, text="복지할인")
 lbl_total_복지.pack(side="left", fill="x", expand=False, padx=5, pady=1, ipady=4)
 
-txt_total_복지 = Entry(total_frame)
+txt_total_복지 = Entry(total_frame, font = ('', 12, 'bold'))
 txt_total_복지.pack(side="left", fill="x", expand=False, padx=5, pady=1, ipady=4)
 
 # 실행 프레임
