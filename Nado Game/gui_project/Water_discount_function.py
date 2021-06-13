@@ -28,7 +28,6 @@ def add_file(kind):
         txt_merits_path.delete(0,END)
         txt_merits_path.insert(0, files)
         return txt_merits_path
-        # 최초에 사용자가 지정한 경로를 보여줌
 
 # 저장 경로 (폴더)
 def browse_dest_path():
@@ -153,8 +152,8 @@ def template_make(f3,df,df_f,df_3):
     dis2['동'] = pd.to_numeric(dis2['동'])
     dis2['호'] = pd.to_numeric(dis2['호'])
 
-    # # 복지종류별 입력하기
-    # # Template dataframe 작성
+    # 복지종류별 입력하기
+    # Template dataframe 작성
 
     df_x = pd.read_excel(f3,skiprows=0)
 
