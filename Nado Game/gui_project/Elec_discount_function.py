@@ -105,6 +105,7 @@ def kind_calc(f2):
     subset_df_f.loc[subset_df_f.복지구분 == '다자녀할인', '복지코드'] = '3'
     subset_df_f.loc[subset_df_f.복지구분 == '대가족할인', '복지코드'] = '1'
     subset_df_f.loc[subset_df_f.복지구분 == '출산가구할인', '복지코드'] = '2'
+    subset_df_f
 
     # 복지할인 조건를 충족(대가족할인이 아닌것 ~)하는 데이터를 필터링하여 새로운 변수에 저장합니다.
     subset_df_w = df_w[~contains_family].copy()
@@ -115,10 +116,11 @@ def kind_calc(f2):
     subset_df_w.loc[subset_df_w.복지구분 == '의료기기할인', '복지코드'] = 'G'
     subset_df_w.loc[subset_df_w.복지구분 == '장애인할인', '복지코드'] = 'D'
     subset_df_w.loc[subset_df_w.복지구분 == '차상위할인', '복지코드'] = 'I'
+    subset_df_w
     
     return subset_df_f, subset_df_w
 
-def discount_file(f3,df2,subset_df_w,subset_df_f):
+def discount_file(f3,df2,subset_df_f,subset_df_w):
     df_x = pd.read_excel(f3,skiprows=0)
     # xperp upload template 양식의 columns list 생성
     # df_x_cl = df_x.columns.tolist()
@@ -143,7 +145,6 @@ def discount_file(f3,df2,subset_df_w,subset_df_f):
     total_사용량보장공제 = discount['사용량보장공제'].sum()
     total_대가족할인액 = discount['대가족할인액'].sum()
     total_복지할인액 = discount['복지할인액'].sum()
-
     # display the result of computation
     txt_total_사용량.delete(0,END)
     txt_total_사용량.insert(0, f'{total_사용량보장공제:>20,}')
@@ -161,7 +162,7 @@ def pd_save(discount,f4):
     #작업월을 파일이름에 넣기 위한 코드 (작업일 기준)
     now = datetime.now()
     dt1 = now.strftime("%Y")+now.strftime("%m")
-    dt1 = dt1+'ELEC_XPERP_Upload_J_K_R_S_columns.xlsx'
+    dt1 = dt1+'ELEC_XPERP_Upload_J_K_R_S_t_columns.xlsx'
     file_name = f4+'/'+dt1
 
     #file save
