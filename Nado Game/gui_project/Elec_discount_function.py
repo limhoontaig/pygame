@@ -33,7 +33,7 @@ def browse_dest_path():
     txt_dest_path.delete(0, END)
     txt_dest_path.insert(0, folder_selected)
 
-# 시작
+# 계산 시작
 def start():
     # 각 옵션들 값을 확인
     f1 = txt_welfare_path.get()
@@ -79,11 +79,11 @@ def welfare_calc(f1):
        '출산가구소급', '당월소계', 'TV수신료','청구금액']
     df.columns = new_col_names
 
-    df1 = df.dropna(subset=['동'])
+    df1 = df.dropna(subset=['동','필수사용공제'])
     # Template Columns중에서 필수 Columns만 복사하여 DataFrame 생성용 Columns list 생성
-    df2col =['동','호', '필수사용공제', '할인구분','복지할인']
+    df2col =['동','호', '필수사용공제']
     # df2 DataFrame columns중에서 dtype float를 int로 바꿀 Columns list 생성
-    df2col_f =['동','호', '필수사용공제', '복지할인']
+    df2col_f =['동','호', '필수사용공제']
     # SettingWithCopyWarning Error 방지를 위하여 copy() method적용
     df2 = df1[df2col].copy()
     df2[df2col_f] = df2[df2col_f].astype('int')
@@ -131,7 +131,7 @@ def discount_file(f3,df2,subset_df_f,subset_df_w):
     # 사용량 보장공제를 한전금액(필수사용공제) Data로 Update
     discount['사용량보장공제'] = discount['필수사용공제']
     # 사용량 보장공제 임시데이터 columns를 drop
-    discount = discount.drop(['필수사용공제','할인구분','복지할인'],axis=1)
+    discount = discount.drop(['필수사용공제'],axis=1)
     # Template df에 필수사용공제 merge
     discount = pd.merge(discount, subset_df_f, how = 'outer', on = ['동','호'])
     discount['대가족할인액'] = discount['할인요금']
@@ -162,7 +162,7 @@ def pd_save(discount,f4):
     #작업월을 파일이름에 넣기 위한 코드 (작업일 기준)
     now = datetime.now()
     dt1 = now.strftime("%Y")+now.strftime("%m")
-    dt1 = dt1+'ELEC_XPERP_Upload_J_K_R_S_t_columns.xlsx'
+    dt1 = dt1+'ELEC_XPERP_Upload_J_K_R_S_T_columns.xlsx'
     file_name = f4+'/'+dt1
 
     #file save
