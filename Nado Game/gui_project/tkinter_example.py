@@ -1,3 +1,4 @@
+import os
 from tkinter import *
 from PIL import Image, ImageTk
 
@@ -36,7 +37,8 @@ btn4.pack()
 
 btn5 = Button(root, padx=5, pady=3, fg='red', bg='yellow', text ='Button 5')
 
-photo = PhotoImage(file='img.png')
+path = os.getcwd()
+photo = PhotoImage(file=path+'/'+'img2.png')
 btn6 = Button(root, image=photo, padx=5, pady=30)
 btn6.pack()
 
