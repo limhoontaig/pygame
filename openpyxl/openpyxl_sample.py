@@ -1,5 +1,6 @@
 from openpyxl import Workbook
 from openpyxl.utils import get_column_letter
+from openpyxl import load_workbook
 
 wb = Workbook()
 dest_filename = 'empty_book.xlsx'
@@ -22,3 +23,6 @@ for row in range(10, 20):
 print(ws3['AA10'].value)
 
 wb.save(filename = dest_filename)
+
+wb2 = load_workbook('empty_book.xlsx')
+sheet_names = wb2.sheetnames

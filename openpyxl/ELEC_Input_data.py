@@ -47,7 +47,7 @@ fname = path
 excel = win32.gencache.EnsureDispatch('Excel.Application')
 wb = excel.Workbooks.Open(fname)
 
-wb.SaveAs(fname+"x", FileFormat = 51) #FileFormat = 51 is for .xlsx extension
+wb.SaveAs(filename=fname+"x", FileFormat = 51) #FileFormat = 51 is for .xlsx extension
 wb.Close() #FileFormat = 56 is for .xls extension
 excel.Application.Quit()
 
@@ -60,4 +60,4 @@ excel.Application.Quit()
 #     wb.SaveAs(file[:-1], FileFormat=56)
 #     xl.Quit()
 
-wb_obj = load_workbook(path+'x')
+wb = load_workbook(filename=path+'x')
