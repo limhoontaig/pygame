@@ -5,6 +5,9 @@ from tkinter import *
 from tkinter import filedialog, font
 from datetime import datetime
 
+now = datetime.now()
+yyyymm = now.strftime("%Y")+now.strftime("%m")+'월'
+
 # 파일 추가
 def add_file(kind):
     files = filedialog.askopenfilename(title="엑셀 데이타 파일을 선택하세요", \
@@ -230,7 +233,7 @@ path_frame = LabelFrame(root, text="XPERP 할인자료 업로드파일 저장경
 path_frame.pack(fill="x", padx=5, pady=5, ipady=5)
 
 txt_dest_path = Entry(path_frame)
-txt_dest_path.insert(0, 'D:/과장/1 1 부과자료/2021년/202106월/xperp_감면자료')
+txt_dest_path.insert(0, 'D:/과장/1 1 부과자료/2021년/'+yyyymm+'/xperp_감면자료')
 txt_dest_path.pack(side="left", fill="x", expand=True, padx=5, pady=5, ipady=4)
 
 btn_dest_path = Button(path_frame, text="저장경로", width=10, command=browse_dest_path)
