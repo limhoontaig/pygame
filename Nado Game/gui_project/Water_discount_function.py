@@ -6,6 +6,7 @@ from tkinter import filedialog, ttk, font
 from datetime import datetime
 
 now = datetime.now()
+yyyy = now.strftime("%Y")+'년'
 yyyymm = now.strftime("%Y")+now.strftime("%m")+'월'
 
 root = Tk()
@@ -13,8 +14,8 @@ root.geometry('650x420+300+150')
 root.title("수도감면 자료 작성 프로그램 Produced by LHT")
 
 # 파일 추가
-def add_file(kind):
-    files = filedialog.askopenfilename(title="엑셀 데이타 파일을 선택하세요", \
+def add_file(initialDir, kind):
+    files = filedialog.askopenfilename(initialdir = initialDir, title="엑셀 데이타 파일을 선택하세요", \
         filetypes=(("EXCEL 파일", "*.xls"),('EXCEL 파일', '*.xlsm'), ("EXCEL 파일", "*.xlsx"), ("모든 파일", "*.*")))
     
     if kind == 'welfare':
@@ -207,9 +208,10 @@ welfare_frame = LabelFrame(root, text='수도 복지 할인(다자녀,기초생�
 welfare_frame.pack(fill="x", padx=5, pady=5, ipady=5)
 
 txt_welfare_path = Entry(welfare_frame)
+txt_welfare_path.insert(0, 'D:/과장/1 1 부과자료/'+yyyy+'/'+yyyymm+'/수도감면자료')
 txt_welfare_path.pack(side="left", fill="x", expand=True, padx=5, pady=5, ipady=4) # 높이 변경
 
-btn_welfare_path = Button(welfare_frame, text="수도할인", width=10, command=lambda:add_file('welfare'))
+btn_welfare_path = Button(welfare_frame, text="수도할인", width=10, command=lambda:add_file(txt_welfare_path, 'welfare'))
 btn_welfare_path.pack(side="right", padx=5, pady=5)
 
 # 유공할인 선택 프레임
@@ -217,9 +219,10 @@ kind_merits_frame = LabelFrame(root,text='수도 유공자 할인 감면자료 �
 kind_merits_frame.pack(fill="x", padx=5, pady=5, ipady=5)
 
 txt_merits_path = Entry(kind_merits_frame)
+txt_merits_path.insert(0, 'D:/과장/1 1 부과자료/'+yyyy+'/'+yyyymm+'/수도감면자료')
 txt_merits_path.pack(side="left", fill="x", expand=True, padx=5, pady=5, ipady=4) # 높이 변경
 
-btn_merits_path = Button(kind_merits_frame, text="유공할인", width=10, command=lambda:add_file('merits'))
+btn_merits_path = Button(kind_merits_frame, text="유공할인", width=10, command=lambda:add_file(txt_merits_path, 'merits'))
 btn_merits_path.pack(side="right", padx=5, pady=5)
 
 # Template File SElection Frame
@@ -227,7 +230,7 @@ template_frame = LabelFrame(root,text='XPERP Upload용 Template 파일선택')
 template_frame.pack(fill="x", padx=5, pady=5, ipady=5)
 
 txt_template_path = Entry(template_frame)
-txt_template_path.insert(0,'D:/과장/1 1 부과자료/2021년/Templates/Water_Template_File_for_XPERP_upload.xls')
+txt_template_path.insert(0,'D:/과장/1 1 부과자료/'+yyyy+'/Templates/Water_Template_File_for_XPERP_upload.xls')
 txt_template_path.pack(side="left", fill="x", expand=True, padx=5, pady=5, ipady=4) # 높이 변경
 
 btn_template_path = Button(template_frame, text="Template", width=10, command=lambda:add_file('template'))
@@ -238,7 +241,7 @@ path_frame = LabelFrame(root, text="XPERP 할인자료 업로드파일 저장경
 path_frame.pack(fill="x", padx=5, pady=5, ipady=5)
 
 txt_dest_path = Entry(path_frame)
-txt_dest_path.insert(0, 'D:/과장/1 1 부과자료/2021년/'+yyyymm+'/xperp_감면자료')
+txt_dest_path.insert(0, 'D:/과장/1 1 부과자료/'+yyyy+'/'+yyyymm+'/xperp_감면자료')
 txt_dest_path.pack(side="left", fill="x", expand=True, padx=5, pady=5, ipady=4) # 높이 변경
 
 btn_dest_path = Button(path_frame, text="저장경로", width=10, command=browse_dest_path)
