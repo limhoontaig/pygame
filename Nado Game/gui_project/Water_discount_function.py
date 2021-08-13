@@ -49,7 +49,7 @@ def start():
     f2 = txt_merits_path.get()
     f3 = txt_template_path.get()
     f4 = txt_dest_path.get()
-    print(f1,f2,f3,f4)
+    # print(f1,f2,f3,f4)
 
     # 파일 목록 확인
     if len(txt_welfare_path.get()) == 0:
@@ -124,7 +124,7 @@ def welfare_calc(f1):
 def merits_calc(f2):
     # # 수도 유공자할인 등록 
 
-    df_ = pd.read_excel(f2, sheet_name=0, skiprows=5)
+    df_ = pd.read_excel(f2, sheet_name=0, skiprows=0)
     df_3 = df_[['No','동호수']]
     # new data frame with split value columns
     new = df_3['동호수'].str.split("-", n = 1, expand = True)
@@ -153,8 +153,9 @@ def template_make(f3,df,df_f,df_3):
     dis1.loc[(con1 & con2)|(con1&con3)|(con2&con3)|(con1&con2&con3), 'Code'] = 'V'
     dis2 = dis1[['동','호','Code']]
 
-    dis2['동'] = pd.to_numeric(dis2['동'])
-    dis2['호'] = pd.to_numeric(dis2['호'])
+    # dis2['동'] = pd.to_numeric(dis2['동'])
+    # dis2['호'] = pd.to_numeric(dis2['호'])
+    dis2 = dis2.astype({'동':int, '호':int})
 
     # 복지종류별 입력하기
     # Template dataframe 작성
