@@ -5,6 +5,9 @@ from tkinter import * # __all__
 from tkinter import filedialog, ttk, font
 from datetime import datetime
 
+now = datetime.now()
+yyyymm = now.strftime("%Y")+now.strftime("%m")+'월'
+
 root = Tk()
 root.geometry('650x420+300+150')
 root.title("수도감면 자료 작성 프로그램 Produced by LHT")
@@ -235,7 +238,7 @@ path_frame = LabelFrame(root, text="XPERP 할인자료 업로드파일 저장경
 path_frame.pack(fill="x", padx=5, pady=5, ipady=5)
 
 txt_dest_path = Entry(path_frame)
-txt_dest_path.insert(0, 'D:/과장/1 1 부과자료/2021년/202106월/xperp_감면자료')
+txt_dest_path.insert(0, 'D:/과장/1 1 부과자료/2021년/'+yyyymm+'/xperp_감면자료')
 txt_dest_path.pack(side="left", fill="x", expand=True, padx=5, pady=5, ipady=4) # 높이 변경
 
 btn_dest_path = Button(path_frame, text="저장경로", width=10, command=browse_dest_path)
@@ -244,6 +247,9 @@ btn_dest_path.pack(side="right", padx=5, pady=5)
 # 실행 프레임
 frame_run = Frame(root)
 frame_run.pack(fill="x", padx=5, pady=5)
+
+label_originator = Label(frame_run, padx=5, pady=5, text="프로그램 작성 : 임훈택 Rev 1, 2021.8.12 Modified")
+label_originator.pack(side="left", padx=5, pady=5)
 
 btn_close = Button(frame_run, padx=5, pady=5, text="닫기", width=12, command=root.quit)
 btn_close.pack(side="right", padx=5, pady=5)

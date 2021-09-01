@@ -5,6 +5,9 @@ from tkinter import *
 from tkinter import filedialog, font
 from datetime import datetime
 
+now = datetime.now()
+yyyymm = now.strftime("%Y")+now.strftime("%m")+'월'
+
 # 파일 추가
 def add_file(kind):
     files = filedialog.askopenfilename(title="엑셀 데이타 파일을 선택하세요", \
@@ -74,7 +77,7 @@ def start():
 def welfare_calc(f1):
     df = pd.read_excel(f1,skiprows=2)#, dtype={'동':int, '호':int}) #,thousands=',')
     new_col_names = ['동', '호', '동호명', '가구수', '계약종별', '요금적용전력', '사용량', '기본요금', '전력량요금',
-       '기후환경요금', '연료비조정액', '필수사용공제', '할인구분', '복지할인', '요금개편차액',
+       '기후환경요금', '연료비조정액', '필수사용공제', '복지추가 감액', '할인구분', '복지할인', '요금개편차액',
        '절전할인', '자동이체인터넷', '단수', '전기요금', '부가세', '전력기금', '전기바우처', '정산',
        '출산가구소급', '당월소계', 'TV수신료','청구금액']
     df.columns = new_col_names
@@ -230,7 +233,7 @@ path_frame = LabelFrame(root, text="XPERP 할인자료 업로드파일 저장경
 path_frame.pack(fill="x", padx=5, pady=5, ipady=5)
 
 txt_dest_path = Entry(path_frame)
-txt_dest_path.insert(0, 'D:/과장/1 1 부과자료/2021년/202106월/xperp_감면자료')
+txt_dest_path.insert(0, 'D:/과장/1 1 부과자료/2021년/'+yyyymm+'/xperp_감면자료')
 txt_dest_path.pack(side="left", fill="x", expand=True, padx=5, pady=5, ipady=4)
 
 btn_dest_path = Button(path_frame, text="저장경로", width=10, command=browse_dest_path)
@@ -262,7 +265,7 @@ txt_total_복지.pack(side="left", fill="x", expand=False, padx=5, pady=1, ipady
 frame_run = Frame(root)
 frame_run.pack(fill="x", padx=5, pady=5)
 
-label_originator = Label(frame_run, padx=5, pady=5, text="프로그램 작성 : 임훈택 Rev 0, 2021.6.16 Issued")
+label_originator = Label(frame_run, padx=5, pady=5, text="프로그램 작성 : 임훈택 Rev 1, 2021.8.12 Issued")
 label_originator.pack(side="left", padx=5, pady=5)
 
 btn_close = Button(frame_run, padx=5, pady=5, text="종료", width=12, command=root.quit)
