@@ -123,8 +123,10 @@ def welfare_calc(f1):
 
 def merits_calc(f2):
     # # 수도 유공자할인 등록 
-
-    df_ = pd.read_excel(f2, sheet_name=0, skiprows=0)
+    df__ = pd.read_excel(f2)
+    s = df__.index[(df__["Unnamed: 0"] == "No")].tolist()
+    rows = s[0]
+    df_ = pd.read_excel(f2, sheet_name=0, skiprows=rows+1)
     df_3 = df_[['No','동호수']]
     # new data frame with split value columns
     new = df_3['동호수'].str.split("-", n = 1, expand = True)
