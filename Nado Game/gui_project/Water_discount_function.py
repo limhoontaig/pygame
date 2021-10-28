@@ -10,7 +10,7 @@ yyyy = now.strftime("%Y")+'년'
 yyyymm = now.strftime("%Y")+now.strftime("%m")+'월'
 
 root = Tk()
-root.geometry('650x420+300+150')
+root.geometry('750x490+300+150')
 root.title("수도감면 자료 작성 프로그램 Produced by LHT")
 
 # 파일 추가
@@ -98,6 +98,11 @@ def welfare_calc(f1):
 
     # making 복지코드 on '복지코드' column from XPERP Code
     df["복지코드"]= '3'
+
+    # display the data of welfare homes
+    total_복지 = len(df)
+    txt_total_복지.delete(0,END)
+    txt_total_복지.insert(0, f'{total_복지:>7,}')
     
     # XPERP Code 유공자: 2, 기초생활:3, 다자녀:I(Capital i), 중복할인: V(Capital v)  ###
 
@@ -119,6 +124,11 @@ def welfare_calc(f1):
     # Dropping old Name columns
     df_f.drop(columns =["No","동호수(다자녀감면)"], inplace = True)
     
+    # display the data of large homes
+    total_대가족 = len(df_f)
+    txt_total_대가족.delete(0,END)
+    txt_total_대가족.insert(0, f'{total_대가족:>7,}')
+    
     return df, df_f
 
 def merits_calc(f2):
@@ -138,6 +148,11 @@ def merits_calc(f2):
     df_3.drop(columns =["No","동호수"], inplace = True)
     # making 복지코드 on '복지코드' column from XPERP Code
     df_3["복지코드"]= '2'
+
+    # display the data of 유공자
+    total_유공자 = len(df_3)
+    txt_total_유공자.delete(0,END)
+    txt_total_유공자.insert(0, f'{total_유공자:>7,}')
 
     return df_3
 
@@ -250,11 +265,33 @@ txt_dest_path.pack(side="left", fill="x", expand=True, padx=5, pady=5, ipady=4) 
 btn_dest_path = Button(path_frame, text="저장경로", width=10, command=browse_dest_path)
 btn_dest_path.pack(side="right", padx=5, pady=5)
 
+# 계산결과 공제세대 합계 프레임
+total_frame = LabelFrame(root, text="공제 종류별 총 공제세대 현황표")
+total_frame.pack(fill="x", padx=5, pady=5, ipady=5)
+
+lbl_total_복지 = Label(total_frame, text="복지할인 세대")
+lbl_total_복지.pack(side="left", fill="x", expand=False, padx=1, pady=5, ipady=4) 
+
+txt_total_복지 = Entry(total_frame, font = ('', 10, 'bold'))
+txt_total_복지.pack(side="left", fill="x", expand=False, padx=1, pady=5, ipady=4) 
+
+lbl_total_대가족 = Label(total_frame, text="대가족할인 세대")
+lbl_total_대가족.pack(side="left", fill="x", expand=False, padx=1, pady=1, ipady=4) 
+
+txt_total_대가족 = Entry(total_frame, font = ('', 10, 'bold'))
+txt_total_대가족.pack(side="left", fill="x", expand=False, padx=1, pady=1, ipady=4) 
+
+lbl_total_유공자 = Label(total_frame, text="유공자할인 세대")
+lbl_total_유공자.pack(side="left", fill="x", expand=False, padx=1, pady=1, ipady=4)
+
+txt_total_유공자 = Entry(total_frame, font = ('', 10, 'bold'))
+txt_total_유공자.pack(side="left", fill="x", expand=False, padx=1, pady=1, ipady=4)
+
 # 실행 프레임
 frame_run = Frame(root)
 frame_run.pack(fill="x", padx=5, pady=5)
 
-label_originator = Label(frame_run, padx=5, pady=5, text="프로그램 작성 : 임훈택 Rev 1, 2021.8.12 Modified")
+label_originator = Label(frame_run, padx=5, pady=5, text="프로그램 작성 : 임훈택 Rev 2, 2021.10.28 Modified")
 label_originator.pack(side="left", padx=5, pady=5)
 
 btn_close = Button(frame_run, padx=5, pady=5, text="닫기", width=12, command=root.quit)

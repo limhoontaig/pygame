@@ -246,19 +246,19 @@ total_frame.pack(fill="x", padx=5, pady=5, ipady=5)
 lbl_total_사용량 = Label(total_frame, text="사용량보장")
 lbl_total_사용량.pack(side="left", fill="x", expand=False, padx=5, pady=5, ipady=4) 
 
-txt_total_사용량 = Entry(total_frame, font = ('', 12, 'bold'))
+txt_total_사용량 = Entry(total_frame, font = ('', 11, 'bold'))
 txt_total_사용량.pack(side="left", fill="x", expand=False, padx=5, pady=5, ipady=4) 
 
 lbl_total_대가족 = Label(total_frame, text="대가족")
 lbl_total_대가족.pack(side="left", fill="x", expand=False, padx=5, pady=1, ipady=4) 
 
-txt_total_대가족 = Entry(total_frame, font = ('', 12, 'bold'))
+txt_total_대가족 = Entry(total_frame, font = ('', 11, 'bold'))
 txt_total_대가족.pack(side="left", fill="x", expand=False, padx=5, pady=1, ipady=4) 
 
 lbl_total_복지 = Label(total_frame, text="복지할인")
 lbl_total_복지.pack(side="left", fill="x", expand=False, padx=5, pady=1, ipady=4)
 
-txt_total_복지 = Entry(total_frame, font = ('', 12, 'bold'))
+txt_total_복지 = Entry(total_frame, font = ('', 11, 'bold'))
 txt_total_복지.pack(side="left", fill="x", expand=False, padx=5, pady=1, ipady=4)
 
 # 실행 프레임
