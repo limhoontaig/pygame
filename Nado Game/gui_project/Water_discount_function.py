@@ -134,8 +134,13 @@ def welfare_calc(f1):
 def merits_calc(f2):
     # # 수도 유공자할인 등록 
     df__ = pd.read_excel(f2)
-    s = df__.index[(df__["Unnamed: 0"] == "No")].tolist()
-    rows = s[0]
+    cols = df__.columns
+    if cols[0] == 'No':
+        rows = -1
+    else:
+        s = df__.index[(df__["Unnamed: 0"] == "No")].tolist()
+        rows = s[0]
+    
     df_ = pd.read_excel(f2, sheet_name=0, skiprows=rows+1)
     df_3 = df_[['No','동호수']].copy()
     # new data frame with split value columns
@@ -291,7 +296,7 @@ txt_total_유공자.pack(side="left", fill="x", expand=False, padx=1, pady=1, ip
 frame_run = Frame(root)
 frame_run.pack(fill="x", padx=5, pady=5)
 
-label_originator = Label(frame_run, padx=5, pady=5, text="프로그램 작성 : 임훈택 Rev 2, 2021.10.28 Modified")
+label_originator = Label(frame_run, padx=5, pady=5, text="프로그램 작성 : 임훈택 Rev 3, 2021.11.16 Modified")
 label_originator.pack(side="left", padx=5, pady=5)
 
 btn_close = Button(frame_run, padx=5, pady=5, text="닫기", width=12, command=root.quit)
