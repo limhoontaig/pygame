@@ -188,7 +188,7 @@ def pd_save(discount,f4):
 
 root = Tk()
 root.geometry('735x520+300+150')
-root.title("전기감면 자료 작성 프로그램 Produced by LHT")
+root.title("전기감면 자료 작성 프로그램 Developed by LHT")
 
 # Title Label
 font1 = font.Font(family='맑은 고딕', size=15, weight='bold')
@@ -202,6 +202,7 @@ welfare_frame = LabelFrame(root, text='한전 복지 할인 및 필수사용공�
 welfare_frame.pack(fill="x", padx=5, pady=5, ipady=5)
 
 txt_welfare_path = Entry(welfare_frame)
+txt_welfare_path.insert(0,'D:/과장/1 1 부과자료/2021년/'+yyyymm+'/전기감면자료')
 txt_welfare_path.pack(side="left", fill="x", expand=True, padx=5, pady=5, ipady=4) 
 
 btn_welfare_path = Button(welfare_frame, text="복지할인", width=10, command=lambda:add_file('welfare'))
@@ -212,6 +213,7 @@ kind_welfare_frame = LabelFrame(root,text='한전 복지 할인 종류 및 감�
 kind_welfare_frame.pack(fill="x", padx=5, pady=5, ipady=5)
 
 txt_kind_welfare_path = Entry(kind_welfare_frame)
+txt_kind_welfare_path.insert(0,'D:/과장/1 1 부과자료/2021년/'+yyyymm+'/전기감면자료')
 txt_kind_welfare_path.pack(side="left", fill="x", expand=True, padx=5, pady=5, ipady=4) 
 
 btn_kind_welfare_path = Button(kind_welfare_frame, text="할인종류", width=10, command=lambda:add_file('kind'))
