@@ -6,15 +6,16 @@ from tkinter import filedialog, ttk, font
 from datetime import datetime
 
 now = datetime.now()
+yyyy = now.strftime("%Y")+'년'
 yyyymm = now.strftime("%Y")+now.strftime("%m")+'월'
 
 root = Tk()
-root.geometry('650x420+300+150')
+root.geometry('750x490+300+150')
 root.title("수도감면 자료 작성 프로그램 Produced by LHT")
 
 # 파일 추가
-def add_file(kind):
-    files = filedialog.askopenfilename(title="엑셀 데이타 파일을 선택하세요", \
+def add_file(initialDir, kind):
+    files = filedialog.askopenfilename(initialdir = initialDir, title="엑셀 데이타 파일을 선택하세요", \
         filetypes=(("EXCEL 파일", "*.xls"),('EXCEL 파일', '*.xlsm'), ("EXCEL 파일", "*.xlsx"), ("모든 파일", "*.*")))
     
     if kind == 'welfare':
@@ -48,7 +49,7 @@ def start():
     f2 = txt_merits_path.get()
     f3 = txt_template_path.get()
     f4 = txt_dest_path.get()
-    print(f1,f2,f3,f4)
+    # print(f1,f2,f3,f4)
 
     # 파일 목록 확인
     if len(txt_welfare_path.get()) == 0:
@@ -97,6 +98,11 @@ def welfare_calc(f1):
 
     # making 복지코드 on '복지코드' column from XPERP Code
     df["복지코드"]= '3'
+
+    # display the data of welfare homes
+    total_복지 = len(df)
+    txt_total_복지.delete(0,END)
+    txt_total_복지.insert(0, f'{total_복지:>7,}')
     
     # XPERP Code 유공자: 2, 기초생활:3, 다자녀:I(Capital i), 중복할인: V(Capital v)  ###
 
@@ -118,13 +124,25 @@ def welfare_calc(f1):
     # Dropping old Name columns
     df_f.drop(columns =["No","동호수(다자녀감면)"], inplace = True)
     
+    # display the data of large homes
+    total_대가족 = len(df_f)
+    txt_total_대가족.delete(0,END)
+    txt_total_대가족.insert(0, f'{total_대가족:>7,}')
+    
     return df, df_f
 
 def merits_calc(f2):
     # # 수도 유공자할인 등록 
-
-    df_ = pd.read_excel(f2, sheet_name=0, skiprows=5)
-    df_3 = df_[['No','동호수']]
+    df__ = pd.read_excel(f2)
+    cols = df__.columns
+    if cols[0] == 'No':
+        rows = -1
+    else:
+        s = df__.index[(df__["Unnamed: 0"] == "No")].tolist()
+        rows = s[0]
+    
+    df_ = pd.read_excel(f2, sheet_name=0, skiprows=rows+1)
+    df_3 = df_[['No','동호수']].copy()
     # new data frame with split value columns
     new = df_3['동호수'].str.split("-", n = 1, expand = True)
     # making separate first name column from new data frame
@@ -135,6 +153,11 @@ def merits_calc(f2):
     df_3.drop(columns =["No","동호수"], inplace = True)
     # making 복지코드 on '복지코드' column from XPERP Code
     df_3["복지코드"]= '2'
+
+    # display the data of 유공자
+    total_유공자 = len(df_3)
+    txt_total_유공자.delete(0,END)
+    txt_total_유공자.insert(0, f'{total_유공자:>7,}')
 
     return df_3
 
@@ -152,8 +175,9 @@ def template_make(f3,df,df_f,df_3):
     dis1.loc[(con1 & con2)|(con1&con3)|(con2&con3)|(con1&con2&con3), 'Code'] = 'V'
     dis2 = dis1[['동','호','Code']]
 
-    dis2['동'] = pd.to_numeric(dis2['동'])
-    dis2['호'] = pd.to_numeric(dis2['호'])
+    # dis2['동'] = pd.to_numeric(dis2['동'])
+    # dis2['호'] = pd.to_numeric(dis2['호'])
+    dis2 = dis2.astype({'동':int, '호':int})
 
     # 복지종류별 입력하기
     # Template dataframe 작성
@@ -207,9 +231,10 @@ welfare_frame = LabelFrame(root, text='수도 복지 할인(다자녀,기초생�
 welfare_frame.pack(fill="x", padx=5, pady=5, ipady=5)
 
 txt_welfare_path = Entry(welfare_frame)
+txt_welfare_path.insert(0, 'D:/과장/1 1 부과자료/'+yyyy+'/'+yyyymm+'/수도감면자료')
 txt_welfare_path.pack(side="left", fill="x", expand=True, padx=5, pady=5, ipady=4) # 높이 변경
 
-btn_welfare_path = Button(welfare_frame, text="수도할인", width=10, command=lambda:add_file('welfare'))
+btn_welfare_path = Button(welfare_frame, text="수도할인", width=10, command=lambda:add_file(txt_welfare_path, 'welfare'))
 btn_welfare_path.pack(side="right", padx=5, pady=5)
 
 # 유공할인 선택 프레임
@@ -217,9 +242,10 @@ kind_merits_frame = LabelFrame(root,text='수도 유공자 할인 감면자료 �
 kind_merits_frame.pack(fill="x", padx=5, pady=5, ipady=5)
 
 txt_merits_path = Entry(kind_merits_frame)
+txt_merits_path.insert(0, 'D:/과장/1 1 부과자료/'+yyyy+'/'+yyyymm+'/수도감면자료')
 txt_merits_path.pack(side="left", fill="x", expand=True, padx=5, pady=5, ipady=4) # 높이 변경
 
-btn_merits_path = Button(kind_merits_frame, text="유공할인", width=10, command=lambda:add_file('merits'))
+btn_merits_path = Button(kind_merits_frame, text="유공할인", width=10, command=lambda:add_file(txt_merits_path, 'merits'))
 btn_merits_path.pack(side="right", padx=5, pady=5)
 
 # Template File SElection Frame
@@ -227,7 +253,7 @@ template_frame = LabelFrame(root,text='XPERP Upload용 Template 파일선택')
 template_frame.pack(fill="x", padx=5, pady=5, ipady=5)
 
 txt_template_path = Entry(template_frame)
-txt_template_path.insert(0,'D:/과장/1 1 부과자료/2021년/Templates/Water_Template_File_for_XPERP_upload.xls')
+txt_template_path.insert(0,'D:/과장/1 1 부과자료/'+yyyy+'/Templates/Water_Template_File_for_XPERP_upload.xls')
 txt_template_path.pack(side="left", fill="x", expand=True, padx=5, pady=5, ipady=4) # 높이 변경
 
 btn_template_path = Button(template_frame, text="Template", width=10, command=lambda:add_file('template'))
@@ -238,17 +264,39 @@ path_frame = LabelFrame(root, text="XPERP 할인자료 업로드파일 저장경
 path_frame.pack(fill="x", padx=5, pady=5, ipady=5)
 
 txt_dest_path = Entry(path_frame)
-txt_dest_path.insert(0, 'D:/과장/1 1 부과자료/2021년/'+yyyymm+'/xperp_감면자료')
+txt_dest_path.insert(0, 'D:/과장/1 1 부과자료/'+yyyy+'/'+yyyymm+'/xperp_감면자료')
 txt_dest_path.pack(side="left", fill="x", expand=True, padx=5, pady=5, ipady=4) # 높이 변경
 
 btn_dest_path = Button(path_frame, text="저장경로", width=10, command=browse_dest_path)
 btn_dest_path.pack(side="right", padx=5, pady=5)
 
+# 계산결과 공제세대 합계 프레임
+total_frame = LabelFrame(root, text="공제 종류별 총 공제세대 현황표")
+total_frame.pack(fill="x", padx=5, pady=5, ipady=5)
+
+lbl_total_복지 = Label(total_frame, text="복지할인 세대")
+lbl_total_복지.pack(side="left", fill="x", expand=False, padx=1, pady=5, ipady=4) 
+
+txt_total_복지 = Entry(total_frame, font = ('', 10, 'bold'))
+txt_total_복지.pack(side="left", fill="x", expand=False, padx=1, pady=5, ipady=4) 
+
+lbl_total_대가족 = Label(total_frame, text="대가족할인 세대")
+lbl_total_대가족.pack(side="left", fill="x", expand=False, padx=1, pady=1, ipady=4) 
+
+txt_total_대가족 = Entry(total_frame, font = ('', 10, 'bold'))
+txt_total_대가족.pack(side="left", fill="x", expand=False, padx=1, pady=1, ipady=4) 
+
+lbl_total_유공자 = Label(total_frame, text="유공자할인 세대")
+lbl_total_유공자.pack(side="left", fill="x", expand=False, padx=1, pady=1, ipady=4)
+
+txt_total_유공자 = Entry(total_frame, font = ('', 10, 'bold'))
+txt_total_유공자.pack(side="left", fill="x", expand=False, padx=1, pady=1, ipady=4)
+
 # 실행 프레임
 frame_run = Frame(root)
 frame_run.pack(fill="x", padx=5, pady=5)
 
-label_originator = Label(frame_run, padx=5, pady=5, text="프로그램 작성 : 임훈택 Rev 1, 2021.8.12 Modified")
+label_originator = Label(frame_run, padx=5, pady=5, text="프로그램 작성 : 임훈택 Rev 3, 2021.11.16 Modified")
 label_originator.pack(side="left", padx=5, pady=5)
 
 btn_close = Button(frame_run, padx=5, pady=5, text="닫기", width=12, command=root.quit)
