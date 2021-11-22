@@ -15,7 +15,9 @@ def browse_dest_path():
 folder_selected = filedialog.askdirectory()
 # if folder_selected is None: # 사용자가 취소를 누를 때
   
-
+for filename in os.listdir(folder_selected):
+    info = os.stat(filename)
+    print(info.st_mtime)
 
 cwd = os.getcwd()
 # print(cwd)
