@@ -7,6 +7,7 @@ from datetime import datetime
 
 now = datetime.now()
 yyyymm = now.strftime("%Y")+now.strftime("%m")+'월'
+yyyy = now.strftime("%Y")
 
 # 파일 추가
 def add_file(kind):
@@ -66,7 +67,9 @@ def start():
     subset_df = kind_calc(f2)
     subset_df_w = subset_df[0]
     subset_df_f = subset_df[1]
-    discount = discount_file(f3,df2,subset_df_w,subset_df_f)
+    subset_df_a = subset_df[2]
+
+    discount = discount_file(f3,df2,subset_df_w,subset_df_f,subset_df_a)
     pd_save(discount[0],f4)
     print('Total 사용량 보장공제액  :',discount[1])
     print('Total 대가족 할인 공제액 :',discount[2])
@@ -99,31 +102,42 @@ def kind_calc(f2):
     # 복지구분 컬럼을 선택합니다.
     # 컬럼의 값에 대가족할인 항목을 또는(|) 대가족할인 항목늬 문자열이 포함되어있는지 판단합니다.
     # 그 결과를 새로운 변수에 할당합니다.
-    contains_family = df_w['복지구분'].str.contains('다자녀할인|대가족할인|출산가구할인')
+    contains_family = df_w['복지구분'].str.contains('다자녀 할인|대가족 할인|출산가구 할인|의료기기 할인')
+    contains_welfare = df_w['복지구분'].str.contains('장애인 할인|독립유공 할인|국가유공 할인|민주유공 할인|사회복지 할인|기초수급 할인|차상위계층 할인|기초수급 할인 (주거, 교육)')
+    contains_addition = df_w['복지구분'].str.contains('추가복지감액')
 
     # 대가족할인 조건를 충족하는 데이터를 필터링하여 새로운 변수에 저장합니다.
     subset_df_f = df_w[contains_family].copy()
     subset_df_f.set_index(['동','호'],inplace=True)
     #subset_df_f['복지코드'] = subset_df_f['복지구분']
-    subset_df_f.loc[subset_df_f.복지구분 == '다자녀할인', '복지코드'] = '3'
-    subset_df_f.loc[subset_df_f.복지구분 == '대가족할인', '복지코드'] = '1'
-    subset_df_f.loc[subset_df_f.복지구분 == '출산가구할인', '복지코드'] = '2'
+    subset_df_f.loc[subset_df_f.복지구분 == '다자녀 할인', '복지코드'] = '3'
+    subset_df_f.loc[subset_df_f.복지구분 == '대가족 할인', '복지코드'] = '1'
+    subset_df_f.loc[subset_df_f.복지구분 == '출산가구 할인', '복지코드'] = '2'
+    subset_df_f.loc[subset_df_f.복지구분 == '의료기기 할인', '복지코드'] = '4'
     subset_df_f
 
     # 복지할인 조건를 충족(대가족할인이 아닌것 ~)하는 데이터를 필터링하여 새로운 변수에 저장합니다.
-    subset_df_w = df_w[~contains_family].copy()
+    subset_df_w = df_w[contains_welfare].copy()
     subset_df_w.set_index(['동','호'],inplace=True)
-    subset_df_w.loc[subset_df_w.복지구분 == '기초생활할인', '복지코드'] = 'G'
-    subset_df_w.loc[subset_df_w.복지구분 == '독립유공자할인', '복지코드'] = 'A'
-    subset_df_w.loc[subset_df_w.복지구분 == '사회복지할인', '복지코드'] = 'G'
-    subset_df_w.loc[subset_df_w.복지구분 == '의료기기할인', '복지코드'] = 'G'
-    subset_df_w.loc[subset_df_w.복지구분 == '장애인할인', '복지코드'] = 'D'
-    subset_df_w.loc[subset_df_w.복지구분 == '차상위할인', '복지코드'] = 'I'
+    subset_df_w.loc[subset_df_w.복지구분 == '장애인 할인', '복지코드'] = 'D'
+    subset_df_w.loc[subset_df_w.복지구분 == '독립유공 할인', '복지코드'] = 'A'
+    subset_df_w.loc[subset_df_w.복지구분 == '국가유공 할인', '복지코드'] = 'B'
+    subset_df_w.loc[subset_df_w.복지구분 == '민주유공 할인', '복지코드'] = 'C'
+    subset_df_w.loc[subset_df_w.복지구분 == '사회복지 할인', '복지코드'] = 'E'
+    # subset_df_w.loc[subset_df_w.복지구분 == '복지추가감액', '복지코드'] = 'E'
+    subset_df_w.loc[subset_df_w.복지구분 == '기초수급 할인', '복지코드'] = 'H'
+    subset_df_w.loc[subset_df_w.복지구분 == '차상위계층 할인', '복지코드'] = 'I'
+    subset_df_w.loc[subset_df_w.복지구분 == '기초수급 할인 (주거, 교육)', '복지코드'] = 'H'
     subset_df_w
     
-    return subset_df_f, subset_df_w
+    subset_df_add = df_w[contains_addition].copy()
+    subset_df_add.set_index(['동','호'],inplace=True)
+    subset_df_a = subset_df_add[['동','호','할인요금']]
+    subset_df_a.rename(columns = {'할인요금' : '필수사용공제'}, inplace = True)
 
-def discount_file(f3,df2,subset_df_f,subset_df_w):
+    return subset_df_f, subset_df_w, subset_df_a
+
+def discount_file(f3,df2,subset_df_f,subset_df_w,subset_df_a):
     df_x = pd.read_excel(f3,skiprows=0)
     # xperp upload template 양식의 columns list 생성
     # df_x_cl = df_x.columns.tolist()
@@ -131,6 +145,8 @@ def discount_file(f3,df2,subset_df_f,subset_df_w):
     df_x.set_index(['동','호'],inplace=True)
     # discount df 생성 (Template df(df_x)에 필수사용공제(df2) merge
     discount = pd.merge(df_x, df2, how = 'outer', on = ['동','호'])
+    discount = pd.merge(discount, subset_df_a, how = 'outer', on = ['동','호'])   
+
     # 사용량 보장공제를 한전금액(필수사용공제) Data로 Update
     discount['사용량보장공제'] = discount['필수사용공제']
     # 사용량 보장공제 임시데이터 columns를 drop
@@ -202,7 +218,7 @@ welfare_frame = LabelFrame(root, text='한전 복지 할인 및 필수사용공�
 welfare_frame.pack(fill="x", padx=5, pady=5, ipady=5)
 
 txt_welfare_path = Entry(welfare_frame)
-txt_welfare_path.insert(0,'D:/과장/1 1 부과자료/2021년/'+yyyymm+'/전기감면자료')
+txt_welfare_path.insert(0,'D:/과장/1 1 부과자료/'+yyyy+'년/'+yyyymm+'/전기감면자료')
 txt_welfare_path.pack(side="left", fill="x", expand=True, padx=5, pady=5, ipady=4) 
 
 btn_welfare_path = Button(welfare_frame, text="복지할인", width=10, command=lambda:add_file('welfare'))
@@ -213,7 +229,7 @@ kind_welfare_frame = LabelFrame(root,text='한전 복지 할인 종류 및 감�
 kind_welfare_frame.pack(fill="x", padx=5, pady=5, ipady=5)
 
 txt_kind_welfare_path = Entry(kind_welfare_frame)
-txt_kind_welfare_path.insert(0,'D:/과장/1 1 부과자료/2021년/'+yyyymm+'/전기감면자료')
+txt_kind_welfare_path.insert(0,'D:/과장/1 1 부과자료/'+yyyy+'년/'+yyyymm+'/전기감면자료')
 txt_kind_welfare_path.pack(side="left", fill="x", expand=True, padx=5, pady=5, ipady=4) 
 
 btn_kind_welfare_path = Button(kind_welfare_frame, text="할인종류", width=10, command=lambda:add_file('kind'))
@@ -224,7 +240,7 @@ template_frame = LabelFrame(root,text='XPERP Upload용 Template 파일선택')
 template_frame.pack(fill="x", padx=5, pady=5, ipady=5)
 
 txt_template_path = Entry(template_frame)
-txt_template_path.insert(0,'D:/과장/1 1 부과자료/2021년/Templates/Elec_Template_File_for_XPERP_upload.xls')
+txt_template_path.insert(0,'D:/과장/1 1 부과자료/'+yyyy+'년/Templates/Elec_Template_File_for_XPERP_upload.xls')
 txt_template_path.pack(side="left", fill="x", expand=True, padx=5, pady=5, ipady=4) 
 
 btn_template_path = Button(template_frame, text="Template", width=10, command=lambda:add_file('template'))
@@ -235,7 +251,7 @@ path_frame = LabelFrame(root, text="XPERP 할인자료 업로드파일 저장경
 path_frame.pack(fill="x", padx=5, pady=5, ipady=5)
 
 txt_dest_path = Entry(path_frame)
-txt_dest_path.insert(0, 'D:/과장/1 1 부과자료/2021년/'+yyyymm+'/xperp_감면자료')
+txt_dest_path.insert(0, 'D:/과장/1 1 부과자료/'+yyyy+'년/'+yyyymm+'/xperp_감면자료')
 txt_dest_path.pack(side="left", fill="x", expand=True, padx=5, pady=5, ipady=4)
 
 btn_dest_path = Button(path_frame, text="저장경로", width=10, command=browse_dest_path)
@@ -267,7 +283,7 @@ txt_total_복지.pack(side="left", fill="x", expand=False, padx=5, pady=1, ipady
 frame_run = Frame(root)
 frame_run.pack(fill="x", padx=5, pady=5)
 
-label_originator = Label(frame_run, padx=5, pady=5, text="프로그램 작성 : 임훈택 Rev 1, 2021.8.12 Issued")
+label_originator = Label(frame_run, padx=5, pady=5, text="프로그램 작성 : 임훈택 Rev 2, 2021.12.27 Revised")
 label_originator.pack(side="left", padx=5, pady=5)
 
 btn_close = Button(frame_run, padx=5, pady=5, text="종료", width=12, command=root.quit)
