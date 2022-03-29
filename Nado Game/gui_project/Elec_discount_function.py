@@ -67,9 +67,9 @@ def start():
     subset_df = kind_calc(f2)
     subset_df_w = subset_df[0]
     subset_df_f = subset_df[1]
-    subset_df_a = subset_df[2]
+    # subset_df_a = subset_df[2]
 
-    discount = discount_file(f3,df2,subset_df_w,subset_df_f,subset_df_a)
+    discount = discount_file(f3,df2,subset_df_w,subset_df_f)
     pd_save(discount[0],f4)
     print('Total 사용량 보장공제액  :',discount[1])
     print('Total 대가족 할인 공제액 :',discount[2])
@@ -84,6 +84,10 @@ def welfare_calc(f1):
        '절전할인', '자동이체인터넷', '단수', '전기요금', '부가세', '전력기금', '전기바우처', '정산',
        '출산가구소급', '당월소계', 'TV수신료','청구금액']
     df.columns = new_col_names
+    sum_column = df['필수사용공제'] + df['복지추가 감액']
+    df['sum'] = sum_column
+    df.rename(columns = {'필수사용공제':'O_필수사용공제'},inplace=True)
+    df.rename(columns = {'sum':'필수사용공제'},inplace=True)
 
     df1 = df.dropna(subset=['동','필수사용공제'])
     # Template Columns중에서 필수 Columns만 복사하여 DataFrame 생성용 Columns list 생성
@@ -130,14 +134,15 @@ def kind_calc(f2):
     subset_df_w.loc[subset_df_w.복지구분 == '기초수급 할인 (주거, 교육)', '복지코드'] = 'H'
     subset_df_w
     
-    subset_df_add = df_w[contains_addition].copy()
-    subset_df_add.set_index(['동','호'],inplace=True)
-    subset_df_a = subset_df_add[['동','호','할인요금']]
-    subset_df_a.rename(columns = {'할인요금' : '필수사용공제'}, inplace = True)
+    # subset_df_add = df_w[contains_addition].copy()
+    # subset_df_add.set_index(['동','호'],inplace=True)
+    # subset_df_a = subset_df_add[['동','호','할인요금']]
+    # subset_df_a.rename(columns = {'할인요금' : '필수사용공제'}, inplace = True)
+    # subset_df_a
 
-    return subset_df_f, subset_df_w, subset_df_a
+    return subset_df_f, subset_df_w #, subset_df_a
 
-def discount_file(f3,df2,subset_df_f,subset_df_w,subset_df_a):
+def discount_file(f3,df2,subset_df_f,subset_df_w):
     df_x = pd.read_excel(f3,skiprows=0)
     # xperp upload template 양식의 columns list 생성
     # df_x_cl = df_x.columns.tolist()
@@ -145,7 +150,7 @@ def discount_file(f3,df2,subset_df_f,subset_df_w,subset_df_a):
     df_x.set_index(['동','호'],inplace=True)
     # discount df 생성 (Template df(df_x)에 필수사용공제(df2) merge
     discount = pd.merge(df_x, df2, how = 'outer', on = ['동','호'])
-    discount = pd.merge(discount, subset_df_a, how = 'outer', on = ['동','호'])   
+    # discount = pd.merge(discount, subset_df_a, how = 'outer', on = ['동','호'])   
 
     # 사용량 보장공제를 한전금액(필수사용공제) Data로 Update
     discount['사용량보장공제'] = discount['필수사용공제']
