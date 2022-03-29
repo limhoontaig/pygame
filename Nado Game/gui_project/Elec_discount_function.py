@@ -67,7 +67,6 @@ def start():
     subset_df = kind_calc(f2)
     subset_df_w = subset_df[0]
     subset_df_f = subset_df[1]
-    # subset_df_a = subset_df[2]
 
     discount = discount_file(f3,df2,subset_df_w,subset_df_f)
     pd_save(discount[0],f4)
@@ -133,14 +132,8 @@ def kind_calc(f2):
     subset_df_w.loc[subset_df_w.복지구분 == '차상위계층 할인', '복지코드'] = 'I'
     subset_df_w.loc[subset_df_w.복지구분 == '기초수급 할인 (주거, 교육)', '복지코드'] = 'H'
     subset_df_w
-    
-    # subset_df_add = df_w[contains_addition].copy()
-    # subset_df_add.set_index(['동','호'],inplace=True)
-    # subset_df_a = subset_df_add[['동','호','할인요금']]
-    # subset_df_a.rename(columns = {'할인요금' : '필수사용공제'}, inplace = True)
-    # subset_df_a
 
-    return subset_df_f, subset_df_w #, subset_df_a
+    return subset_df_f, subset_df_w
 
 def discount_file(f3,df2,subset_df_f,subset_df_w):
     df_x = pd.read_excel(f3,skiprows=0)
