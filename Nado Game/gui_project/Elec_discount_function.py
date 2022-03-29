@@ -46,15 +46,16 @@ def start():
     f4 = txt_dest_path.get()
 
     # 파일 목록 확인
-    if len(txt_welfare_path.get()) == 0:
+    # if len(txt_welfare_path.get()) == 0:
+    if '.xls' not in txt_welfare_path.get() or len(txt_welfare_path.get()) == 0:
         msgbox.showwarning("경고", "한전 복지감면 파일을 추가하세요")
         return
 
-    if len(txt_kind_welfare_path.get()) == 0:
-        msgbox.showwarning("경고", "한전 복지감면 종류 파일을 추가하세요")
+    if '.xls' not in txt_kind_welfare_path.get() or len(txt_kind_welfare_path.get()) == 0:
+        msgbox.showwarning("경고", "한전 감면 종류 파일을 추가하세요")
         return
 
-    if len(txt_template_path.get()) == 0:
+    if '.xls' not in txt_template_path.get() or len(txt_template_path.get()) == 0:
         msgbox.showwarning("경고", "Template File을 추가하세요")
         return
 
