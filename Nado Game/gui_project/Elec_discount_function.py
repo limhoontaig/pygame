@@ -288,7 +288,7 @@ txt_total_복지.pack(side="left", fill="x", expand=False, padx=5, pady=1, ipady
 frame_run = Frame(root)
 frame_run.pack(fill="x", padx=5, pady=5)
 
-label_originator = Label(frame_run, padx=5, pady=5, text="프로그램 작성 : 임훈택 Rev 2, 2021.12.27 Revised")
+label_originator = Label(frame_run, padx=5, pady=5, text="프로그램 작성 : 임훈택 Rev 3, 2022.03.29 Revised")
 label_originator.pack(side="left", padx=5, pady=5)
 
 btn_close = Button(frame_run, padx=5, pady=5, text="종료", width=12, command=root.quit)
