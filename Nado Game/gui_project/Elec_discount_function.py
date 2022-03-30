@@ -101,6 +101,9 @@ def welfare_calc(f1):
 
 def kind_calc(f2):
     df_w = pd.read_excel(f2,skiprows=2, thousands=',')#, dtype={'동':int, '호':int}) #,thousands=',')
+    new_col_names = ['동', '호', '대상자명','복지구분','장애종류','장애등급','할인요금']
+    df_w.columns = new_col_names
+    
     df_w = df_w[['동','호','복지구분','할인요금']]
 
     # 복지구분 컬럼을 선택합니다.
