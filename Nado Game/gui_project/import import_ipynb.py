@@ -150,10 +150,12 @@ code = get_code(code_df, '삼성전자')
 
 df = pdr.get_data_yahoo(code)
 
+print(df)
 df['Close'].plot()
 
 # 수정주가를 반영
 df = pdr.get_data_yahoo(code, adjust_price=True)
-
-print(df['Close'].plot(figsize=(10, 5)))
+list_colname = list(df)
+print(list_colname)
+print(df['Open'].plot(figsize=(10, 5)))
 
