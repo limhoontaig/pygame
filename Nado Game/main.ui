@@ -141,13 +141,6 @@
       </property>
      </widget>
     </item>
-    <item row="4" column="0" rowspan="2">
-     <widget class="QPushButton" name="btn_icon">
-      <property name="text">
-       <string>Ctrl+G</string>
-      </property>
-     </widget>
-    </item>
     <item row="5" column="1">
      <widget class="QPushButton" name="btn_group_2">
       <property name="text">
@@ -159,6 +152,13 @@
      <widget class="QPushButton" name="btn_group_3">
       <property name="text">
        <string>btn_group_3</string>
+      </property>
+     </widget>
+    </item>
+    <item row="4" column="0" rowspan="4">
+     <widget class="QPushButton" name="btn_icon">
+      <property name="text">
+       <string>btn_icon</string>
       </property>
      </widget>
     </item>
