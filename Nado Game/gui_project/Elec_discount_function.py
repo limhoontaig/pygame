@@ -83,7 +83,12 @@ def welfare_calc(f1):
        '연료비조정액', '필수사용공제', '복지추가 감액', '할인구분', '복지할인', '요금개편차액',
        '절전할인', '자동이체인터넷', '단수', '전기요금', '부가세', '전력기금', '전기바우처', '정산',
        '출산가구소급', '당월소계', 'TV수신료','청구금액']
-    df.columns = new_col_names
+    
+    try:
+        df.columns = new_col_names
+    except:
+        msgbox.showwarning("경고", f1 + "파일 한전 항목이 변경 되었습니다. 항목확인 후 프로그램 조정하세요.")
+
     sum_column = df['필수사용공제'] + df['복지추가 감액']
     df['sum'] = sum_column
     df.rename(columns = {'필수사용공제':'O_필수사용공제'},inplace=True)
@@ -98,12 +103,43 @@ def welfare_calc(f1):
     df2 = df1[df2col].copy()
     df2[df2col_f] = df2[df2col_f].astype('int')
     return df2
+    
 
 def kind_calc(f2):
     df_w = pd.read_excel(f2,skiprows=2, thousands=',')#, dtype={'동':int, '호':int}) #,thousands=',')
     new_col_names = ['동', '호', '대상자명','복지구분','장애종류','장애등급','할인요금']
-    df_w.columns = new_col_names
+
+
+    try:
+        df_w.columns = new_col_names
+    except:
+        msgbox.showwarning("경고", f2 + "파일 한전 항목이 변경 되었습니다. 항목확인 후 프로그램 조정하세요.")
+
+    used_kind_of_welfare = ['장애인 할인', '다자녀 할인', '대가족 할인', '의료기기 할인', '기초수급 할인', '출산가구 할인', '복지추가감액',
+ '기초수급 할인 (주거, 교육)', '차상위계층 할인', '사회복지 할인', '독립유공 할인']
+    kind_of_welfare = df_w['장애종류'].unique()
     
+    for kind in kind_of_welfare:
+        temp_length = 0
+        used_length = len(used_kind_of_welfare)
+        kind_length = len(kind_of_welfare)
+        for used_kind in used_kind_of_welfare:
+            if kind == used_kind:
+                pass
+            else:
+                temp_length += 1
+                if temp_length == used_length:
+                    try:
+                        msgbox.askyesno("할인종류 '"+ kind + "'가 추가 되었습니다.",  "항목확인 후 프로그램 조정하세요. Really Quit?")
+                        if msgbox == 'yes':
+                            root.destroy()
+                        else:
+                            pass
+                    except:
+                        pass
+        
+
+
     df_w = df_w[['동','호','복지구분','할인요금']]
 
     # 복지구분 컬럼을 선택합니다.
