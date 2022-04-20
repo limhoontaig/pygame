@@ -79,15 +79,51 @@ def start():
     
 def welfare_calc(f1):
     df = pd.read_excel(f1,skiprows=2)#, dtype={'동':int, '호':int}) #,thousands=',')
+    df_col_names = df.columns.tolist()
+
+    used_col_names = ['동', '호', '동호명', '가구수', '계약\n종별', '요금적용\n전력', '사용량', '기본요금', '전력량\n요금', 
+        '기후환경\n요금', '연료비조정\n요금', '필수사용\n공제', '복지추가\n감액', '할인\n구분', '복지할인', '요금개편\n차액', 
+        '절전할인', '자동이체\n/인터넷', '단수', '전기요금', '부가세', '전력\n기금', '전기\n바우처', '정산', '출산가구소급', 
+        '당월소계', 'TV수신료', '청구금액']
+
+    print(df_col_names)
+
+    for col in df_col_names:
+        temp_length = 0
+        used_length = len(used_col_names)
+        kind_length = len(df_col_names)
+        for used_col in used_col_names:
+            if col == used_col:
+                pass
+            else:
+                temp_length += 1
+                if temp_length == used_length:
+                    try:
+                        msgbox.askyesno("고지서 목차 '"+ col + "' 항목이 추가 되었습니다.",  "항목확인 후 프로그램 조정하세요. Really Quit?")
+                        if msgbox == 'yes':
+                            root.destroy()
+                        else:
+                            pass
+                    except:
+                        pass
+    print(df)
+    df.rename(columns = {'필수사용\n공제':'필수사용공제'},inplace=True)
+    df.rename(columns = {'복지추가\n감액':'복지추가 감액' },inplace=True)
+
+    df_col_names = df.columns.tolist()
+    print(df_col_names[4])
+    '''
     new_col_names = ['동', '호', '동호명', '가구수', '계약종별', '요금적용전력', '사용량', '기본요금', '전력량요금',
-       '연료비조정액', '필수사용공제', '복지추가 감액', '할인구분', '복지할인', '요금개편차액',
+       '기후환경요금','연료비조정액', '필수사용공제', '복지추가 감액', '할인구분', '복지할인', '요금개편차액',
        '절전할인', '자동이체인터넷', '단수', '전기요금', '부가세', '전력기금', '전기바우처', '정산',
        '출산가구소급', '당월소계', 'TV수신료','청구금액']
-    
+
+
     try:
         df.columns = new_col_names
     except:
         msgbox.showwarning("경고", f1 + "파일 한전 항목이 변경 되었습니다. 항목확인 후 프로그램 조정하세요.")
+    '''
 
     sum_column = df['필수사용공제'] + df['복지추가 감액']
     df['sum'] = sum_column
