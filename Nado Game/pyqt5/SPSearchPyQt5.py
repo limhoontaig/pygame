@@ -52,9 +52,9 @@ class WindowClass(QMainWindow, form_class):
             row_content.append(content)
 
         self.lineEdit_1.setText(row_content[0].text())
-        #self.lineEdit_2.setText(row_content[1].text())
-        #self.lineEdit_3.setText(row_content[2].text())
-        #self.lineEdit_4.setText(row_content[3].text())
+        self.lineEdit_2.setText(row_content[1].text())
+        self.dateEdit_4.setText(row_content[2].text())
+        self.lineEdit_4.setText(row_content[3].text())
         
         #print("cell changed event 발생 : ", row, col, data.text(), lineEditNo)
 

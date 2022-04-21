@@ -14,16 +14,6 @@
    <string>MainWindow</string>
   </property>
   <widget class="QWidget" name="centralwidget">
-   <widget class="QTableView" name="tableView">
-    <property name="geometry">
-     <rect>
-      <x>10</x>
-      <y>100</y>
-      <width>381</width>
-      <height>331</height>
-     </rect>
-    </property>
-   </widget>
    <widget class="QGroupBox" name="groupBox">
     <property name="geometry">
      <rect>
@@ -627,9 +617,9 @@
     <property name="geometry">
      <rect>
       <x>10</x>
-      <y>490</y>
-      <width>701</width>
-      <height>221</height>
+      <y>100</y>
+      <width>961</width>
+      <height>691</height>
      </rect>
     </property>
     <property name="midLineWidth">
