@@ -19,8 +19,8 @@
      <rect>
       <x>10</x>
       <y>100</y>
-      <width>951</width>
-      <height>681</height>
+      <width>381</width>
+      <height>331</height>
      </rect>
     </property>
    </widget>
@@ -622,6 +622,69 @@
       <height>22</height>
      </rect>
     </property>
+   </widget>
+   <widget class="QTableWidget" name="tableWidget">
+    <property name="geometry">
+     <rect>
+      <x>10</x>
+      <y>490</y>
+      <width>701</width>
+      <height>221</height>
+     </rect>
+    </property>
+    <property name="midLineWidth">
+     <number>1</number>
+    </property>
+    <row>
+     <property name="text">
+      <string>새 열1</string>
+     </property>
+    </row>
+    <row>
+     <property name="text">
+      <string>새 열2</string>
+     </property>
+    </row>
+    <row>
+     <property name="text">
+      <string>새 열3</string>
+     </property>
+    </row>
+    <row>
+     <property name="text">
+      <string>새 열4</string>
+     </property>
+    </row>
+    <row>
+     <property name="text">
+      <string>새 열5</string>
+     </property>
+    </row>
+    <column>
+     <property name="text">
+      <string>새 행1</string>
+     </property>
+    </column>
+    <column>
+     <property name="text">
+      <string>새 행2</string>
+     </property>
+    </column>
+    <column>
+     <property name="text">
+      <string>새 행3</string>
+     </property>
+    </column>
+    <column>
+     <property name="text">
+      <string>새 행4</string>
+     </property>
+    </column>
+    <item row="0" column="0">
+     <property name="text">
+      <string>tableWidget</string>
+     </property>
+    </item>
    </widget>
   </widget>
   <widget class="QMenuBar" name="menubar">
