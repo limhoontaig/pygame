@@ -22,8 +22,9 @@ class WindowClass(QMainWindow, form_class):
 
         self.tableWidget.setRowCount(rdr_row)
         self.tableWidget.setColumnCount(rdr_col)
+        self.tableWidget.setHorizontalHeaderLabels(data[0])
         r = 0
-        for i in data:
+        for i in data[1:]:
             r += 1
             c = 0
             for j in i:
@@ -45,16 +46,22 @@ class WindowClass(QMainWindow, form_class):
         print("cell changed event 발생 : ", row, col, data.text(), lineEditNo)
 
     def cellClickedFunc(self, row, col):
+        i= 0
         row_content = []
         #range(self.tableWidget.columnCount())
         for column in range(self.tableWidget.columnCount()):
             content = self.tableWidget.item(row, column)
             row_content.append(content)
-
+         
         self.lineEdit_1.setText(row_content[0].text())
         self.lineEdit_2.setText(row_content[1].text())
-        self.dateEdit_4.setText(row_content[2].text())
+        self.lineEdit_3.setText(row_content[2].text())
         self.lineEdit_4.setText(row_content[3].text())
+        self.lineEdit_5.setText(row_content[4].text())
+        self.lineEdit_6.setText(row_content[5].text())
+        self.lineEdit_7.setText(row_content[6].text())
+        self.lineEdit_8.setText(row_content[7].text())
+        self.lineEdit_9.setText(row_content[8].text())
         
         #print("cell changed event 발생 : ", row, col, data.text(), lineEditNo)
 
@@ -72,7 +79,7 @@ class WindowClass(QMainWindow, form_class):
                     items.append(item)
                     #print(items)
                 data.append(items)
-        print(data)
+        # print(data)
         return data
 
 if __name__ == '__main__':
