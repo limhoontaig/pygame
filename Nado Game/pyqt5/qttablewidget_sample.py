@@ -11,6 +11,9 @@ class MyFrame(QWidget):
         self.table = QTableWidget(5, 5, self)  # row, column
 
         self.table.setAlternatingRowColors(True)
+        self.table.setSelectionBehavior(QAbstractItemView.SelectRows) # row 단위로 선택 가능
+
+        # 출처: https://freeprog.tistory.com/333 [취미로 하는 프로그래밍 !!!]
 
         self.table.setHorizontalHeaderLabels(["", "종목명", "현재가(문자)",  "현재가(숫자)", "거래량"])
         data = [
