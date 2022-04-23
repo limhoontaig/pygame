@@ -20,6 +20,8 @@ class WindowClass(QMainWindow, form_class):
         rdr_row = len(data)
         rdr_col = len(data[0])
 
+        self.tableWidget.setAlternatingRowColors(True)
+        
         self.tableWidget.setRowCount(rdr_row)
         self.tableWidget.setColumnCount(rdr_col)
         self.tableWidget.setHorizontalHeaderLabels(data[0])
