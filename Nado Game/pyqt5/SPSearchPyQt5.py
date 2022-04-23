@@ -16,17 +16,22 @@ class WindowClass(QMainWindow, form_class):
         super().__init__()
         self.setupUi(self)
 
-        data = self.read_data()
+        rows = csv.reader(self.read_data())
+        headers = next(rows)
+        data = []
+        for row in rows:
+            data.append(row)
         rdr_row = len(data)
         rdr_col = len(data[0])
 
         self.tableWidget.setAlternatingRowColors(True)
-        
+
         self.tableWidget.setRowCount(rdr_row)
         self.tableWidget.setColumnCount(rdr_col)
-        self.tableWidget.setHorizontalHeaderLabels(data[0])
+        self.tableWidget.setHorizontalHeaderLabels(headers)
+        self.tableWidget.setSortingEnabled(True) # default ; False
         r = 0
-        for i in data[1:]:
+        for i in data:
             r += 1
             c = 0
             for j in i:
@@ -69,20 +74,14 @@ class WindowClass(QMainWindow, form_class):
 
 
     def read_data(self):
-
-        filename = resource_path('dowstocks.csv')
-        with open(filename, 'r') as f:
-            data = []
-            for line in f:
-                l = line.split(',')
-                #print(l)
-                items = []
-                for item in l:
-                    items.append(item)
-                    #print(items)
-                data.append(items)
-        # print(data)
-        return data
+        
+        #files = QFileDialog.askopenfilename(title="엑셀 데이타 파일을 선택하세요", \
+        #    filetypes=(("EXCEL 파일", "*.xls"),('CSV 파일', '*.csv'), ("EXCEL 파일", "*.xlsx"), ("모든 파일", "*.*")))
+        files = QFileDialog.getOpenFileName(self)
+        filename = resource_path(files[0])
+        f = open(filename)
+            
+        return f
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)
