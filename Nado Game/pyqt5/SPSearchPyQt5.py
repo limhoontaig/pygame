@@ -2,6 +2,8 @@ import os
 import sys
 import csv
 from PyQt5.QtWidgets import *
+from PyQt5.QtCore import QDate
+
 from PyQt5 import uic
 
 def resource_path(relative_path):
@@ -57,18 +59,23 @@ class WindowClass(QMainWindow, form_class):
         row_content = []
         #range(self.tableWidget.columnCount())
         for column in range(self.tableWidget.columnCount()):
-            content = self.tableWidget.item(row, column)
+            content = self.tableWidget.item(row, column).text()
             row_content.append(content)
          
-        self.lineEdit_1.setText(row_content[0].text())
-        self.lineEdit_2.setText(row_content[1].text())
-        self.lineEdit_3.setText(row_content[2].text())
-        self.lineEdit_4.setText(row_content[3].text())
-        self.lineEdit_5.setText(row_content[4].text())
-        self.lineEdit_6.setText(row_content[5].text())
-        self.lineEdit_7.setText(row_content[6].text())
-        self.lineEdit_8.setText(row_content[7].text())
-        self.lineEdit_9.setText(row_content[8].text())
+        self.lineEdit_1.setText(row_content[0])
+        self.lineEdit_2.setText(row_content[1])
+        self.lineEdit_3.setText(row_content[2])
+        self.lineEdit_4.setText(row_content[3])
+        self.lineEdit_5.setText(row_content[4])
+        self.lineEdit_6.setText(row_content[5])
+        self.lineEdit_7.setText(row_content[6])
+        self.lineEdit_8.setText(row_content[7])
+        self.lineEdit_9.setText(row_content[8])
+        s = row_content[2].split('/')
+        print(s)
+        # s_d = s.split('/')
+        d = QDate(int(s[2]), int(s[0]), int(s[1]))
+        self.dateEdit_3.setDate(d)
         
         #print("cell changed event 발생 : ", row, col, data.text(), lineEditNo)
 
@@ -77,7 +84,7 @@ class WindowClass(QMainWindow, form_class):
         
         #files = QFileDialog.askopenfilename(title="엑셀 데이타 파일을 선택하세요", \
         #    filetypes=(("EXCEL 파일", "*.xls"),('CSV 파일', '*.csv'), ("EXCEL 파일", "*.xlsx"), ("모든 파일", "*.*")))
-        files = QFileDialog.getOpenFileName(self)
+        files = QFileDialog.getOpenFileName(self, '파일을 선택하세요.', r'C:\source\pygame\Nado Game\pyqt5', 'All File(*);; Text File(*.txt);; csv file(*csv)', 'excel file(*xls *xlsx)')
         filename = resource_path(files[0])
         f = open(filename)
             
