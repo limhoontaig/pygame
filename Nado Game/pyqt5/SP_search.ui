@@ -618,8 +618,8 @@
      <rect>
       <x>10</x>
       <y>100</y>
-      <width>961</width>
-      <height>691</height>
+      <width>951</width>
+      <height>321</height>
      </rect>
     </property>
     <property name="styleSheet">
@@ -629,6 +629,16 @@ background-color: rgb(255, 252, 229);
     </property>
     <property name="midLineWidth">
      <number>1</number>
+    </property>
+   </widget>
+   <widget class="QTableView" name="tableView">
+    <property name="geometry">
+     <rect>
+      <x>10</x>
+      <y>430</y>
+      <width>951</width>
+      <height>341</height>
+     </rect>
     </property>
    </widget>
   </widget>

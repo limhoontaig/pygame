@@ -1,8 +1,9 @@
 import os
 import sys
 import csv
-from PyQt5.QtWidgets import *
-from PyQt5.QtCore import QDate
+from PyQt5 import QtCore, QtGui, QtWidgets
+from PyQt5.QtWidgets import * 
+from PyQt5.QtCore import Qt, QDate
 
 from PyQt5 import uic
 
@@ -12,6 +13,28 @@ def resource_path(relative_path):
 
 form = resource_path('SP_search.ui')
 form_class = uic.loadUiType(form)[0]
+
+class TableModel(QtCore.QAbstractTableModel):
+    def __init__(self, data):
+        super(TableModel, self).__init__()
+        self._data = data
+
+    def data(self, index, role):
+        if role == Qt.DisplayRole:
+            # See below for the nested-list data structure.
+            # .row() indexes into the outer list,
+            # .column() indexes into the sub-list
+            return self._data[index.row()][index.column()]
+
+    def rowCount(self, index):
+        # The length of the outer list.
+        return len(self._data)
+
+    def columnCount(self, index):
+        # The following takes the first sub-list, and returns
+        # the length (only works if all rows are an equal length)
+        return len(self._data[0])
+
 
 class WindowClass(QMainWindow, form_class):
     def __init__(self):
@@ -32,6 +55,13 @@ class WindowClass(QMainWindow, form_class):
         self.tableWidget.setColumnCount(rdr_col)
         self.tableWidget.setHorizontalHeaderLabels(headers)
         self.tableWidget.setSortingEnabled(True) # default ; False
+
+        self.tableView = QtWidgets.QTableView()
+        self.model = TableModel(data)
+        self.tableView.setModel(self.model)
+
+        #self.setCentralWidget(self.tableView)
+
         r = 0
         for i in data:
             r += 1
@@ -84,7 +114,7 @@ class WindowClass(QMainWindow, form_class):
         
         #files = QFileDialog.askopenfilename(title="엑셀 데이타 파일을 선택하세요", \
         #    filetypes=(("EXCEL 파일", "*.xls"),('CSV 파일', '*.csv'), ("EXCEL 파일", "*.xlsx"), ("모든 파일", "*.*")))
-        files = QFileDialog.getOpenFileName(self, '파일을 선택하세요.', r'C:\source\pygame\Nado Game\pyqt5', 'All File(*);; Text File(*.txt);; csv file(*csv)', 'excel file(*xls *xlsx)')
+        files = QFileDialog.getOpenFileName(self, '파일을 선택하세요.', r'C:/source/pygame/Nado Game/pyqt5' , 'All File(*);; Text File(*.txt);; csv file(*csv) ;; excel file(*xls *xlsx)')
         filename = resource_path(files[0])
         f = open(filename)
             
