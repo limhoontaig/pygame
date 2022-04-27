@@ -12,7 +12,6 @@ def resource_path(relative_path):
     return os.path.join(base_path, relative_path)
 
 form = resource_path("전기감면_mainwindow.ui")
-print(form)
 form_class = uic.loadUiType(form)[0]
 
 now = datetime.now()
@@ -30,7 +29,6 @@ class MyWindow(QMainWindow, form_class):
     def __init__(self):
         super().__init__()
         self.LE = LE
-        # print(len(self.LE), self.LE, LE)
         self.setupUi(self)
 
         self.lineEdit.setText(LE[0])
@@ -76,7 +74,6 @@ class MyWindow(QMainWindow, form_class):
         else:
             init_dir = self.LE[3]
             fname = QFileDialog.getExistingDirectory(self, '저장 Direttory를 선택하새요', init_dir)
-            #print(len(fname))
             if len(fname) != 0:
                 self.lineEdit_4.setText(fname)
             else:
@@ -113,8 +110,8 @@ class MyWindow(QMainWindow, form_class):
         subset_df_w = subset_df[0]
         subset_df_f = subset_df[1]
 
-        discount = discount_file(f3,df2,subset_df_w,subset_df_f)
-        pd_save(discount[0],f4)
+        discount = self.discount_file(f3,df2,subset_df_w,subset_df_f)
+        self.pd_save(discount[0],f4)
         print('Total 사용량 보장공제액  :',discount[1])
         print('Total 대가족 할인 공제액 :',discount[2])
         print('Total 복지 할인 공제액   :',discount[3])
@@ -130,8 +127,6 @@ class MyWindow(QMainWindow, form_class):
             '절전할인', '자동이체\n/인터넷', '단수', '전기요금', '부가세', '전력\n기금', '전기\n바우처', '정산', '출산가구소급', 
             '당월소계', 'TV수신료', '청구금액']
 
-        # print(df_col_names)
-
         for col in df_col_names:
             temp_length = 0
             used_length = len(used_col_names)
@@ -143,32 +138,19 @@ class MyWindow(QMainWindow, form_class):
                     temp_length += 1
                     if temp_length == used_length:
                         try:
-                            msgbox.askyesno("고지서 목차 '"+ col + "' 항목이 추가 되었습니다.",  "항목확인 후 프로그램 조정하세요. Really Quit?")
-                            if msgbox == 'yes':
-                                root.destroy()
+                            QMessageBox.warning(self, "고지서 목차 '"+ col + "' 항목이 추가 되었습니다.",  "항목확인 후 프로그램 조정하세요. Really Quit?")
+                            if QMessageBox.Yes:
+                                self.close()
                             else:
                                 pass
                         except:
                             pass
-        print(df)
+
         df.rename(columns = {'필수사용\n공제':'필수사용공제'},inplace=True)
         df.rename(columns = {'복지추가\n감액':'복지추가 감액' },inplace=True)
 
         df_col_names = df.columns.tolist()
-        print(df_col_names[4])
-        '''
-        new_col_names = ['동', '호', '동호명', '가구수', '계약종별', '요금적용전력', '사용량', '기본요금', '전력량요금',
-        '기후환경요금','연료비조정액', '필수사용공제', '복지추가 감액', '할인구분', '복지할인', '요금개편차액',
-        '절전할인', '자동이체인터넷', '단수', '전기요금', '부가세', '전력기금', '전기바우처', '정산',
-        '출산가구소급', '당월소계', 'TV수신료','청구금액']
-
-
-        try:
-            df.columns = new_col_names
-        except:
-            msgbox.showwarning("경고", f1 + "파일 한전 항목이 변경 되었습니다. 항목확인 후 프로그램 조정하세요.")
-        '''
-
+       
         sum_column = df['필수사용공제'] + df['복지추가 감액']
         df['sum'] = sum_column
         df.rename(columns = {'필수사용공제':'O_필수사용공제'},inplace=True)
@@ -192,10 +174,12 @@ class MyWindow(QMainWindow, form_class):
         try:
             df_w.columns = new_col_names
         except:
-            msgbox.showwarning("경고", f2 + "파일 한전 항목이 변경 되었습니다. 항목확인 후 프로그램 조정하세요.")
+            QMessageBox.warning(self, "경고", f2 + "파일 한전 항목이 변경 되었습니다. 항목확인 후 프로그램 조정하세요.")
+            if QMessageBox.Yes:
+                self.close()
 
         used_kind_of_welfare = ['장애인 할인', '다자녀 할인', '대가족 할인', '의료기기 할인', '기초수급 할인', '출산가구 할인', '복지추가감액',
-    '기초수급 할인 (주거, 교육)', '차상위계층 할인', '사회복지 할인', '독립유공 할인']
+                                '기초수급 할인 (주거, 교육)', '차상위계층 할인', '사회복지 할인', '독립유공 할인']
         kind_of_welfare = df_w['장애종류'].unique()
         
         for kind in kind_of_welfare:
@@ -209,9 +193,10 @@ class MyWindow(QMainWindow, form_class):
                     temp_length += 1
                     if temp_length == used_length:
                         try:
-                            msgbox.askyesno("할인종류 '"+ kind + "'가 추가 되었습니다.",  "항목확인 후 프로그램 조정하세요. Really Quit?")
-                            if msgbox == 'yes':
-                                root.destroy()
+                            QMessageBox.warning(self,"할인종류 '"+ kind + "'가 추가 되었습니다.",  "항목확인 후 프로그램 조정하세요. Really Quit?")
+                            if QMessageBox.Yes:
+                                self.close()
+                            
                             else:
                                 pass
                         except:
@@ -282,14 +267,9 @@ class MyWindow(QMainWindow, form_class):
         total_대가족할인액 = discount['대가족할인액'].sum()
         total_복지할인액 = discount['복지할인액'].sum()
         # display the result of computation
-        txt_total_사용량.delete(0,END)
-        txt_total_사용량.insert(0, f'{total_사용량보장공제:>20,}')
-
-        txt_total_대가족.delete(0,END)
-        txt_total_대가족.insert(0, f'{total_대가족할인액:>20,}')
-        
-        txt_total_복지.delete(0,END)
-        txt_total_복지.insert(0, f'{total_복지할인액:>20,}')
+        self.lineEdit_5.setText(str(f'{total_사용량보장공제:>20,}'))
+        self.lineEdit_6.setText(str(f'{total_대가족할인액:>20,}'))
+        self.lineEdit_7.setText(str(f'{total_복지할인액:>20,}'))
 
         return discount, total_사용량보장공제, total_대가족할인액, total_복지할인액
 
