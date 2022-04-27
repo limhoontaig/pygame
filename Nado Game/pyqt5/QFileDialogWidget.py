@@ -1,4 +1,4 @@
-'''
+
 import sys
 from PyQt5.QtWidgets import *
 
@@ -31,7 +31,7 @@ if __name__ == "__main__":
     window = MyWindow()
     window.show()
     app.exec_()
-'''
+
 '''
 import sys
  

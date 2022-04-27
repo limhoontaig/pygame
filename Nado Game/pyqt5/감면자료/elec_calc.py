@@ -108,8 +108,8 @@ class MyWindow(QMainWindow, form_class):
             QMessageBox.about(self, "경고", "저장 경로를 선택하세요")
             return
 
-        df2 = welfare_calc(f1)
-        subset_df = kind_calc(f2)
+        df2 = self.welfare_calc(f1)
+        subset_df = self.kind_calc(f2)
         subset_df_w = subset_df[0]
         subset_df_f = subset_df[1]
 
@@ -120,6 +120,7 @@ class MyWindow(QMainWindow, form_class):
         print('Total 복지 할인 공제액   :',discount[3])
         
         return
+
     def welfare_calc(self, f1):
         df = pd.read_excel(f1,skiprows=2)#, dtype={'동':int, '호':int}) #,thousands=',')
         df_col_names = df.columns.tolist()
@@ -129,7 +130,7 @@ class MyWindow(QMainWindow, form_class):
             '절전할인', '자동이체\n/인터넷', '단수', '전기요금', '부가세', '전력\n기금', '전기\n바우처', '정산', '출산가구소급', 
             '당월소계', 'TV수신료', '청구금액']
 
-        print(df_col_names)
+        # print(df_col_names)
 
         for col in df_col_names:
             temp_length = 0
@@ -183,24 +184,140 @@ class MyWindow(QMainWindow, form_class):
         df2[df2col_f] = df2[df2col_f].astype('int')
         return df2
 
+    def kind_calc(self, f2):
+        df_w = pd.read_excel(f2,skiprows=2, thousands=',')#, dtype={'동':int, '호':int}) #,thousands=',')
+        new_col_names = ['동', '호', '대상자명','복지구분','장애종류','장애등급','할인요금']
 
 
+        try:
+            df_w.columns = new_col_names
+        except:
+            msgbox.showwarning("경고", f2 + "파일 한전 항목이 변경 되었습니다. 항목확인 후 프로그램 조정하세요.")
 
-'''
-        if kind == 'welfare':
-            self.lineEdit.setText(fname[0])
-            return self.lineEdit.text()
+        used_kind_of_welfare = ['장애인 할인', '다자녀 할인', '대가족 할인', '의료기기 할인', '기초수급 할인', '출산가구 할인', '복지추가감액',
+    '기초수급 할인 (주거, 교육)', '차상위계층 할인', '사회복지 할인', '독립유공 할인']
+        kind_of_welfare = df_w['장애종류'].unique()
+        
+        for kind in kind_of_welfare:
+            temp_length = 0
+            used_length = len(used_kind_of_welfare)
+            kind_length = len(kind_of_welfare)
+            for used_kind in used_kind_of_welfare:
+                if kind == used_kind:
+                    pass
+                else:
+                    temp_length += 1
+                    if temp_length == used_length:
+                        try:
+                            msgbox.askyesno("할인종류 '"+ kind + "'가 추가 되었습니다.",  "항목확인 후 프로그램 조정하세요. Really Quit?")
+                            if msgbox == 'yes':
+                                root.destroy()
+                            else:
+                                pass
+                        except:
+                            pass
+            
 
-        elif kind == 'kind':
-            txt_kind_welfare_path.delete(0,END)
-            txt_kind_welfare_path.insert(0, files)
-            return txt_kind_welfare_path
 
+        df_w = df_w[['동','호','복지구분','할인요금']]
+
+        # 복지구분 컬럼을 선택합니다.
+        # 컬럼의 값에 대가족할인 항목을 또는(|) 대가족할인 항목늬 문자열이 포함되어있는지 판단합니다.
+        # 그 결과를 새로운 변수에 할당합니다.
+        contains_family = df_w['복지구분'].str.contains('다자녀 할인|대가족 할인|출산가구 할인|의료기기 할인')
+        contains_welfare = df_w['복지구분'].str.contains('장애인 할인|독립유공 할인|국가유공 할인|민주유공 할인|사회복지 할인|기초수급 할인|차상위계층 할인|기초수급 할인 (주거, 교육)')
+        contains_addition = df_w['복지구분'].str.contains('추가복지감액')
+
+        # 대가족할인 조건를 충족하는 데이터를 필터링하여 새로운 변수에 저장합니다.
+        subset_df_f = df_w[contains_family].copy()
+        subset_df_f.set_index(['동','호'],inplace=True)
+        #subset_df_f['복지코드'] = subset_df_f['복지구분']
+        subset_df_f.loc[subset_df_f.복지구분 == '다자녀 할인', '복지코드'] = '3'
+        subset_df_f.loc[subset_df_f.복지구분 == '대가족 할인', '복지코드'] = '1'
+        subset_df_f.loc[subset_df_f.복지구분 == '출산가구 할인', '복지코드'] = '2'
+        subset_df_f.loc[subset_df_f.복지구분 == '의료기기 할인', '복지코드'] = '4'
+        subset_df_f
+
+        # 복지할인 조건를 충족(대가족할인이 아닌것 ~)하는 데이터를 필터링하여 새로운 변수에 저장합니다.
+        subset_df_w = df_w[contains_welfare].copy()
+        subset_df_w.set_index(['동','호'],inplace=True)
+        subset_df_w.loc[subset_df_w.복지구분 == '장애인 할인', '복지코드'] = 'D'
+        subset_df_w.loc[subset_df_w.복지구분 == '독립유공 할인', '복지코드'] = 'A'
+        subset_df_w.loc[subset_df_w.복지구분 == '국가유공 할인', '복지코드'] = 'B'
+        subset_df_w.loc[subset_df_w.복지구분 == '민주유공 할인', '복지코드'] = 'C'
+        subset_df_w.loc[subset_df_w.복지구분 == '사회복지 할인', '복지코드'] = 'E'
+        # subset_df_w.loc[subset_df_w.복지구분 == '복지추가감액', '복지코드'] = 'E'
+        subset_df_w.loc[subset_df_w.복지구분 == '기초수급 할인', '복지코드'] = 'H'
+        subset_df_w.loc[subset_df_w.복지구분 == '차상위계층 할인', '복지코드'] = 'I'
+        subset_df_w.loc[subset_df_w.복지구분 == '기초수급 할인 (주거, 교육)', '복지코드'] = 'H'
+        subset_df_w
+
+        return subset_df_f, subset_df_w  
+
+    def discount_file(self, f3,df2,subset_df_f,subset_df_w):
+        df_x = pd.read_excel(f3,skiprows=0)
+        # xperp upload template 양식의 columns list 생성
+        # df_x_cl = df_x.columns.tolist()
+        # 동호를 indexing하여 dataFrame merge 준비
+        df_x.set_index(['동','호'],inplace=True)
+        # discount df 생성 (Template df(df_x)에 필수사용공제(df2) merge
+        discount = pd.merge(df_x, df2, how = 'outer', on = ['동','호'])
+        # discount = pd.merge(discount, subset_df_a, how = 'outer', on = ['동','호'])   
+
+        # 사용량 보장공제를 한전금액(필수사용공제) Data로 Update
+        discount['사용량보장공제'] = discount['필수사용공제']
+        # 사용량 보장공제 임시데이터 columns를 drop
+        discount = discount.drop(['필수사용공제'],axis=1)
+        # Template df에 필수사용공제 merge
+        discount = pd.merge(discount, subset_df_f, how = 'outer', on = ['동','호'])
+        discount['대가족할인액'] = discount['할인요금']
+        discount['대가족할인구분'] = discount['복지코드']
+        discount = discount.drop(['복지코드','할인요금','복지구분'],axis=1)
+        discount = pd.merge(discount, subset_df_w, how = 'outer', on = ['동','호'])
+        #discount1 = discount.reset_index()
+        discount['복지할인액'] = discount['할인요금']
+        discount['복지할인구분'] = discount['복지코드']
+        discount = discount.drop(['복지코드','할인요금','복지구분'],axis=1)
+        total_사용량보장공제 = discount['사용량보장공제'].sum()
+        total_대가족할인액 = discount['대가족할인액'].sum()
+        total_복지할인액 = discount['복지할인액'].sum()
+        # display the result of computation
+        txt_total_사용량.delete(0,END)
+        txt_total_사용량.insert(0, f'{total_사용량보장공제:>20,}')
+
+        txt_total_대가족.delete(0,END)
+        txt_total_대가족.insert(0, f'{total_대가족할인액:>20,}')
+        
+        txt_total_복지.delete(0,END)
+        txt_total_복지.insert(0, f'{total_복지할인액:>20,}')
+
+        return discount, total_사용량보장공제, total_대가족할인액, total_복지할인액
+
+    def pd_save(self, discount,f4):
+
+        #작업월을 파일이름에 넣기 위한 코드 (작업일 기준)
+        now = datetime.now()
+        dt1 = now.strftime("%Y")+now.strftime("%m")
+        dt1 = dt1+'ELEC_XPERP_Upload_J_K_R_S_T_columns.xlsx'
+        file_name = f4+'/'+dt1
+
+        #file save
+        if os.path.isfile(file_name):
+            os.remove(file_name)
+            discount.to_excel(file_name,index=False,header=False)
         else:
-            txt_template_path.delete(0,END)
-            txt_template_path.insert(0, files)
-            return txt_template_path   
-'''
+            discount.to_excel(file_name,index=False,header=False)
+        
+        dttemp = file_name.split('.')
+        dt2 = dttemp[0] + '.xls'
+
+        if os.path.isfile(dt2):
+            os.remove(dt2)
+            os.rename(file_name, dt2)   
+        else:
+            os.rename(file_name, dt2)
+        
+        return
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
