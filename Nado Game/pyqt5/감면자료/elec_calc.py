@@ -144,8 +144,8 @@ class MyWindow(QMainWindow, form_class):
                             reply = QMessageBox.question((self, "고지서 목차 '"+ col + "' 항목이 변경되었습니다.",  "항목을 확인하시겠습니까?"),
                              (QMessageBox.Yes | QMessageBox.No, QMessageBox.No))
                             # QMessageBox.warning(self, "고지서 목차 '"+ col + "' 항목이 추가 되었습니다.",  "항목확인 후 프로그램 조정하세요. Really Quit?")
-                            if QMessageBox.Yes:
-                                self.QMessageBox.Yes.connect(self.pushButtonClicked, data)
+                            if reply == QMessageBox.Yes:
+                                self.pushButtonClicked(data)
                             else:
                                 pass
                         except:
