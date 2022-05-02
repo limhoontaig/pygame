@@ -127,6 +127,9 @@ class MyWindow(QMainWindow, form_class):
             '절전할인', '자동이체\n/인터넷', '단수', '전기요금', '부가세', '전력\n기금', '전기\n바우처', '정산', '출산가구소급', 
             '당월소계', 'TV수신료', '청구금액']
 
+        data = [df_col_names]
+        data.append(used_col_names)
+
         for col in df_col_names:
             temp_length = 0
             used_length = len(used_col_names)
@@ -138,9 +141,11 @@ class MyWindow(QMainWindow, form_class):
                     temp_length += 1
                     if temp_length == used_length:
                         try:
-                            QMessageBox.warning(self, "고지서 목차 '"+ col + "' 항목이 추가 되었습니다.",  "항목확인 후 프로그램 조정하세요. Really Quit?")
-                            if QMessageBox.Yes:
-                                self.close()
+                            reply = QMessageBox.question((self, "고지서 목차 '"+ col + "' 항목이 변경되었습니다.",  "항목을 확인하시겠습니까?"),
+                             (QMessageBox.Yes | QMessageBox.No, QMessageBox.No))
+                            # QMessageBox.warning(self, "고지서 목차 '"+ col + "' 항목이 추가 되었습니다.",  "항목확인 후 프로그램 조정하세요. Really Quit?")
+                            if reply == QMessageBox.Yes:
+                                self.pushButtonClicked(data)
                             else:
                                 pass
                         except:
@@ -181,7 +186,8 @@ class MyWindow(QMainWindow, form_class):
         used_kind_of_welfare = ['장애인 할인', '다자녀 할인', '대가족 할인', '의료기기 할인', '기초수급 할인', '출산가구 할인', '복지추가감액',
                                 '기초수급 할인 (주거, 교육)', '차상위계층 할인', '사회복지 할인', '독립유공 할인']
         kind_of_welfare = df_w['장애종류'].unique()
-        
+        data = []
+        data.append()
         for kind in kind_of_welfare:
             temp_length = 0
             used_length = len(used_kind_of_welfare)
@@ -195,7 +201,7 @@ class MyWindow(QMainWindow, form_class):
                         try:
                             QMessageBox.warning(self,"할인종류 '"+ kind + "'가 추가 되었습니다.",  "항목확인 후 프로그램 조정하세요. Really Quit?")
                             if QMessageBox.Yes:
-                                self.close()
+                                self.connect(self.pushButtonClicked, data)
                             
                             else:
                                 pass
@@ -298,6 +304,44 @@ class MyWindow(QMainWindow, form_class):
             os.rename(file_name, dt2)
         
         return
+
+    def pushButtonClicked(self, data):
+        myapp = MyApp(data)
+        myapp.exec_()
+
+
+class MyApp(QWidget):
+
+    def __init__(self):
+        super().__init__()
+        self.initUI()
+
+    def initUI(self, data):
+
+        self.tableWidget = QTableWidget()
+        rows = len(data[0]) + 5
+        cols = len(data)
+        self.tableWidget.setRowCount(rows)
+        self.tableWidget.setColumnCount(cols)
+
+        self.tableWidget.setEditTriggers(QAbstractItemView.NoEditTriggers)
+        # self.tableWidget.setEditTriggers(QAbstractItemView.DoubleClicked)
+        # self.tableWidget.setEditTriggers(QAbstractItemView.AllEditTriggers)
+
+        self.tableWidget.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+        # self.tableWidget.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeToContents)
+
+        for i in range(cols):
+            for j in range(rows):
+                self.tableWidget.setItem(i, j, QTableWidgetItem(data[i,j]))
+
+        layout = QVBoxLayout()
+        layout.addWidget(self.tableWidget)
+        self.setLayout(layout)
+
+        self.setWindowTitle('QTableWidget')
+        self.setGeometry(300, 100, 600, 400)
+        self.show()
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
