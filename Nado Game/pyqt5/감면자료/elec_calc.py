@@ -42,6 +42,9 @@ class MyWindow(QMainWindow, form_class):
         self.pushButton_4.clicked.connect(self.add_file)
         self.pushButton_5.clicked.connect(self.start)
 
+        self.pushButton_6.clicked.connect(self.close)
+
+
     @pyqtSlot()
     def add_file(self):
 
@@ -121,36 +124,39 @@ class MyWindow(QMainWindow, form_class):
     def welfare_calc(self, f1):
         df = pd.read_excel(f1,skiprows=2)#, dtype={'동':int, '호':int}) #,thousands=',')
         df_col_names = df.columns.tolist()
-
+        df_column_length = len(df_col_names)
         used_col_names = ['동', '호', '동호명', '가구수', '계약\n종별', '요금적용\n전력', '사용량', '기본요금', '전력량\n요금', 
             '기후환경\n요금', '연료비조정\n요금', '필수사용\n공제', '복지추가\n감액', '할인\n구분', '복지할인', '요금개편\n차액', 
             '절전할인', '자동이체\n/인터넷', '단수', '전기요금', '부가세', '전력\n기금', '전기\n바우처', '정산', '출산가구소급', 
             '당월소계', 'TV수신료', '청구금액']
+        used_col_names_len = len(used_col_names)
+
+        if df_column_length == used_col_names_len:
+            pass
+        else:
+            reply = QMessageBox.warning(self, "한전 고지서 항목 수량이 바뀌었습니다.", " 확인하시겠습니까?", QMessageBox.Yes|QMessageBox.No)
+            if reply == QMessageBox.Yes:
+                print('항목 확인 모듈 실행')
+            else:
+                self.close()
 
         data = [df_col_names]
         data.append(used_col_names)
 
-        for col in df_col_names:
-            temp_length = 0
-            used_length = len(used_col_names)
-            kind_length = len(df_col_names)
-            for used_col in used_col_names:
-                if col == used_col:
-                    pass
+        for i in range (0, df_column_length):
+            if df_col_names[i] == used_col_names[i]:
+                print('df_column_length =', df_column_length, 'used_col_names_len', used_col_names_len)
+                print(i, df_col_names[i], used_col_names[i], '\n')
+            else:
+                
+                reply = QMessageBox.question(self, "고지서 목차 "+ df_col_names[i] + " 항목이 변경되었습니다.",  "항목을 확인하시겠습니까?",
+                    QMessageBox.Yes | QMessageBox.No)
+                # QMessageBox.warning(self, "고지서 목차가 변경 되었습니다.",  "항목확인 후 프로그램 조정하세요. Really Quit?")
+                if reply == QMessageBox.Yes:
+                    self.pushButtonClicked(data)
                 else:
-                    temp_length += 1
-                    if temp_length == used_length:
-                        try:
-                            reply = QMessageBox.question((self, "고지서 목차 '"+ col + "' 항목이 변경되었습니다.",  "항목을 확인하시겠습니까?"),
-                             (QMessageBox.Yes | QMessageBox.No, QMessageBox.No))
-                            # QMessageBox.warning(self, "고지서 목차 '"+ col + "' 항목이 추가 되었습니다.",  "항목확인 후 프로그램 조정하세요. Really Quit?")
-                            if reply == QMessageBox.Yes:
-                                self.pushButtonClicked(data)
-                            else:
-                                pass
-                        except:
-                            pass
-
+                    self.close()
+                
         df.rename(columns = {'필수사용\n공제':'필수사용공제'},inplace=True)
         df.rename(columns = {'복지추가\n감액':'복지추가 감액' },inplace=True)
 
@@ -179,15 +185,41 @@ class MyWindow(QMainWindow, form_class):
         try:
             df_w.columns = new_col_names
         except:
-            QMessageBox.warning(self, "경고", f2 + "파일 한전 항목이 변경 되었습니다. 항목확인 후 프로그램 조정하세요.")
-            if QMessageBox.Yes:
+            reply = QMessageBox.question(self, '"경고 " + f2 + "파일 한전 항목이 변경 되었습니다."', "항목확인 후 프로그램 조정하세요.", 
+            QMessageBox.Yes|QMessageBox.No)
+            if reply == QMessageBox.Yes:
+                self.pushButtonClicked()
+            else: 
                 self.close()
 
         used_kind_of_welfare = ['장애인 할인', '다자녀 할인', '대가족 할인', '의료기기 할인', '기초수급 할인', '출산가구 할인', '복지추가감액',
                                 '기초수급 할인 (주거, 교육)', '차상위계층 할인', '사회복지 할인', '독립유공 할인']
         kind_of_welfare = df_w['장애종류'].unique()
-        data = []
-        data.append()
+        
+        for i in range (0, len(used_kind_of_welfare)):
+            if used_kind_of_welfare[i] != kind_of_welfare[i]:
+                pass
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        '''
         for kind in kind_of_welfare:
             temp_length = 0
             used_length = len(used_kind_of_welfare)
@@ -197,17 +229,17 @@ class MyWindow(QMainWindow, form_class):
                     pass
                 else:
                     temp_length += 1
-                    if temp_length == used_length:
-                        try:
-                            QMessageBox.warning(self,"할인종류 '"+ kind + "'가 추가 되었습니다.",  "항목확인 후 프로그램 조정하세요. Really Quit?")
-                            if QMessageBox.Yes:
-                                self.connect(self.pushButtonClicked, data)
-                            
-                            else:
-                                pass
-                        except:
-                            pass
-            
+            if temp_length == used_length:
+                try:
+                    reply = QMessageBox.warning(self,"할인종류 '"+ kind + "'가 추가 되었습니다.",  "항목확인 후 프로그램 조정하세요. Really Quit?")
+                    if reply == QMessageBox.Yes:
+                        self.connect(self.pushButtonClicked, data)
+                    
+                    else:
+                        pass
+                except:
+                    pass
+        '''    
 
 
         df_w = df_w[['동','호','복지구분','할인요금']]
@@ -216,8 +248,9 @@ class MyWindow(QMainWindow, form_class):
         # 컬럼의 값에 대가족할인 항목을 또는(|) 대가족할인 항목늬 문자열이 포함되어있는지 판단합니다.
         # 그 결과를 새로운 변수에 할당합니다.
         contains_family = df_w['복지구분'].str.contains('다자녀 할인|대가족 할인|출산가구 할인|의료기기 할인')
-        contains_welfare = df_w['복지구분'].str.contains('장애인 할인|독립유공 할인|국가유공 할인|민주유공 할인|사회복지 할인|기초수급 할인|차상위계층 할인|기초수급 할인 (주거, 교육)')
         contains_addition = df_w['복지구분'].str.contains('추가복지감액')
+        contains_welfare = ~df_w['복지구분'].str.contains('다자녀 할인|대가족 할인|출산가구 할인|의료기기 할인|추가복지감액')
+        # contains_welfare = df_w['복지구분'].str.contains('장애인 할인|독립유공 할인|국가유공 할인|민주유공 할인|사회복지 할인|기초수급 할인|차상위계층 할인|기초수급 할인 (주거, 교육)')
 
         # 대가족할인 조건를 충족하는 데이터를 필터링하여 새로운 변수에 저장합니다.
         subset_df_f = df_w[contains_family].copy()
@@ -308,6 +341,10 @@ class MyWindow(QMainWindow, form_class):
     def pushButtonClicked(self, data):
         myapp = MyApp(data)
         myapp.exec_()
+    
+    def close(self):
+        self.close()
+    
 
 
 class MyApp(QWidget):
