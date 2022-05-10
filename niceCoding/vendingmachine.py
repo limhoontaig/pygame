@@ -1,7 +1,7 @@
 import tkinter as tk
 from tkinter import messagebox
 
-price = {'coffee':3500, 'latte':4000,'smoothie':4500,'tea':3000}
+price = {'coffee':3500, 'latte':4000,'smoothie':4500,'tea':3000, 'red tea':3200}
 order = []
 sum = 0
 coffee_count = 0
@@ -53,6 +53,7 @@ def count(item):
     
     if item == 'coffee':
         coffee_count += 1
+        # frame1.text 
         return
     elif item == 'latte':
         latte_count += 1
@@ -79,28 +80,28 @@ def btn_exit():
 
 window = tk.Tk()
 window.title('음료 주문')
-window.geometry('300x500+500+50')
+window.geometry('400x500+500+50')
 
 frame1 = tk.Frame(window)
 frame1.pack()
 
 
-tk.Button(frame1, text='coffee',command=lambda: add('coffee'),width=10,height=2).grid(row=0, column=0)
-tk.Button(frame1, text='latte',command=lambda: add('latte'),width=10,height=2).grid(row=1, column=0)
-tk.Button(frame1, text='smoothie',command=lambda: add('smoothie'),width=10,height=2).grid(row=2, column=0)
-tk.Button(frame1, text='tea',command=lambda: add('tea'),width=10,height=2).grid(row=3, column=0)
-tk.Button(frame1, text='red tea',command=lambda: add('red tea'),width=10,height=2).grid(row=4, column=0)
-tk.Button(frame1, text='coffee_cancel',command=lambda: cancel('coffee'),width=10,height=2).grid(row=0, column=1)
-tk.Button(frame1, text='latte_cancel',command=lambda: cancel('latte'),width=10,height=2).grid(row=1, column=1)
-tk.Button(frame1, text='smoothie_cancel',command=lambda: cancel('smoothie'),width=10,height=2).grid(row=2, column=1)
-tk.Button(frame1, text='tea_cancel',command=lambda: cancel('tea'),width=10,height=2).grid(row=3, column=1)
-tk.Button(frame1, text='red tea_cancel',command=lambda: cancel('red tea'),width=10,height=2).grid(row=4, column=1)
+tk.Button(frame1, text='coffee',command=lambda: add('coffee'),width=20,height=2).grid(row=0, column=0)
+tk.Button(frame1, text='latte',command=lambda: add('latte'),width=20,height=2).grid(row=1, column=0)
+tk.Button(frame1, text='smoothie',command=lambda: add('smoothie'),width=20,height=2).grid(row=2, column=0)
+tk.Button(frame1, text='tea',command=lambda: add('tea'),width=20,height=2).grid(row=3, column=0)
+tk.Button(frame1, text='red tea',command=lambda: add('red tea'),width=20,height=2).grid(row=4, column=0)
+tk.Button(frame1, text='coffee_cancel',command=lambda: cancel('coffee'),width=20,height=2).grid(row=0, column=1)
+tk.Button(frame1, text='latte_cancel',command=lambda: cancel('latte'),width=20,height=2).grid(row=1, column=1)
+tk.Button(frame1, text='smoothie_cancel',command=lambda: cancel('smoothie'),width=20,height=2).grid(row=2, column=1)
+tk.Button(frame1, text='tea_cancel',command=lambda: cancel('tea'),width=20,height=2).grid(row=3, column=1)
+tk.Button(frame1, text='red tea_cancel',command=lambda: cancel('red tea'),width=20,height=2).grid(row=4, column=1)
 tk.Label(frame1, text=coffee_count,width=10,height=2).grid(row=0, column=2)
 tk.Label(frame1, text=latte_count,width=10,height=2).grid(row=1, column=2)
 tk.Label(frame1, text=smoothie_count,width=10,height=2).grid(row=2, column=2)
 tk.Label(frame1, text=tea_count,width=10,height=2).grid(row=3, column=2)
 tk.Label(frame1, text=red_tea_count,width=10,height=2).grid(row=4, column=2)
-tk.Button(frame1, text='exit',command=btn_exit,width=10,height=2).grid(row=5, column=0)
+tk.Button(frame1, text='exit',command=btn_exit,width=20,height=2).grid(row=5, column=0)
 
 label1 = tk.Label(window, text='금액: 0원',width=100, height=2,fg='blue')
 label1.pack()

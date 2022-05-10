@@ -31,6 +31,12 @@ class MyWindow(QMainWindow, form_class):
         self.LE = LE
         self.setupUi(self)
 
+        self.tableWidget.setRowCount(28)
+        self.tableWidget.setColumnCount(2)
+        self.tableWidget.setAlternatingRowColors(True)
+        self.tableWidget.setHorizontalHeaderLabels(['기존', '금월'])
+        self.tableWidget.setSortingEnabled(True) # default ; False
+
         self.lineEdit.setText(LE[0])
         self.lineEdit_2.setText(LE[1])
         self.lineEdit_3.setText(LE[2])
@@ -44,6 +50,26 @@ class MyWindow(QMainWindow, form_class):
 
         self.pushButton_6.clicked.connect(self.close)
 
+    def set_tbl(self, data):
+
+        rdr_row = len(data)
+        rdr_col = len(data[0])
+
+        r = 0
+        for i in data:
+            r += 1
+            c = 0
+            for j in i:
+                c += 1
+                try:
+                    self.tableWidget.setItem(r-1,c-1,QTableWidgetItem(j) )
+                except:
+                    pass
+        '''
+        self.tableWidget.cellChanged.connect(self.cellChangeFunc)
+        self.tableWidget.cellClicked.connect(self.cellClickedFunc)
+        self.lineEdit_1.setText('Test 입력')'''
+        self.show()
 
     @pyqtSlot()
     def add_file(self):
@@ -130,18 +156,18 @@ class MyWindow(QMainWindow, form_class):
             '절전할인', '자동이체\n/인터넷', '단수', '전기요금', '부가세', '전력\n기금', '전기\n바우처', '정산', '출산가구소급', 
             '당월소계', 'TV수신료', '청구금액']
         used_col_names_len = len(used_col_names)
+        data = [df_col_names]
+        data.append(used_col_names)
 
         if df_column_length == used_col_names_len:
             pass
         else:
             reply = QMessageBox.warning(self, "한전 고지서 항목 수량이 바뀌었습니다.", " 확인하시겠습니까?", QMessageBox.Yes|QMessageBox.No)
             if reply == QMessageBox.Yes:
-                print('항목 확인 모듈 실행')
+                self.set_tbl(data)
             else:
                 self.close()
 
-        data = [df_col_names]
-        data.append(used_col_names)
 
         for i in range (0, df_column_length):
             if df_col_names[i] == used_col_names[i]:

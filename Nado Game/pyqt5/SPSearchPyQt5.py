@@ -40,6 +40,11 @@ class WindowClass(QMainWindow, form_class):
     def __init__(self):
         super().__init__()
         self.setupUi(self)
+        
+        self.pushButton_4.clicked.connect(self.set_tbl)
+        self.pushButton_5.clicked.connect(self.tableWidget.clear)
+
+    def set_tbl(self):
 
         rows = csv.reader(self.read_data())
         headers = next(rows)

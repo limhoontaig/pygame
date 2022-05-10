@@ -1,4 +1,3 @@
-'''
 ## Ex 5-21-1. QTableWidget (Advanced).
 
 import sys
@@ -16,8 +15,8 @@ class MyApp(QWidget):
     def initUI(self):
 
         self.tableWidget = QTableWidget()
-        self.tableWidget.setRowCount(520)
-        self.tableWidget.setColumnCount(40)
+        self.tableWidget.setRowCount(20)
+        self.tableWidget.setColumnCount(8)
 
         self.label = QLabel('')
 
@@ -50,9 +49,9 @@ class MyApp(QWidget):
         self.show()
 
     def set_rand_int(self):
-        rand_int = np.random.randint(1, 100, size=(20, 4))
+        rand_int = np.random.randint(1, 100, size=(20, 8))
         for i in range(20):
-            for j in range(4):
+            for j in range(8):
                 self.tableWidget.setItem(i, j, QTableWidgetItem(str(rand_int[i, j])))
 
     def set_label(self, row, column):
@@ -68,7 +67,7 @@ if __name__ == '__main__':
     sys.exit(app.exec_())
 
 
-    '''
+'''
 
 
 # https://freeprog.tistory.com/333 취미로 하는 프로그래밍!!!
@@ -578,3 +577,4 @@ if __name__ == "__main__":
     sys.exit(app.exec_())
 
 # https://freeprog.tistory.com/333 취미로 하는 프로그래밍!!!
+'''

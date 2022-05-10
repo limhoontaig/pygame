@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>890</width>
+    <width>1244</width>
     <height>600</height>
    </rect>
   </property>
@@ -379,6 +379,16 @@
     </property>
     <property name="text">
      <string>종     료</string>
+    </property>
+   </widget>
+   <widget class="QTableWidget" name="tableWidget">
+    <property name="geometry">
+     <rect>
+      <x>900</x>
+      <y>10</y>
+      <width>256</width>
+      <height>511</height>
+     </rect>
     </property>
    </widget>
   </widget>
