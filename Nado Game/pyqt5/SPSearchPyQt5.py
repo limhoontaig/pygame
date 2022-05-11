@@ -45,12 +45,23 @@ class WindowClass(QMainWindow, form_class):
         self.pushButton_5.clicked.connect(self.tableWidget.clear)
 
     def set_tbl(self):
-
+        '''
         rows = csv.reader(self.read_data())
         headers = next(rows)
         data = []
         for row in rows:
             data.append(row)
+        '''
+        data = ['동', '호', '동호명', '가구수', '계약\n종별', '요금적용\n전력', '사용량', '기본요금', '전력량\n요금', 
+            '기후환경\n요금', '연료비조정\n요금', '필수사용\n공제', '복지추가\n감액', '할인\n구분', '복지할인', '요금개편\n차액', 
+            '절전할인', '자동이체\n/인터넷', '단수', '전기요금', '부가세', '전력\n기금', '전기\n바우처', '정산', '출산가구소급', 
+            '당월소계']#, 'TV수신료', '청구금액']
+
+        data.append(['동', '호', '동호명', '가구수', '계약\n종별', '요금적용\n전력', '사용량', '기본요금', '전력량\n요금', 
+            '기후환경\n요금', '연료비조정\n요금', '필수사용\n공제', '복지추가\n감액', '할인\n구분', '복지할인', '요금개편\n차액', 
+            '절전할인', '자동이체\n/인터넷', '단수', '전기요금', '부가세', '전력\n기금', '전기\n바우처', '정산', '출산가구소급', 
+            '당월소계'])#, 'TV수신료', '청구금액'])
+
         rdr_row = len(data)
         rdr_col = len(data[0])
 
@@ -58,7 +69,8 @@ class WindowClass(QMainWindow, form_class):
 
         self.tableWidget.setRowCount(rdr_row)
         self.tableWidget.setColumnCount(rdr_col)
-        self.tableWidget.setHorizontalHeaderLabels(headers)
+        self.tableWidget.setHorizontalHeaderLabels(['기존', '금월'])
+        #self.tableWidget.setHorizontalHeaderLabels(headers)
         self.tableWidget.setSortingEnabled(True) # default ; False
 
         self.tableView = QtWidgets.QTableView()
@@ -73,7 +85,7 @@ class WindowClass(QMainWindow, form_class):
             c = 0
             for j in i:
                 c += 1
-                self.tableWidget.setItem(r-1,c-1,QTableWidgetItem(j) )
+                self.tableWidget.setItem(r-1,c-1,QTableWidgetItem(j))
 
         self.tableWidget.cellChanged.connect(self.cellChangeFunc)
         self.tableWidget.cellClicked.connect(self.cellClickedFunc)

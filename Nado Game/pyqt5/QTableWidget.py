@@ -10,13 +10,13 @@ class MyApp(QWidget):
     def __init__(self):
         super().__init__()
         self.initUI()
-        self.set_rand_int()
+        #self.set_rand_int()
 
     def initUI(self):
 
         self.tableWidget = QTableWidget()
-        self.tableWidget.setRowCount(20)
-        self.tableWidget.setColumnCount(8)
+        self.tableWidget.setRowCount(30)
+        self.tableWidget.setColumnCount(2)
 
         self.label = QLabel('')
 
@@ -50,9 +50,19 @@ class MyApp(QWidget):
 
     def set_rand_int(self):
         rand_int = np.random.randint(1, 100, size=(20, 8))
-        for i in range(20):
-            for j in range(8):
-                self.tableWidget.setItem(i, j, QTableWidgetItem(str(rand_int[i, j])))
+        data = [['동', '호', '동호명', '가구수', '계약\n종별', '요금적용\n전력', '사용량', '기본요금', '전력량\n요금', '기후환경\n요금', '연료비조정\n요금', 
+            '필수사용\n공제', '복지추가\n감액', '할인\n구분', '복지할인', '요금개편\n차액', '절전할인', '자동이체\n/인터넷', '단수', '전기요금', 
+            '부가세', '전력\n기금', '전기\n바우처', '정산', '출산가구소급', '당월소계', 'TV수신료', '청구금액'], 
+            ['동', '호', '동호명', '가구수', '계약\n종별', '요금적용\n전력', '사용량', '기본요금', '전력량\n요금', 
+            '기후환경\n요금', '연료비조정\n요금', '필수사용\n공제', '복지추가\n감액', '할인\n구분', '복지할인', '요금개편\n차액', '절전할인', '자동이체\n/인터넷', '단수', '전기요금', '부가세', '전력\n기금', '전기\n바우처', '정산', '출산가구소급', '당월소계']]
+        c = 0
+        for i in data:
+            r = 0
+            c = c+1
+            for j in i:
+                r = r+1
+
+                self.tableWidget.setItem(r-1, c-1, QTableWidgetItem(j))
 
     def set_label(self, row, column):
         item = self.tableWidget.item(row, column)

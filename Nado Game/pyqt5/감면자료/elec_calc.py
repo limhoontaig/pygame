@@ -49,14 +49,19 @@ class MyWindow(QMainWindow, form_class):
         self.pushButton_5.clicked.connect(self.start)
         self.pushButton_7.clicked.connect(self.item_verify)
         self.pushButton_8.clicked.connect(self.kind_verify)
+        self.pushButton_9.clicked.connect(self.tableWidget.scrollToTop)
+        self.pushButton_10.clicked.connect(self.tableWidget.scrollToBottom)
 
         self.pushButton_6.clicked.connect(self.close)
 
     def set_tbl(self, data):
 
-        rdr_row = len(data)
-        rdr_col = len(data[0])
+        rdr_col = len(data)
+        rdr_row = len(data[0])
         self.tableWidget.clear()
+        self.tableWidget.setHorizontalHeaderLabels(['기존', '금월'])
+        self.tableWidget.setRowCount(rdr_row+2)
+        self.tableWidget.setColumnCount(rdr_col)
         c = 0
         for i in data:
             r = 0
@@ -66,11 +71,6 @@ class MyWindow(QMainWindow, form_class):
 
                 self.tableWidget.setItem(r-1, c-1, QTableWidgetItem(j))
         app.exec_()
-        '''
-        self.tableWidget.cellChanged.connect(self.cellChangeFunc)
-        self.tableWidget.cellClicked.connect(self.cellClickedFunc)
-        self.lineEdit_1.setText('Test 입력')'''
-        #self.show()
 
     @pyqtSlot()
     def add_file(self):
@@ -167,70 +167,10 @@ class MyWindow(QMainWindow, form_class):
         for s in sub_list:
                 self.textEdit.append(str(s))
         return
-    '''
-        if len(sub_list) == 0:
-            pass
-        else:
-            # self.textEdit.setText(str(sub_list))
-            for s in sub_list:
-                self.textEdit.append(str(s))
-            reply = QMessageBox.warning(self, "한전 고지서 항목 수량이 바뀌었습니다.", str(sub_list) + " 항목을 확인하시겠습니까?", QMessageBox.Yes|QMessageBox.No)
-            if reply == QMessageBox.Yes:
-                reply_1 = QMessageBox.warning(self, '계속 여부', '계속하시겠습니까?', QMessageBox.Yes|QMessageBox.No)
-                if reply_1 == QMessageBox.Yes:
-                    pass
-                else:
-                    self.close()
-            else:
-                self.close()
-    '''
-
+    
     def welfare_calc(self, f1):
         df = pd.read_excel(f1,skiprows=2)#, dtype={'동':int, '호':int}) #,thousands=',')
-        df_col_names = df.columns.tolist()
-        df_column_length = len(df_col_names)
-        used_col_names = ['동', '호', '동호명', '가구수', '계약\n종별', '요금적용\n전력', '사용량', '기본요금', '전력량\n요금', 
-            '기후환경\n요금', '연료비조정\n요금', '필수사용\n공제', '복지추가\n감액', '할인\n구분', '복지할인', '요금개편\n차액', 
-            '절전할인', '자동이체\n/인터넷', '단수', '전기요금', '부가세', '전력\n기금', '전기\n바우처', '정산', '출산가구소급', 
-            '당월소계', 'TV수신료', '청구금액']
-        used_col_names_len = len(used_col_names)
-
-        sub_list = list(set(df_col_names) ^ set(used_col_names))
-        data = [used_col_names]
-        data.append(df_col_names)
-
-        if len(sub_list) == 0:
-            pass
-        else:
-            # self.textEdit.setText(str(sub_list))
-            for s in sub_list:
-                self.textEdit.append(str(s))
-            reply = QMessageBox.warning(self, "한전 고지서 항목 수량이 바뀌었습니다.", str(sub_list) + " 항목을 확인하시겠습니까?", QMessageBox.Yes|QMessageBox.No)
-            if reply == QMessageBox.Yes:
-                self.set_tbl(data)
-                reply_1 = QMessageBox.warning(self, '계속 여부', '계속하시겠습니까?', QMessageBox.Yes|QMessageBox.No)
-                if reply_1 == QMessageBox.Yes:
-                    pass
-                else:
-                    self.close()
-            else:
-                self.close()
-        '''
-
-        for i in range (0, df_column_length):
-            if df_col_names[i] == used_col_names[i]:
-                print('df_column_length =', df_column_length, 'used_col_names_len', used_col_names_len)
-                print(i, df_col_names[i], used_col_names[i], '\n')
-            else:
-                
-                reply = QMessageBox.question(self, "고지서 목차 "+ df_col_names[i] + " 항목이 변경되었습니다.",  "항목을 확인하시겠습니까?",
-                    QMessageBox.Yes | QMessageBox.No)
-                # QMessageBox.warning(self, "고지서 목차가 변경 되었습니다.",  "항목확인 후 프로그램 조정하세요. Really Quit?")
-                if reply == QMessageBox.Yes:
-                    self.pushButtonClicked(data)
-                else:
-                    self.close()
-        '''        
+        
         df.rename(columns = {'필수사용\n공제':'필수사용공제'},inplace=True)
         df.rename(columns = {'복지추가\n감액':'복지추가 감액' },inplace=True)
 
@@ -253,56 +193,28 @@ class MyWindow(QMainWindow, form_class):
 
     def kind_verify(self):
         df_w = pd.read_excel(self.lineEdit_2.text(),skiprows=2, thousands=',')#, dtype={'동':int, '호':int}) #,thousands=',')
+        
+        df_col = df_w.columns.to_list()
+        kind_of_welfare = list(df_w['장애종류'].unique())
+        new = df_col + kind_of_welfare
+
         new_col_names = ['동', '호', '대상자명','복지구분','장애종류','장애등급','할인요금']
-
-        df_w.columns = new_col_names
-
-        '''try:
-        except:
-            reply = QMessageBox.question(self, '"경고 " + f2 + "파일 한전 항목이 변경 되었습니다."', "항목확인 후 프로그램 조정하세요.", 
-            QMessageBox.Yes|QMessageBox.No)
-            if reply == QMessageBox.Yes:
-                self.pushButtonClicked()
-            else: 
-                self.close()
-        '''
         used_kind_of_welfare = ['장애인 할인', '다자녀 할인', '대가족 할인', '의료기기 할인', '기초수급 할인', '출산가구 할인', '복지추가감액',
                                 '기초수급 할인 (주거, 교육)', '차상위계층 할인', '사회복지 할인', '독립유공 할인']
-        kind_of_welfare = df_w['장애종류'].unique()
-        sub_list = list(set(used_kind_of_welfare) ^ set(kind_of_welfare))
-        data = [used_kind_of_welfare]
-        data.append(kind_of_welfare)
+        old = new_col_names + used_kind_of_welfare
+        
+        data = []
+        data.append(old)
+        data.append(new)
+
+        print(data)
+
+        sub_list = list(set(old) ^ set(new))
         self.set_tbl(data)
         self.textEdit.clear()
         for s in sub_list:
                 self.textEdit.append(str(s))
         return
-        
-        '''for i in range (0, len(used_kind_of_welfare)):
-            if used_kind_of_welfare[i] != kind_of_welfare[i]:
-                pass
-        
-        for kind in kind_of_welfare:
-            temp_length = 0
-            used_length = len(used_kind_of_welfare)
-            kind_length = len(kind_of_welfare)
-            for used_kind in used_kind_of_welfare:
-                if kind == used_kind:
-                    pass
-                else:
-                    temp_length += 1
-            if temp_length == used_length:
-                try:
-                    reply = QMessageBox.warning(self,"할인종류 '"+ kind + "'가 추가 되었습니다.",  "항목확인 후 프로그램 조정하세요. Really Quit?")
-                    if reply == QMessageBox.Yes:
-                        self.connect(self.pushButtonClicked, data)
-                    
-                    else:
-                        pass
-                except:
-                    pass
-        '''    
-
 
     def kind_calc(self, f2):
         df_w = pd.read_excel(f2,skiprows=2, thousands=',')#, dtype={'동':int, '호':int}) #,thousands=',')
@@ -310,45 +222,10 @@ class MyWindow(QMainWindow, form_class):
 
         df_w.columns = new_col_names
 
-        '''try:
-        except:
-            reply = QMessageBox.question(self, '"경고 " + f2 + "파일 한전 항목이 변경 되었습니다."', "항목확인 후 프로그램 조정하세요.", 
-            QMessageBox.Yes|QMessageBox.No)
-            if reply == QMessageBox.Yes:
-                self.pushButtonClicked()
-            else: 
-                self.close()
-        '''
         used_kind_of_welfare = ['장애인 할인', '다자녀 할인', '대가족 할인', '의료기기 할인', '기초수급 할인', '출산가구 할인', '복지추가감액',
                                 '기초수급 할인 (주거, 교육)', '차상위계층 할인', '사회복지 할인', '독립유공 할인']
         kind_of_welfare = df_w['장애종류'].unique()
         
-        '''for i in range (0, len(used_kind_of_welfare)):
-            if used_kind_of_welfare[i] != kind_of_welfare[i]:
-                pass
-        
-        for kind in kind_of_welfare:
-            temp_length = 0
-            used_length = len(used_kind_of_welfare)
-            kind_length = len(kind_of_welfare)
-            for used_kind in used_kind_of_welfare:
-                if kind == used_kind:
-                    pass
-                else:
-                    temp_length += 1
-            if temp_length == used_length:
-                try:
-                    reply = QMessageBox.warning(self,"할인종류 '"+ kind + "'가 추가 되었습니다.",  "항목확인 후 프로그램 조정하세요. Really Quit?")
-                    if reply == QMessageBox.Yes:
-                        self.connect(self.pushButtonClicked, data)
-                    
-                    else:
-                        pass
-                except:
-                    pass
-        '''    
-
-
         df_w = df_w[['동','호','복지구분','할인요금']]
 
         # 복지구분 컬럼을 선택합니다.
@@ -445,15 +322,7 @@ class MyWindow(QMainWindow, form_class):
         
         return
 
-    def pushButtonClicked(self, data):
-        myapp = MyApp(data)
-        myapp.exec_()
     
-    #def close(self):
-    #    self.close()
-    
-
-
 class MyApp(QWidget):
 
     def __init__(self):
