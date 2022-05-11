@@ -41,6 +41,7 @@ class MyWindow(QMainWindow, form_class):
         self.lineEdit_2.setText(LE[1])
         self.lineEdit_3.setText(LE[2])
         self.lineEdit_4.setText(LE[3])
+        self.label_5.setText('프로그램 작성 : 임훈택 Rev 0, 2022.05.11 Issued')
 
         self.pushButton.clicked.connect(self.add_file)
         self.pushButton_2.clicked.connect(self.add_file)
@@ -70,7 +71,7 @@ class MyWindow(QMainWindow, form_class):
                 r = r+1
 
                 self.tableWidget.setItem(r-1, c-1, QTableWidgetItem(j))
-        app.exec_()
+        #app.exec_()
 
     @pyqtSlot()
     def add_file(self):
