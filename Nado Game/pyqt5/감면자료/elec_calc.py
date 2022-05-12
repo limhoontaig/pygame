@@ -70,7 +70,7 @@ class MyWindow(QMainWindow, form_class):
                 r = r+1
 
                 self.tableWidget.setItem(r-1, c-1, QTableWidgetItem(j))
-        app.exec_()
+        #app.exec_()
 
     @pyqtSlot()
     def add_file(self):
@@ -198,7 +198,7 @@ class MyWindow(QMainWindow, form_class):
         kind_of_welfare = list(df_w['장애종류'].unique())
         new = df_col + kind_of_welfare
 
-        new_col_names = ['동', '호', '대상자명','복지구분','장애종류','장애등급','할인요금']
+        new_col_names = ['동', '호', '대상자명','할인종류','장애종류','장애등급','할인요금']
         used_kind_of_welfare = ['장애인 할인', '다자녀 할인', '대가족 할인', '의료기기 할인', '기초수급 할인', '출산가구 할인', '복지추가감액',
                                 '기초수급 할인 (주거, 교육)', '차상위계층 할인', '사회복지 할인', '독립유공 할인']
         old = new_col_names + used_kind_of_welfare
@@ -207,7 +207,7 @@ class MyWindow(QMainWindow, form_class):
         data.append(old)
         data.append(new)
 
-        print(data)
+        #print(data)
 
         sub_list = list(set(old) ^ set(new))
         self.set_tbl(data)
@@ -218,7 +218,7 @@ class MyWindow(QMainWindow, form_class):
 
     def kind_calc(self, f2):
         df_w = pd.read_excel(f2,skiprows=2, thousands=',')#, dtype={'동':int, '호':int}) #,thousands=',')
-        new_col_names = ['동', '호', '대상자명','복지구분','장애종류','장애등급','할인요금']
+        new_col_names = ['동', '호', '대상자명','할인종류','장애종류','장애등급','할인요금']
 
         df_w.columns = new_col_names
 
@@ -226,38 +226,38 @@ class MyWindow(QMainWindow, form_class):
                                 '기초수급 할인 (주거, 교육)', '차상위계층 할인', '사회복지 할인', '독립유공 할인']
         kind_of_welfare = df_w['장애종류'].unique()
         
-        df_w = df_w[['동','호','복지구분','할인요금']]
+        df_w = df_w[['동','호','할인종류','할인요금']]
 
-        # 복지구분 컬럼을 선택합니다.
+        # 할인종류 컬럼을 선택합니다.
         # 컬럼의 값에 대가족할인 항목을 또는(|) 대가족할인 항목늬 문자열이 포함되어있는지 판단합니다.
         # 그 결과를 새로운 변수에 할당합니다.
-        contains_family = df_w['복지구분'].str.contains('다자녀 할인|대가족 할인|출산가구 할인|의료기기 할인')
-        contains_addition = df_w['복지구분'].str.contains('추가복지감액')
-        contains_welfare = ~df_w['복지구분'].str.contains('다자녀 할인|대가족 할인|출산가구 할인|의료기기 할인|추가복지감액')
-        # contains_welfare = df_w['복지구분'].str.contains('장애인 할인|독립유공 할인|국가유공 할인|민주유공 할인|사회복지 할인|기초수급 할인|차상위계층 할인|기초수급 할인 (주거, 교육)')
+        contains_family = df_w['할인종류'].str.contains('다자녀 할인|대가족 할인|출산가구 할인|의료기기 할인')
+        contains_addition = df_w['할인종류'].str.contains('추가복지감액')
+        contains_welfare = ~df_w['할인종류'].str.contains('다자녀 할인|대가족 할인|출산가구 할인|의료기기 할인|추가복지감액')
+        # contains_welfare = df_w['할인종류'].str.contains('장애인 할인|독립유공 할인|국가유공 할인|민주유공 할인|사회복지 할인|기초수급 할인|차상위계층 할인|기초수급 할인 (주거, 교육)')
 
         # 대가족할인 조건를 충족하는 데이터를 필터링하여 새로운 변수에 저장합니다.
         subset_df_f = df_w[contains_family].copy()
         subset_df_f.set_index(['동','호'],inplace=True)
-        #subset_df_f['복지코드'] = subset_df_f['복지구분']
-        subset_df_f.loc[subset_df_f.복지구분 == '다자녀 할인', '복지코드'] = '3'
-        subset_df_f.loc[subset_df_f.복지구분 == '대가족 할인', '복지코드'] = '1'
-        subset_df_f.loc[subset_df_f.복지구분 == '출산가구 할인', '복지코드'] = '2'
-        subset_df_f.loc[subset_df_f.복지구분 == '의료기기 할인', '복지코드'] = '4'
+        #subset_df_f['복지코드'] = subset_df_f['할인종류']
+        subset_df_f.loc[subset_df_f.할인종류 == '다자녀 할인', '복지코드'] = '3'
+        subset_df_f.loc[subset_df_f.할인종류 == '대가족 할인', '복지코드'] = '1'
+        subset_df_f.loc[subset_df_f.할인종류 == '출산가구 할인', '복지코드'] = '2'
+        subset_df_f.loc[subset_df_f.할인종류 == '의료기기 할인', '복지코드'] = '4'
         subset_df_f
 
         # 복지할인 조건를 충족(대가족할인이 아닌것 ~)하는 데이터를 필터링하여 새로운 변수에 저장합니다.
         subset_df_w = df_w[contains_welfare].copy()
         subset_df_w.set_index(['동','호'],inplace=True)
-        subset_df_w.loc[subset_df_w.복지구분 == '장애인 할인', '복지코드'] = 'D'
-        subset_df_w.loc[subset_df_w.복지구분 == '독립유공 할인', '복지코드'] = 'A'
-        subset_df_w.loc[subset_df_w.복지구분 == '국가유공 할인', '복지코드'] = 'B'
-        subset_df_w.loc[subset_df_w.복지구분 == '민주유공 할인', '복지코드'] = 'C'
-        subset_df_w.loc[subset_df_w.복지구분 == '사회복지 할인', '복지코드'] = 'E'
-        # subset_df_w.loc[subset_df_w.복지구분 == '복지추가감액', '복지코드'] = 'E'
-        subset_df_w.loc[subset_df_w.복지구분 == '기초수급 할인', '복지코드'] = 'H'
-        subset_df_w.loc[subset_df_w.복지구분 == '차상위계층 할인', '복지코드'] = 'I'
-        subset_df_w.loc[subset_df_w.복지구분 == '기초수급 할인 (주거, 교육)', '복지코드'] = 'H'
+        subset_df_w.loc[subset_df_w.할인종류 == '장애인 할인', '복지코드'] = 'D'
+        subset_df_w.loc[subset_df_w.할인종류 == '독립유공 할인', '복지코드'] = 'A'
+        subset_df_w.loc[subset_df_w.할인종류 == '국가유공 할인', '복지코드'] = 'B'
+        subset_df_w.loc[subset_df_w.할인종류 == '민주유공 할인', '복지코드'] = 'C'
+        subset_df_w.loc[subset_df_w.할인종류 == '사회복지 할인', '복지코드'] = 'E'
+        # subset_df_w.loc[subset_df_w.할인종류 == '복지추가감액', '복지코드'] = 'E'
+        subset_df_w.loc[subset_df_w.할인종류 == '기초수급 할인', '복지코드'] = 'H'
+        subset_df_w.loc[subset_df_w.할인종류 == '차상위계층 할인', '복지코드'] = 'I'
+        subset_df_w.loc[subset_df_w.할인종류 == '기초수급 할인 (주거, 교육)', '복지코드'] = 'H'
         subset_df_w
 
         return subset_df_f, subset_df_w  
@@ -280,12 +280,12 @@ class MyWindow(QMainWindow, form_class):
         discount = pd.merge(discount, subset_df_f, how = 'outer', on = ['동','호'])
         discount['대가족할인액'] = discount['할인요금']
         discount['대가족할인구분'] = discount['복지코드']
-        discount = discount.drop(['복지코드','할인요금','복지구분'],axis=1)
+        discount = discount.drop(['복지코드','할인요금','할인종류'],axis=1)
         discount = pd.merge(discount, subset_df_w, how = 'outer', on = ['동','호'])
         #discount1 = discount.reset_index()
         discount['복지할인액'] = discount['할인요금']
         discount['복지할인구분'] = discount['복지코드']
-        discount = discount.drop(['복지코드','할인요금','복지구분'],axis=1)
+        discount = discount.drop(['복지코드','할인요금','할인종류'],axis=1)
         total_사용량보장공제 = discount['사용량보장공제'].sum()
         total_대가족할인액 = discount['대가족할인액'].sum()
         total_복지할인액 = discount['복지할인액'].sum()
@@ -354,7 +354,7 @@ class MyApp(QWidget):
 
         self.setWindowTitle('QTableWidget')
         self.setGeometry(300, 100, 600, 400)
-        self.show()
+        #self.show()
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
