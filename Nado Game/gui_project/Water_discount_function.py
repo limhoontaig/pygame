@@ -144,11 +144,15 @@ def merits_calc(f2):
     df_ = pd.read_excel(f2, sheet_name=0, skiprows=rows+1)
     df_3 = df_[['No','동호수']].copy()
     # new data frame with split value columns
-    new = df_3['동호수'].str.split("-", n = 1, expand = True)
+    temp = df_3['동호수'].str.split(" 동", n = 1, expand = True)
+    df_3["동"] = temp[0]
+    temp_1 = temp[1].str.slice(stop=-1)
+    df_3['호'] = temp_1
+    print(df_3)
     # making separate first name column from new data frame
-    df_3["동"]= new[0]
+    #   df_3["동"]= new[0]
     # making separate last name column from new data frame
-    df_3["호"]= new[1]
+    #    df_3["호"]= new[1]
     # Dropping old Name columns
     df_3.drop(columns =["No","동호수"], inplace = True)
     # making 복지코드 on '복지코드' column from XPERP Code
