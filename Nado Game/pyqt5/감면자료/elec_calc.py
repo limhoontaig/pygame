@@ -240,24 +240,24 @@ class MyWindow(QMainWindow, form_class):
         subset_df_f = df_w[contains_family].copy()
         subset_df_f.set_index(['동','호'],inplace=True)
         #subset_df_f['복지코드'] = subset_df_f['할인종류']
-        subset_df_f.loc[subset_df_f.할인종류 == '다자녀 할인', '복지코드'] = '3'
         subset_df_f.loc[subset_df_f.할인종류 == '대가족 할인', '복지코드'] = '1'
         subset_df_f.loc[subset_df_f.할인종류 == '출산가구 할인', '복지코드'] = '2'
+        subset_df_f.loc[subset_df_f.할인종류 == '다자녀 할인', '복지코드'] = '3'
         subset_df_f.loc[subset_df_f.할인종류 == '의료기기 할인', '복지코드'] = '4'
         subset_df_f
 
         # 복지할인 조건를 충족(대가족할인이 아닌것 ~)하는 데이터를 필터링하여 새로운 변수에 저장합니다.
         subset_df_w = df_w[contains_welfare].copy()
         subset_df_w.set_index(['동','호'],inplace=True)
-        subset_df_w.loc[subset_df_w.할인종류 == '장애인 할인', '복지코드'] = 'D'
         subset_df_w.loc[subset_df_w.할인종류 == '독립유공 할인', '복지코드'] = 'A'
         subset_df_w.loc[subset_df_w.할인종류 == '국가유공 할인', '복지코드'] = 'B'
         subset_df_w.loc[subset_df_w.할인종류 == '민주유공 할인', '복지코드'] = 'C'
+        subset_df_w.loc[subset_df_w.할인종류 == '장애인 할인', '복지코드'] = 'D'
         subset_df_w.loc[subset_df_w.할인종류 == '사회복지 할인', '복지코드'] = 'E'
-        # subset_df_w.loc[subset_df_w.할인종류 == '복지추가감액', '복지코드'] = 'E'
         subset_df_w.loc[subset_df_w.할인종류 == '기초수급 할인', '복지코드'] = 'H'
-        subset_df_w.loc[subset_df_w.할인종류 == '차상위계층 할인', '복지코드'] = 'I'
         subset_df_w.loc[subset_df_w.할인종류 == '기초수급 할인 (주거, 교육)', '복지코드'] = 'H'
+        subset_df_w.loc[subset_df_w.할인종류 == '차상위계층 할인', '복지코드'] = 'I'
+        # subset_df_w.loc[subset_df_w.할인종류 == '복지추가감액', '복지코드'] = 'E'
         subset_df_w
 
         return subset_df_f, subset_df_w  
