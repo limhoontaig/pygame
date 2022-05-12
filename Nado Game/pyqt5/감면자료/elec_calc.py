@@ -57,10 +57,15 @@ class MyWindow(QMainWindow, form_class):
     def set_tbl(self, data):
 
         rdr_col = len(data)
-        rdr_row = len(data[0])
+        temp_rdr_row = []
+        for d in data:
+            temp = len(d)
+            temp_rdr_row.append(temp) 
+        rdr_row = max(temp_rdr_row)
+        print('temp',temp_rdr_row, 'max',rdr_row)
         self.tableWidget.clear()
         self.tableWidget.setHorizontalHeaderLabels(['기존', '금월'])
-        self.tableWidget.setRowCount(rdr_row+2)
+        self.tableWidget.setRowCount(rdr_row)
         self.tableWidget.setColumnCount(rdr_col)
         c = 0
         for i in data:
@@ -149,15 +154,16 @@ class MyWindow(QMainWindow, form_class):
         return
 
     def item_verify(self):
-        #f1 = self.lineEdit.text()
-        df = pd.read_excel(self.lineEdit.text(),skiprows=2)#, dtype={'동':int, '호':int}) #,thousands=',')
+        f1 = self.lineEdit.text()
+        if '.xls' not in f1 or f1 == 0:
+            QMessageBox.about(self, "경고", "한전 복지감면 파일을 추가하세요")
+            return
+        df = pd.read_excel(f1,skiprows=2)#, dtype={'동':int, '호':int}) #,thousands=',')
         df_col_names = df.columns.tolist()
-        df_column_length = len(df_col_names)
         used_col_names = ['동', '호', '동호명', '가구수', '계약\n종별', '요금적용\n전력', '사용량', '기본요금', '전력량\n요금', 
             '기후환경\n요금', '연료비조정\n요금', '필수사용\n공제', '복지추가\n감액', '할인\n구분', '복지할인', '요금개편\n차액', 
             '절전할인', '자동이체\n/인터넷', '단수', '전기요금', '부가세', '전력\n기금', '전기\n바우처', '정산', '출산가구소급', 
-            '당월소계', 'TV수신료', '청구금액']
-        used_col_names_len = len(used_col_names)
+            ]#'당월소계']#, 'TV수신료', '청구금액']
 
         sub_list = list(set(df_col_names) ^ set(used_col_names))
         data = [used_col_names]
@@ -165,7 +171,7 @@ class MyWindow(QMainWindow, form_class):
         self.set_tbl(data)
         self.textEdit.clear()
         for s in sub_list:
-                self.textEdit.append(str(s))
+            self.textEdit.append(str(s))
         return
     
     def welfare_calc(self, f1):
@@ -189,13 +195,24 @@ class MyWindow(QMainWindow, form_class):
         # SettingWithCopyWarning Error 방지를 위하여 copy() method적용
         df2 = df1[df2col].copy()
         df2[df2col_f] = df2[df2col_f].astype('int')
+        print(df2)
+        total = df2['필수사용공제'].sum()
+        print(total)
         return df2
 
     def kind_verify(self):
-        df_w = pd.read_excel(self.lineEdit_2.text(),skiprows=2, thousands=',')#, dtype={'동':int, '호':int}) #,thousands=',')
+        f2 = self.lineEdit_2.text()
+        if '.xls' not in f2 or f2 == 0:
+            QMessageBox.about(self, "경고", "한전 감면 종류 파일을 추가하세요")
+            return
+        df_w = pd.read_excel(f2,skiprows=2, thousands=',')#, dtype={'동':int, '호':int}) #,thousands=',')
         
         df_col = df_w.columns.to_list()
-        kind_of_welfare = list(df_w['장애종류'].unique())
+        try:
+            kind_of_welfare = list(df_w['장애종류'].unique())
+        except:
+            QMessageBox.about(self, "경고", "'장애종류' 키값이 없습니다. 파일을 확인하세요")
+            return
         new = df_col + kind_of_welfare
 
         new_col_names = ['동', '호', '대상자명','할인종류','장애종류','장애등급','할인요금']
@@ -233,7 +250,7 @@ class MyWindow(QMainWindow, form_class):
         # 그 결과를 새로운 변수에 할당합니다.
         contains_family = df_w['할인종류'].str.contains('다자녀 할인|대가족 할인|출산가구 할인|의료기기 할인')
         contains_addition = df_w['할인종류'].str.contains('추가복지감액')
-        contains_welfare = ~df_w['할인종류'].str.contains('다자녀 할인|대가족 할인|출산가구 할인|의료기기 할인|추가복지감액')
+        contains_welfare = ~df_w['할인종류'].str.contains('다자녀 할인|대가족 할인|출산가구 할인|의료기기 할인|복지추가감액')
         # contains_welfare = df_w['할인종류'].str.contains('장애인 할인|독립유공 할인|국가유공 할인|민주유공 할인|사회복지 할인|기초수급 할인|차상위계층 할인|기초수급 할인 (주거, 교육)')
 
         # 대가족할인 조건를 충족하는 데이터를 필터링하여 새로운 변수에 저장합니다.
@@ -270,7 +287,7 @@ class MyWindow(QMainWindow, form_class):
         df_x.set_index(['동','호'],inplace=True)
         # discount df 생성 (Template df(df_x)에 필수사용공제(df2) merge
         discount = pd.merge(df_x, df2, how = 'outer', on = ['동','호'])
-        # discount = pd.merge(discount, subset_df_a, how = 'outer', on = ['동','호'])   
+        # discount = pd.merge(discount, subset_df_a, how = 'outer', on = ['동','호'])
 
         # 사용량 보장공제를 한전금액(필수사용공제) Data로 Update
         discount['사용량보장공제'] = discount['필수사용공제']
@@ -322,39 +339,6 @@ class MyWindow(QMainWindow, form_class):
         
         return
 
-    
-class MyApp(QWidget):
-
-    def __init__(self):
-        super().__init__()
-        self.initUI()
-
-    def initUI(self, data):
-
-        self.tableWidget = QTableWidget()
-        rows = len(data[0]) + 5
-        cols = len(data)
-        self.tableWidget.setRowCount(rows)
-        self.tableWidget.setColumnCount(cols)
-
-        self.tableWidget.setEditTriggers(QAbstractItemView.NoEditTriggers)
-        # self.tableWidget.setEditTriggers(QAbstractItemView.DoubleClicked)
-        # self.tableWidget.setEditTriggers(QAbstractItemView.AllEditTriggers)
-
-        self.tableWidget.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
-        # self.tableWidget.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeToContents)
-
-        for i in range(cols):
-            for j in range(rows):
-                self.tableWidget.setItem(i, j, QTableWidgetItem(data[i,j]))
-
-        layout = QVBoxLayout()
-        layout.addWidget(self.tableWidget)
-        self.setLayout(layout)
-
-        self.setWindowTitle('QTableWidget')
-        self.setGeometry(300, 100, 600, 400)
-        #self.show()
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
