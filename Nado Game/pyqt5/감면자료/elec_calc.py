@@ -62,7 +62,6 @@ class MyWindow(QMainWindow, form_class):
             temp = len(d)
             temp_rdr_row.append(temp) 
         rdr_row = max(temp_rdr_row)
-        print('temp',temp_rdr_row, 'max',rdr_row)
         self.tableWidget.clear()
         self.tableWidget.setHorizontalHeaderLabels(['기존', '금월'])
         self.tableWidget.setRowCount(rdr_row)
@@ -163,7 +162,7 @@ class MyWindow(QMainWindow, form_class):
         used_col_names = ['동', '호', '동호명', '가구수', '계약\n종별', '요금적용\n전력', '사용량', '기본요금', '전력량\n요금', 
             '기후환경\n요금', '연료비조정\n요금', '필수사용\n공제', '복지추가\n감액', '할인\n구분', '복지할인', '요금개편\n차액', 
             '절전할인', '자동이체\n/인터넷', '단수', '전기요금', '부가세', '전력\n기금', '전기\n바우처', '정산', '출산가구소급', 
-            ]#'당월소계']#, 'TV수신료', '청구금액']
+            '당월소계', 'TV수신료', '청구금액']
 
         sub_list = list(set(df_col_names) ^ set(used_col_names))
         data = [used_col_names]
@@ -181,7 +180,8 @@ class MyWindow(QMainWindow, form_class):
         df.rename(columns = {'복지추가\n감액':'복지추가 감액' },inplace=True)
 
         df_col_names = df.columns.tolist()
-       
+        필수사용공제 = df['필수사용공제'].sum()
+        복지추가감액 = df['복지추가 감액'].sum()
         sum_column = df['필수사용공제'] + df['복지추가 감액']
         df['sum'] = sum_column
         df.rename(columns = {'필수사용공제':'O_필수사용공제'},inplace=True)
@@ -195,10 +195,7 @@ class MyWindow(QMainWindow, form_class):
         # SettingWithCopyWarning Error 방지를 위하여 copy() method적용
         df2 = df1[df2col].copy()
         df2[df2col_f] = df2[df2col_f].astype('int')
-        print(df2)
-        total = df2['필수사용공제'].sum()
-        print(total)
-        return df2
+        return df2, 필수사용공제, 복지추가감액
 
     def kind_verify(self):
         f2 = self.lineEdit_2.text()
@@ -286,7 +283,7 @@ class MyWindow(QMainWindow, form_class):
         # 동호를 indexing하여 dataFrame merge 준비
         df_x.set_index(['동','호'],inplace=True)
         # discount df 생성 (Template df(df_x)에 필수사용공제(df2) merge
-        discount = pd.merge(df_x, df2, how = 'outer', on = ['동','호'])
+        discount = pd.merge(df_x, df2[0], how = 'outer', on = ['동','호'])
         # discount = pd.merge(discount, subset_df_a, how = 'outer', on = ['동','호'])
 
         # 사용량 보장공제를 한전금액(필수사용공제) Data로 Update
@@ -306,10 +303,16 @@ class MyWindow(QMainWindow, form_class):
         total_사용량보장공제 = discount['사용량보장공제'].sum()
         total_대가족할인액 = discount['대가족할인액'].sum()
         total_복지할인액 = discount['복지할인액'].sum()
+        sub_total = total_대가족할인액 + total_복지할인액
+        grand_total = sub_total + total_사용량보장공제
         # display the result of computation
         self.lineEdit_5.setText(str(f'{total_사용량보장공제:>20,}'))
         self.lineEdit_6.setText(str(f'{total_대가족할인액:>20,}'))
         self.lineEdit_7.setText(str(f'{total_복지할인액:>20,}'))
+        self.lineEdit_8.setText(str(f'{df2[1]:>20,}'))
+        self.lineEdit_9.setText(str(f'{df2[2]:>20,}'))
+        self.lineEdit_10.setText(str(f'{sub_total:>20,}'))
+        self.lineEdit_11.setText(str(f'{grand_total:>20,}'))
 
         return discount, total_사용량보장공제, total_대가족할인액, total_복지할인액
 
