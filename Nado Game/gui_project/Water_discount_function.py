@@ -75,8 +75,9 @@ def start():
 
     df_temp = merits_calc(f2)
     df3 = df_temp[0]
+    df4 = df_temp[1]
 
-    discount = template_make(f3,df,df_f,df3)
+    discount = template_make(f3,df,df_f,df3,df4)
     
     pd_save(discount,f4)
     return
@@ -162,7 +163,7 @@ def merits_calc(f2):
     df_3.drop(columns =["No","동호수"], inplace = True)'''
     # making 복지코드 on '복지코드' column from XPERP Code
     df_3 = parse_file[0]
-    df_3["복지코드"]= '2' #
+    df_3["복지코드"]= 'T' #
     print(df_3) 
     df_4 = parse_file[1]
     df_4["복지코드"]= '2'
@@ -199,17 +200,21 @@ def seperate_dongho(f):
     return sheets
 
 
-def template_make(f3,df,df_f,df_3):
+def template_make(f3,df,df_f,df_3,df_4):
     dis = pd.merge(df, df_f, how = 'outer', on = ['동','호'])
     dis1 = pd.merge(dis, df_3, how = 'outer', on = ['동','호'])
-
+    dis2 = pd.merge(dis1, df_4, how = 'outer', on = ['동','호'])
+    print(dis2)
     #discount_1.fillna(0)
     con1 = (dis1.복지코드_x=='3')
     con2 = (dis1.복지코드_y=='I')
-    con3 = (dis1.복지코드=='2')
+    con3 = (dis1.복지코드=='T') # 중증장애인
+    con4 = (dis1.복지코드=='2') # 유공자
     dis1.loc[con1, 'Code'] = '3'
     dis1.loc[con2, 'Code'] = 'I'
-    dis1.loc[con3, 'Code'] = '2'
+    dis1.loc[con3, 'Code'] = 'T'
+    dis1.loc[con4, 'Code'] = '2'
+
     dis1.loc[(con1 & con2)|(con1&con3)|(con2&con3)|(con1&con2&con3), 'Code'] = 'V'
     dis2 = dis1[['동','호','Code']]
 
