@@ -71,12 +71,19 @@ def start():
 
     df2 = welfare_calc(f1)
     df = df2[0]
+    df.rename(columns = {'복지코드' : '복지'}, inplace = True)
     df_f = df2[1]
+    df_f.rename(columns = {'복지코드' : '가족'}, inplace = True)
 
     df_temp = merits_calc(f2)
     df3 = df_temp[0]
+    df3.rename(columns = {'복지코드' : '중증'}, inplace = True)
     df4 = df_temp[1]
-
+    df4.rename(columns = {'복지코드' : '유공'}, inplace = True)
+    print('df', df)
+    print('df_f', df_f)
+    print('df3', df3)
+    print('df4', df4)
     discount = template_make(f3,df,df_f,df3,df4)
     
     pd_save(discount,f4)
@@ -202,25 +209,27 @@ def seperate_dongho(f):
 
 def template_make(f3,df,df_f,df_3,df_4):
     dis = pd.merge(df, df_f, how = 'outer', on = ['동','호'])
+    print('dis', dis)
     dis1 = pd.merge(dis, df_3, how = 'outer', on = ['동','호'])
+    print('dis1', dis1)
     dis2 = pd.merge(dis1, df_4, how = 'outer', on = ['동','호'])
-    print(dis2)
+    print('dis2', dis2)
     #discount_1.fillna(0)
-    con1 = (dis1.복지코드_x=='3')
-    con2 = (dis1.복지코드_y=='I')
-    con3 = (dis1.복지코드=='T') # 중증장애인
-    con4 = (dis1.복지코드=='2') # 유공자
-    dis1.loc[con1, 'Code'] = '3'
-    dis1.loc[con2, 'Code'] = 'I'
-    dis1.loc[con3, 'Code'] = 'T'
-    dis1.loc[con4, 'Code'] = '2'
+    con1 = (dis2.복지=='3')
+    con2 = (dis2.가족=='I')
+    con3 = (dis2.중증=='T') # 중증장애인
+    con4 = (dis2.유공=='2') # 유공자
+    dis2.loc[con1, 'Code'] = '3'
+    dis2.loc[con2, 'Code'] = 'I'
+    dis2.loc[con3, 'Code'] = 'T'
+    dis2.loc[con4, 'Code'] = '2'
 
-    dis1.loc[(con1 & con2)|(con1&con3)|(con2&con3)|(con1&con2&con3), 'Code'] = 'V'
-    dis2 = dis1[['동','호','Code']]
+    dis2.loc[(con1&con2)|(con1&con3)|(con2&con3)|(con1&con2&con3), 'Code'] = 'V'
+    dis3 = dis2[['동','호','Code']]
 
     # dis2['동'] = pd.to_numeric(dis2['동'])
     # dis2['호'] = pd.to_numeric(dis2['호'])
-    dis2 = dis2.astype({'동':int, '호':int})
+    dis3 = dis3.astype({'동':int, '호':int})
 
     # 복지종류별 입력하기
     # Template dataframe 작성
@@ -228,7 +237,7 @@ def template_make(f3,df,df_f,df_3,df_4):
     df_x = pd.read_excel(f3,skiprows=0)
 
     # discount df 생성 (Template df(df_x)에 감면코드(discount) merge
-    discount = pd.merge(df_x, dis2, how = 'outer', on = ['동','호'])
+    discount = pd.merge(df_x, dis3, how = 'outer', on = ['동','호'])
     # 감면구분 코드를 Code Data로 Update
     discount['감면구분'] = discount['Code']
     # Code 임시데이터 columns를 drop
@@ -299,7 +308,7 @@ txt_template_path = Entry(template_frame)
 txt_template_path.insert(0,'D:/과장/1 1 부과자료/'+yyyy+'/Templates/Water_Template_File_for_XPERP_upload.xls')
 txt_template_path.pack(side="left", fill="x", expand=True, padx=5, pady=5, ipady=4) # 높이 변경
 
-btn_template_path = Button(template_frame, text="Template", width=10, command=lambda:add_file('template'))
+btn_template_path = Button(template_frame, text="Template", width=10, command=lambda:add_file(txt_template_path, 'template'))
 btn_template_path.pack(side="right", padx=5, pady=5)
 
 # 저장 경로 프레임
