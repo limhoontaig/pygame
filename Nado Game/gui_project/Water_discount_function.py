@@ -57,7 +57,7 @@ def start():
         return
 
     if len(txt_merits_path.get()) == 0:
-        msgbox.showwarning("경고", "수도 유공자 감면 파일을 추가하세요")
+        msgbox.showwarning("경고", "수도 중증장애인/유공자 감면 파일을 추가하세요")
         return
 
     if len(txt_template_path.get()) == 0:
@@ -73,7 +73,8 @@ def start():
     df = df2[0]
     df_f = df2[1]
 
-    df3 = merits_calc(f2)
+    df_temp = merits_calc(f2)
+    df3 = df_temp[0]
 
     discount = template_make(f3,df,df_f,df3)
     
@@ -132,8 +133,12 @@ def welfare_calc(f1):
     return df, df_f
 
 def merits_calc(f2):
-    # # 수도 유공자할인 등록 
-    df__ = pd.read_excel(f2)
+    # # 수도 유공자할인 등록
+    f = pd.ExcelFile(f2)
+    parse_file = seperate_dongho(f)
+
+    '''sheet_name = f.sheet_names 
+    df__ = pd.read_excel(f2, sheet_name=sheet_name[0])
     cols = df__.columns
     if cols[0] == 'No':
         rows = -1
@@ -154,16 +159,45 @@ def merits_calc(f2):
     # making separate last name column from new data frame
     #    df_3["호"]= new[1]
     # Dropping old Name columns
-    df_3.drop(columns =["No","동호수"], inplace = True)
+    df_3.drop(columns =["No","동호수"], inplace = True)'''
     # making 복지코드 on '복지코드' column from XPERP Code
-    df_3["복지코드"]= '2'
+    df_3 = parse_file[0]
+    df_3["복지코드"]= '2' #
+    print(df_3) 
+    df_4 = parse_file[1]
+    df_4["복지코드"]= '2'
+    print(df_4) 
+
 
     # display the data of 유공자
     total_유공자 = len(df_3)
     txt_total_유공자.delete(0,END)
     txt_total_유공자.insert(0, f'{total_유공자:>7,}')
 
-    return df_3
+    return df_3, df_4
+
+def seperate_dongho(f):
+    sheet_name = f.sheet_names
+    sheets = []
+    for sheet in sheet_name:
+        df__ = pd.read_excel(f,sheet_name = sheet)
+        cols = df__.columns
+        if cols[0] == 'No':
+            rows = -1
+        else:
+            s = df__.index[(df__["Unnamed: 0"] == "No")].tolist()
+            rows = s[0]
+        sheet = pd.ExcelFile.parse(f, sheet_name=sheet,skiprows=rows+1)
+        temp = sheet['동호수'].str.split('동 ', expand = True)
+        sheet['동'] = temp[0]
+        temp_1 = temp[1].str.slice(stop = -1)
+        sheet['호'] = temp_1
+        df_1 = sheet[['동', '호']]
+        
+        sheets.append(df_1)
+
+    return sheets
+
 
 def template_make(f3,df,df_f,df_3):
     dis = pd.merge(df, df_f, how = 'outer', on = ['동','호'])
@@ -242,7 +276,7 @@ btn_welfare_path = Button(welfare_frame, text="수도할인", width=10, command=
 btn_welfare_path.pack(side="right", padx=5, pady=5)
 
 # 유공할인 선택 프레임
-kind_merits_frame = LabelFrame(root,text='수도 유공자 할인 감면자료 파일선택')
+kind_merits_frame = LabelFrame(root,text='수도 중증장애인/유공자 할인 감면자료 파일선택')
 kind_merits_frame.pack(fill="x", padx=5, pady=5, ipady=5)
 
 txt_merits_path = Entry(kind_merits_frame)
