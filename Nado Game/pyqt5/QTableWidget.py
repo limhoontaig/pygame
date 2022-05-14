@@ -1,4 +1,4 @@
-## Ex 5-21-1. QTableWidget (Advanced).
+'''## Ex 5-21-1. QTableWidget (Advanced).
 
 import sys
 import numpy as np
@@ -587,4 +587,3 @@ if __name__ == "__main__":
     sys.exit(app.exec_())
 
 # https://freeprog.tistory.com/333 취미로 하는 프로그래밍!!!
-'''

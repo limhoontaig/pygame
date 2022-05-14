@@ -1,7 +1,10 @@
+import collections
 import sys
 import os
 import pandas as pd
 from PyQt5.QtWidgets import *
+from PyQt5.QtWidgets import QAbstractItemView
+
 from PyQt5.QtCore import pyqtSlot, QObject, pyqtSignal
 from PyQt5 import uic
 from datetime import datetime
@@ -33,8 +36,14 @@ class MyWindow(QMainWindow, form_class):
         self.tableWidget.setRowCount(28)
         self.tableWidget.setColumnCount(3)
         self.tableWidget.setAlternatingRowColors(True)
-        self.tableWidget.setHorizontalHeaderLabels(['No', '고객번호', '동호수'])
-        self.tableWidget.setSortingEnabled(True) # default ; False
+        self.tableWidget.setHorizontalHeaderLabels(['No', '동호수'])
+        #self.tableWidget.resizeColumnToContents()
+        #self.tableWidget.resizeRowToContents()
+        self.tableWidget.setEditTriggers(QAbstractItemView.AllEditTriggers) # QAbstractItemView.NoEditTriggers
+        self.tableWidget.cellChanged.connect(self.cellchanged_event)
+        
+
+        self.tableWidget.setSortingEnabled(False) # default ; False
 
         self.lineEdit.setText(LE[0])
         self.lineEdit_2.setText(LE[1])
@@ -53,8 +62,32 @@ class MyWindow(QMainWindow, form_class):
         self.pushButton_10.clicked.connect(self.tableWidget.scrollToBottom)
         self.pushButton_11.clicked.connect(self.data_verify)
         self.pushButton_12.clicked.connect(self.data_verify)
+        self.pushButton_16.setDisabled(True)
+        self.pushButton_13.setDisabled(True)
+        self.pushButton_15.setDisabled(True)
+        self.pushButton_14.setDisabled(True)
 
         self.pushButton_6.clicked.connect(self.close)
+
+    def data_query(self):
+        '''
+        data query from tablewidget
+        '''
+        rowcount = self.tableWidget.rowCount()
+        colcount = self.tableWidget.columnCount()
+        data_list = []
+        for i in range(0, rowcount):
+            data =[]
+            for j in range(0, colcount):
+                d = self.tableWidget.item(i,j)
+                data.append(d)
+            data_list.append(data)
+        
+        return data_list
+
+    def cellchanged_event(self, row, col):
+        data = self.tableWidget.item(row,col)
+        print(data.text())
 
     def data_verify(self):
         sname = self.sender().text()
@@ -63,22 +96,39 @@ class MyWindow(QMainWindow, form_class):
             if '.xls' not in file or file == 0:
                 QMessageBox.about(self, "경고", "수도 다자녀/복지감면 파일을 추가하세요")
                 return
+            self.pushButton_16.setDisabled(False)
+            self.pushButton_13.setDisabled(True)
+            self.pushButton_15.setDisabled(True)
+            self.pushButton_14.setDisabled(True)
+
         elif sname == '다자녀':
             file = self.lineEdit.text()
             if '.xls' not in file or file == 0:
                 QMessageBox.about(self, "경고", "수도 다자녀/복지감면 파일을 추가하세요")
                 return
+            self.pushButton_16.setDisabled(True)
+            self.pushButton_13.setDisabled(False)
+            self.pushButton_15.setDisabled(True)
+            self.pushButton_14.setDisabled(True)
         elif sname == '중증장애':
             file = self.lineEdit_2.text()
             if '.xls' not in file or file == 0:
                 QMessageBox.about(self, "경고", "수도 중증장애/유공자 감면 파일을 추가하세요")
                 return
+            self.pushButton_16.setDisabled(True)
+            self.pushButton_13.setDisabled(True)
+            self.pushButton_15.setDisabled(False)
+            self.pushButton_14.setDisabled(True)
         else:
             sname = '유공자'
             file = self.lineEdit_2.text()
             if '.xls' not in file or file == 0:
                 QMessageBox.about(self, "경고", "수도 중증장애/유공자 감면 파일을 추가하세요")
                 return
+            self.pushButton_16.setDisabled(True)
+            self.pushButton_13.setDisabled(True)
+            self.pushButton_15.setDisabled(True)
+            self.pushButton_14.setDisabled(False)
         
         f = pd.ExcelFile(file)
         code = sname
