@@ -53,7 +53,7 @@ def start():
 
     # 파일 목록 확인
     if len(txt_welfare_path.get()) == 0:
-        msgbox.showwarning("경고", "수도 감면 파일을 추가하세요")
+        msgbox.showwarning("경고", "수도 기초수급/다자녀 감면 파일을 추가하세요")
         return
 
     if len(txt_merits_path.get()) == 0:
@@ -71,7 +71,7 @@ def start():
 
     df2 = welfare_calc(f1)
     df = df2[0]
-    df.rename(columns = {'복지코드' : '복지'}, inplace = True)
+    df.rename(columns = {'복지코드' : '기초'}, inplace = True)
     df_f = df2[1]
     df_f.rename(columns = {'복지코드' : '가족'}, inplace = True)
 
@@ -215,8 +215,9 @@ def template_make(f3,df,df_f,df_3,df_4):
     dis2 = pd.merge(dis1, df_4, how = 'outer', on = ['동','호'])
     print('dis2', dis2)
     #discount_1.fillna(0)
-    con1 = (dis2.복지=='3')
-    con2 = (dis2.가족=='I')
+    dis_code = {''}
+    con1 = (dis2.기초=='3') # 기초생활
+    con2 = (dis2.가족=='I') # 다자녀
     con3 = (dis2.중증=='T') # 중증장애인
     con4 = (dis2.유공=='2') # 유공자
     dis2.loc[con1, 'Code'] = '3'
@@ -224,7 +225,7 @@ def template_make(f3,df,df_f,df_3,df_4):
     dis2.loc[con3, 'Code'] = 'T'
     dis2.loc[con4, 'Code'] = '2'
 
-    dis2.loc[(con1&con2)|(con1&con3)|(con2&con3)|(con1&con2&con3), 'Code'] = 'V'
+    dis2.loc[(con1&con2)|(con1&con3)|(con2&con3)|(con1&con2&con3), 'Code'] = 'V' # 중복할인
     dis3 = dis2[['동','호','Code']]
 
     # dis2['동'] = pd.to_numeric(dis2['동'])
