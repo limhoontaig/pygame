@@ -577,7 +577,7 @@
       </font>
      </property>
      <property name="text">
-      <string>기초생활</string>
+      <string>복지</string>
      </property>
     </widget>
     <widget class="QPushButton" name="pushButton_8">

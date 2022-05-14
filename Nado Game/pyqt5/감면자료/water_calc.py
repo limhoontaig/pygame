@@ -47,27 +47,69 @@ class MyWindow(QMainWindow, form_class):
         self.pushButton_3.clicked.connect(self.add_file)
         self.pushButton_4.clicked.connect(self.add_file)
         self.pushButton_5.clicked.connect(self.start)
-        #self.pushButton_7.clicked.connect(self.기초생활)
-        #self.pushButton_8.clicked.connect(self.중증장애)
+        self.pushButton_7.clicked.connect(self.data_verify)
+        self.pushButton_8.clicked.connect(self.data_verify)
         self.pushButton_9.clicked.connect(self.tableWidget.scrollToTop)
         self.pushButton_10.clicked.connect(self.tableWidget.scrollToBottom)
-        #self.pushButton_11.clicked.connect(self.다자녀)
-        #self.pushButton_12.clicked.connect(self.유공자)
+        self.pushButton_11.clicked.connect(self.data_verify)
+        self.pushButton_12.clicked.connect(self.data_verify)
 
         self.pushButton_6.clicked.connect(self.close)
+
+    def data_verify(self):
+        sname = self.sender().text()
+        if sname == '복지': # 코드 : 복지
+            file = self.lineEdit.text()
+            if '.xls' not in file or file == 0:
+                QMessageBox.about(self, "경고", "수도 다자녀/복지감면 파일을 추가하세요")
+                return
+        elif sname == '다자녀':
+            file = self.lineEdit.text()
+            if '.xls' not in file or file == 0:
+                QMessageBox.about(self, "경고", "수도 다자녀/복지감면 파일을 추가하세요")
+                return
+        elif sname == '중증장애':
+            file = self.lineEdit_2.text()
+            if '.xls' not in file or file == 0:
+                QMessageBox.about(self, "경고", "수도 중증장애/유공자 감면 파일을 추가하세요")
+                return
+        else:
+            sname = '유공자'
+            file = self.lineEdit_2.text()
+            if '.xls' not in file or file == 0:
+                QMessageBox.about(self, "경고", "수도 중증장애/유공자 감면 파일을 추가하세요")
+                return
+        
+        f = pd.ExcelFile(file)
+        code = sname
+        sheet = self.sheet_select(f,code)
+        df = pd.read_excel(f,sheet_name = sheet)
+        self.set_tbl(df)
+        return
+
+    def sheet_select(self, f, code):
+        sheet_name = f.sheet_names
+        for sheet in sheet_name:
+            if code in sheet:
+                return sheet
+            else:
+                pass
+
+
+
 
     def set_tbl(self, df):
 
         rdr_col = len(df.columns)
-        rdr_row = (df.index)
-        
+        rdr_row = len(df)
+        header = df.columns.values.tolist()
         self.tableWidget.clear()
-        self.tableWidget.setHorizontalHeaderLabels(['No', '고객번호', '동호수'])
+        self.tableWidget.setHorizontalHeaderLabels(header)
         self.tableWidget.setRowCount(rdr_row)
         self.tableWidget.setColumnCount(rdr_col)
         for i in range(rdr_row):
             for j in range(rdr_col):
-                self.tableWidget.setItem(i, j, QTableWidgetItem(str(df.iget_value(i,j))))
+                self.tableWidget.setItem(i, j, QTableWidgetItem(str(df.iloc[i,j])))
         #app.exec_()
 
     @pyqtSlot()
@@ -180,7 +222,7 @@ class MyWindow(QMainWindow, form_class):
         sheet_name = f.sheet_names
         sheet_data = []
         for sheet in sheet_name:
-            items_code = self.sheet_verify(sheet)
+            items_code = self.code_verify(sheet)
             df__ = pd.read_excel(f,sheet_name = sheet)
             cols = df__.columns
             if cols[0] == 'No':
@@ -211,7 +253,7 @@ class MyWindow(QMainWindow, form_class):
 
         return sheet_data
 
-    def sheet_verify(self, sheet):
+    def code_verify(self, sheet):
         if '복지' in sheet:
             code = {'item':'복지', 'code':'3'}
             return code
@@ -235,6 +277,12 @@ class MyWindow(QMainWindow, form_class):
        # 4개 조건을 조합하기 위하여 코드 합하기 및 길이가 2이상인 데이터 처리
         dis2.loc[dis2['Code'].str.len()>1, 'Code'] = 'V'
         dis3 = dis2[['동','호','Code']]
+
+        v_count = len(dis3[dis3['Code']=='V'])
+        count = dis3['Code'].count()
+        self.lineEdit_10.setText(str(f'{v_count:>7,}')) # 중복
+        self.lineEdit_11.setText(str(f'{count:>7,}')) # 총합계
+
 
         dis3 = dis3.astype({'동':int, '호':int})
 
