@@ -135,73 +135,29 @@ class MyWindow(QMainWindow, form_class):
 
         df2 = self.welfare_calc(f1)
         df = df2[0]
-        df.rename(columns = {'복지코드' : '기초'}, inplace = True)
+        #df.rename(columns = {'복지코드' : '기초'}, inplace = True)
         df_f = df2[1]
-        df_f.rename(columns = {'복지코드' : '가족'}, inplace = True)
+        #df_f.rename(columns = {'복지코드' : '가족'}, inplace = True)
 
         df_temp = self.merits_calc(f2)
         df3 = df_temp[0]
-        df3.rename(columns = {'복지코드' : '중증'}, inplace = True)
+        #df3.rename(columns = {'복지코드' : '중증'}, inplace = True)
         df4 = df_temp[1]
-        df4.rename(columns = {'복지코드' : '유공'}, inplace = True)
-        print('df', df)
-        print('df_f', df_f)
-        print('df3', df3)
-        print('df4', df4)
+        #df4.rename(columns = {'복지코드' : '유공'}, inplace = True)
         discount = self.template_make(f3,df,df_f,df3,df4)
         
         self.pd_save(discount,f4)
         return
 
     def welfare_calc(self, f1):
-        df = pd.read_excel(f1,sheet_name=0, skiprows=0)
-
-        #df['동'] = df['동호수(복지개별)'].parse('-', 0)
-        # new list of data frame with split value columns
-        new = df['동호수(복지개별)'].str.split("-", n = 1, expand = True)
-        
-        # making separate first name column from new data frame
-        df["동"]= new[0]
-        
-        # making separate last name column from new data frame
-        df["호"]= new[1]
-        
-        # Dropping old Name columns
-        df.drop(columns =["No","동호수(복지개별)"], inplace = True)
-
-        # making 복지코드 on '복지코드' column from XPERP Code
-        df["복지코드"]= '3'
-
-        # display the data of welfare homes
+        f = pd.ExcelFile(f1)
+        parse_file = self.seperate_dongho(f)
+        df = parse_file[0]
+        df_f = parse_file[1]
         total_복지 = len(df)
-        # txt_total_복지.delete(0,END)
-        # txt_total_복지.insert(0, f'{total_복지:>7,}')
-        
-        # XPERP Code 유공자: 2, 기초생활:3, 다자녀:I(Capital i), 중복할인: V(Capital v)  ###
-
-        # 다자녀 시트 읽어오기
-        df_f = pd.read_excel(f1, sheet_name=1,skiprows=0)
-
-        # new data frame with split value columns
-        new = df_f['동호수(다자녀감면)'].str.split("-", n = 1, expand = True)
-        
-        # making separate 동 name column from new data frame
-        df_f["동"]= new[0]
-        
-        # making separate 호 name column from new data frame
-        df_f["호"]= new[1]
-
-        # making 복지코드 on '복지코드' column from XPERP Code
-        df_f["복지코드"]= 'I' # Capital I
-        
-        # Dropping old Name columns
-        df_f.drop(columns =["No","동호수(다자녀감면)"], inplace = True)
-        
-        # display the data of large homes
+        self.lineEdit_5.setText(str(f'{total_복지:>7,}'))
         total_대가족 = len(df_f)
-        #txt_total_대가족.delete(0,END)
-        #txt_total_대가족.insert(0, f'{total_대가족:>7,}')
-        
+        self.lineEdit_6.setText(str(f'{total_대가족:>7,}'))
         return df, df_f
 
     def merits_calc(self, f2):
@@ -209,49 +165,22 @@ class MyWindow(QMainWindow, form_class):
         f = pd.ExcelFile(f2)
         parse_file = self.seperate_dongho(f)
 
-        '''sheet_name = f.sheet_names 
-        df__ = pd.read_excel(f2, sheet_name=sheet_name[0])
-        cols = df__.columns
-        if cols[0] == 'No':
-            rows = -1
-        else:
-            s = df__.index[(df__["Unnamed: 0"] == "No")].tolist()
-            rows = s[0]
-        
-        df_ = pd.read_excel(f2, sheet_name=0, skiprows=rows+1)
-        df_3 = df_[['No','동호수']].copy()
-        # new data frame with split value columns
-        temp = df_3['동호수'].str.split(" 동", n = 1, expand = True)
-        df_3["동"] = temp[0]
-        temp_1 = temp[1].str.slice(stop=-1)
-        df_3['호'] = temp_1
-        print(df_3)
-        # making separate first name column from new data frame
-        #   df_3["동"]= new[0]
-        # making separate last name column from new data frame
-        #    df_3["호"]= new[1]
-        # Dropping old Name columns
-        df_3.drop(columns =["No","동호수"], inplace = True)'''
-        # making 복지코드 on '복지코드' column from XPERP Code
+        #df_3["중증"]= 'T' #
         df_3 = parse_file[0]
-        df_3["복지코드"]= 'T' #
-        print(df_3) 
+        total_중증 = len(df_3)
+        self.lineEdit_7.setText(str(f'{total_중증:>7,}'))
+        #df_4["유공자"]= '2'
         df_4 = parse_file[1]
-        df_4["복지코드"]= '2'
-        print(df_4) 
-
-
-        # display the data of 유공자
-        total_유공자 = len(df_3)
-        #txt_total_유공자.delete(0,END)
-        #txt_total_유공자.insert(0, f'{total_유공자:>7,}')
+        total_유공자 = len(df_4)
+        self.lineEdit_8.setText(str(f'{total_유공자:>7,}'))
 
         return df_3, df_4
 
     def seperate_dongho(self, f):
         sheet_name = f.sheet_names
-        sheets = []
+        sheet_data = []
         for sheet in sheet_name:
+            items_code = self.sheet_verify(sheet)
             df__ = pd.read_excel(f,sheet_name = sheet)
             cols = df__.columns
             if cols[0] == 'No':
@@ -259,41 +188,54 @@ class MyWindow(QMainWindow, form_class):
             else:
                 s = df__.index[(df__["Unnamed: 0"] == "No")].tolist()
                 rows = s[0]
-            sheet = pd.ExcelFile.parse(f, sheet_name=sheet,skiprows=rows+1)
-            temp = sheet['동호수'].str.split('동 ', expand = True)
-            sheet['동'] = temp[0]
-            temp_1 = temp[1].str.slice(stop = -1)
-            sheet['호'] = temp_1
-            df_1 = sheet[['동', '호']]
-            
-            sheets.append(df_1)
+            sheet = pd.ExcelFile.parse(f, sheet_name=sheet,header=0,skiprows=rows+1)
+            header = sheet.columns.values.tolist() #dataframe에서 header list 작성
+            for h in header:
+                if '동호수' in h:
+                    h_index = header.index(h)
+                else:
+                    pass
+            try:
+                temp = sheet[header[h_index]].str.split('-', expand = True)
+                sheet['동'] = temp[0]
+                sheet['호'] = temp[1]
+                df_1 = sheet[['동', '호']]
+            except:
+                temp = sheet[header[h_index]].str.split('동 ', expand = True)
+                sheet['동'] = temp[0]
+                temp_1 = temp[1].str.slice(stop = -1)
+                sheet['호'] = temp_1
+                df_1 = sheet[['동', '호']]
+            df_1[items_code['item']] = items_code['code']
+            sheet_data.append(df_1)
 
-        return sheets
+        return sheet_data
 
+    def sheet_verify(self, sheet):
+        if '복지' in sheet:
+            code = {'item':'복지', 'code':'3'}
+            return code
+        elif '다자녀' in sheet:
+            code = {'item':'다자녀', 'code':'I'}
+            return code
+        elif '유공자' in sheet:
+            code = {'item':'유공', 'code':'2'}
+            return code
+        else:
+            code = {'item':'중증', 'code':'T'}
+            return code
 
     def template_make(self, f3,df,df_f,df_3,df_4):
         dis = pd.merge(df, df_f, how = 'outer', on = ['동','호'])
-        print('dis', dis)
         dis1 = pd.merge(dis, df_3, how = 'outer', on = ['동','호'])
-        print('dis1', dis1)
         dis2 = pd.merge(dis1, df_4, how = 'outer', on = ['동','호'])
-        print('dis2', dis2)
-        #discount_1.fillna(0)
-        dis_code = {''}
-        con1 = (dis2.기초=='3') # 기초생활
-        con2 = (dis2.가족=='I') # 다자녀
-        con3 = (dis2.중증=='T') # 중증장애인
-        con4 = (dis2.유공=='2') # 유공자
-        dis2.loc[con1, 'Code'] = '3'
-        dis2.loc[con2, 'Code'] = 'I'
-        dis2.loc[con3, 'Code'] = 'T'
-        dis2.loc[con4, 'Code'] = '2'
-
-        dis2.loc[(con1&con2)|(con1&con3)|(con2&con3)|(con1&con2&con3), 'Code'] = 'V' # 중복할인
+        # 종류별 concatnate 문자열 처리를 위하여 fill nan 처리 
+        dis2.fillna('', inplace=True)
+        dis2['Code'] = dis2['복지'].str.cat(dis2[['다자녀','중증','유공']])
+       # 4개 조건을 조합하기 위하여 코드 합하기 및 길이가 2이상인 데이터 처리
+        dis2.loc[dis2['Code'].str.len()>1, 'Code'] = 'V'
         dis3 = dis2[['동','호','Code']]
 
-        # dis2['동'] = pd.to_numeric(dis2['동'])
-        # dis2['호'] = pd.to_numeric(dis2['호'])
         dis3 = dis3.astype({'동':int, '호':int})
 
         # 복지종류별 입력하기
