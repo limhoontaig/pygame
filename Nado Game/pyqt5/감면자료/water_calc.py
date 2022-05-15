@@ -38,7 +38,7 @@ class MyWindow(QMainWindow, form_class):
         self.tableWidget.setRowCount(28)
         self.tableWidget.setColumnCount(3)
         self.tableWidget.setAlternatingRowColors(True)
-        #self.tableWidget.setHorizontalHeaderLabels(['No', '동호수'])
+        self.tableWidget.setHorizontalHeaderLabels(['No', '동호수'])
         #self.tableWidget.resizeColumnToContents()
         #self.tableWidget.resizeRowToContents()
         self.tableWidget.setEditTriggers(QAbstractItemView.AllEditTriggers) # QAbstractItemView.NoEditTriggers
@@ -64,10 +64,10 @@ class MyWindow(QMainWindow, form_class):
         self.pushButton_10.clicked.connect(self.tableWidget.scrollToBottom)
         self.pushButton_11.clicked.connect(self.data_verify)
         self.pushButton_12.clicked.connect(self.data_verify)
-        self.pushButton_16.clicked.connect(self.data_change_save)
-        self.pushButton_13.clicked.connect(self.data_change_save)
-        self.pushButton_15.clicked.connect(self.data_change_save)
-        self.pushButton_14.clicked.connect(self.data_change_save)
+        #self.pushButton_16.clicked.connect(self.data_change_save)
+        #self.pushButton_13.clicked.connect(self.data_change_save)
+        #self.pushButton_15.clicked.connect(self.data_change_save)
+        #self.pushButton_14.clicked.connect(self.data_change_save)
         self.pushButton_16.setDisabled(True)
         self.pushButton_13.setDisabled(True)
         self.pushButton_15.setDisabled(True)
@@ -297,7 +297,7 @@ class MyWindow(QMainWindow, form_class):
         if f4 == 0:
             QMessageBox.about(self, "경고", "저장 경로를 선택하세요")
             return
-        
+        '''
         # 검증 파일 생성 확인
         if '.xls' not in f5 or f5 == 0:
             QMessageBox.about(self, "경고", "수도 기초수급 감면 파일을 확인하세요")
@@ -314,14 +314,15 @@ class MyWindow(QMainWindow, form_class):
         if '.xls' not in f8 or f8 == 0:
             QMessageBox.about(self, "경고", "수도 유공자 감면 파일을 확인하세요")
             return
+        '''
 
-        df2 = self.welfare_calc(f5,f6)
+        df2 = self.welfare_calc(f1)
         df = df2[0]
         #df.rename(columns = {'복지코드' : '기초'}, inplace = True)
         df_f = df2[1]
         #df_f.rename(columns = {'복지코드' : '가족'}, inplace = True)
 
-        df_temp = self.merits_calc(f7, f8)
+        df_temp = self.merits_calc(f2)
         df3 = df_temp[0]
         #df3.rename(columns = {'복지코드' : '중증'}, inplace = True)
         df4 = df_temp[1]
@@ -331,26 +332,26 @@ class MyWindow(QMainWindow, form_class):
         self.pd_save(discount,f4)
         return
 
-    def welfare_calc(self, f5, f6):
-        f = pd.ExcelFile(f5)
-        df = self.seperate_dongho(f)
-        f = pd.ExcelFile(f6)
-        df_f = self.seperate_dongho(f)
+    def welfare_calc(self, f1):
+        f = pd.ExcelFile(f1)
+        d = self.seperate_dongho(f)
+        df = d[0]
+        df_f = d[1]
         total_복지 = len(df)
         self.lineEdit_5.setText(str(f'{total_복지:>7,}'))
         total_대가족 = len(df_f)
         self.lineEdit_6.setText(str(f'{total_대가족:>7,}'))
         return df, df_f
 
-    def merits_calc(self, f7, f8):
+    def merits_calc(self, f2):
         # # 수도 유공자할인 등록
-        f = pd.ExcelFile(f7)
-        df_3 = self.seperate_dongho(f)
+        f = pd.ExcelFile(f2)
+        df = self.seperate_dongho(f)
+        df_3 = df[0]
         total_중증 = len(df_3)
         self.lineEdit_7.setText(str(f'{total_중증:>7,}'))
         #df_4["유공자"]= '2'
-        f = pd.ExcelFile(f8)
-        df_4 = self.seperate_dongho(f)
+        df_4 = df[1]
         total_유공자 = len(df_4)
         self.lineEdit_8.setText(str(f'{total_유공자:>7,}'))
 
