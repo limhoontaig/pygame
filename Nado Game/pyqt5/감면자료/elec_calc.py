@@ -10,7 +10,7 @@ def resource_path(relative_path):
     base_path = getattr(sys, "_MAIPASS", os.path.dirname(os.path.abspath(__file__)))
     return os.path.join(base_path, relative_path)
 
-form = resource_path("전기감면_mainwindow.ui")
+form = resource_path("elec_mainwindow.ui")
 form_class = uic.loadUiType(form)[0]
 
 now = datetime.now()
