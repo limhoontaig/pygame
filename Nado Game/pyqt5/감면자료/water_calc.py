@@ -5,7 +5,7 @@ import os
 import openpyxl
 import pandas as pd
 from PyQt5.QtWidgets import *
-from PyQt5.QtWidgets import QAbstractItemView
+from PyQt5.QtWidgets import QAbstractItemView, QHeaderView
 
 from PyQt5.QtCore import pyqtSlot, QObject, pyqtSignal
 from PyQt5 import uic
@@ -38,7 +38,7 @@ class MyWindow(QMainWindow, form_class):
         self.tableWidget.setRowCount(28)
         self.tableWidget.setColumnCount(3)
         self.tableWidget.setAlternatingRowColors(True)
-        self.tableWidget.setHorizontalHeaderLabels(['No', '동호수'])
+        self.tableWidget.setHorizontalHeaderLabels(['No', '사용가번호', '동호수'])
         #self.tableWidget.resizeColumnToContents()
         #self.tableWidget.resizeRowToContents()
         self.tableWidget.setEditTriggers(QAbstractItemView.AllEditTriggers) # QAbstractItemView.NoEditTriggers
@@ -64,10 +64,10 @@ class MyWindow(QMainWindow, form_class):
         self.pushButton_10.clicked.connect(self.tableWidget.scrollToBottom)
         self.pushButton_11.clicked.connect(self.data_verify)
         self.pushButton_12.clicked.connect(self.data_verify)
-        #self.pushButton_16.clicked.connect(self.data_change_save)
-        #self.pushButton_13.clicked.connect(self.data_change_save)
-        #self.pushButton_15.clicked.connect(self.data_change_save)
-        #self.pushButton_14.clicked.connect(self.data_change_save)
+        self.pushButton_16.clicked.connect(self.data_change_save)
+        self.pushButton_13.clicked.connect(self.data_change_save)
+        self.pushButton_15.clicked.connect(self.data_change_save)
+        self.pushButton_14.clicked.connect(self.data_change_save)
         self.pushButton_16.setDisabled(True)
         self.pushButton_13.setDisabled(True)
         self.pushButton_15.setDisabled(True)
@@ -77,19 +77,12 @@ class MyWindow(QMainWindow, form_class):
 
     def data_query(self):
         '''
-        data query from tablewidget
+        data query from tablewidget to pandas dataframe
         '''
         rowcount = self.tableWidget.rowCount()
         colcount = self.tableWidget.columnCount()
         
-        c_l = []
-        for x in range(colcount):
-            d_l = self.tableWidget.horizontalHeaderItem(x).text()
-            c_l.append(d_l)
-        df_columns = c_l
-
-        
-        #df_columns = [self.tableWidget.horizontalHeaderItem(x).text() for x in range(0,colcount)]
+        headers = [self.tableWidget.horizontalHeaderItem(x).text() for x in range(0,colcount)]
         data_list = []
         for i in range(0, rowcount):
             data =[]
@@ -97,8 +90,8 @@ class MyWindow(QMainWindow, form_class):
                 d = self.tableWidget.item(i,j).text()
                 data.append(d)
             data_list.append(data)
-        df = pd.DataFrame(data_list)
-        df.columns = df_columns
+        df = pd.DataFrame(data_list) # list to dataframe
+        df.columns = headers # set the hwaders on dataframe
         
         return df
 
@@ -122,7 +115,6 @@ class MyWindow(QMainWindow, form_class):
         df = self.data_query()
         f_split = file.split('.')
         file = f_split[0]+sheet+'.'+f_split[1]
-        print(file)
 
         if os.path.isfile(file):
             os.remove(file)
@@ -142,18 +134,10 @@ class MyWindow(QMainWindow, form_class):
             sname = '유공자저장'
             self.lineEdit_14.setText(file)
         
-        '''with pd.ExcelWriter(file) as writer:
-            writer.book = openpyxl.load_workbook(file)
-            if sheet in writer.book.sheetnames:
-                writer.book.remove(writer.book[sheet])
-            df.to_excel(writer, sheet_name=sheet)'''
-        # with pd.ExcelWriter(file, mode='a', engine='openpyxl') as writer:
-
         return
 
     def cellchanged_event(self, row, col):
         data = self.tableWidget.item(row,col)
-        #print(data.text())
 
     def data_verify(self):
         sname = self.sender().text()
@@ -202,7 +186,6 @@ class MyWindow(QMainWindow, form_class):
             df = pd.read_excel(f,sheet_name = sheet)
             header = df.columns.values.tolist()
         self.set_tbl(df, header)
-        print(header)
         return
 
     def sheet_select(self, f, code):
@@ -221,13 +204,15 @@ class MyWindow(QMainWindow, form_class):
         rdr_col = len(df.columns)
         rdr_row = len(df)
         self.tableWidget.clear()
-        self.tableWidget.setHorizontalHeaderLabels(header)
+        #self.tableWidget.setHorizontalHeaderLabels(header) # 파일이 바뀔경우 에러 발생 함
+        # 따라서 데이터를 먼저 뿌리고 헤더를 뿌리도록 순서를 아래로 바꿈
         self.tableWidget.setRowCount(rdr_row)
         self.tableWidget.setColumnCount(rdr_col)
         for i in range(rdr_row):
             for j in range(rdr_col):
                 self.tableWidget.setItem(i, j, QTableWidgetItem(str(df.iloc[i,j])))
-        #app.exec_()
+                #self.setSectionResizeMode(j, QHeaderView.ResizeToContents)
+        self.tableWidget.setHorizontalHeaderLabels(header)
 
     @pyqtSlot()
     def add_file(self):
@@ -422,12 +407,10 @@ class MyWindow(QMainWindow, form_class):
         self.lineEdit_10.setText(str(f'{v_count:>7,}')) # 중복
         self.lineEdit_11.setText(str(f'{count:>7,}')) # 총합계
 
-
         dis3 = dis3.astype({'동':int, '호':int})
 
         # 복지종류별 입력하기
         # Template dataframe 작성
-
         df_x = pd.read_excel(f3,skiprows=0)
 
         # discount df 생성 (Template df(df_x)에 감면코드(discount) merge
