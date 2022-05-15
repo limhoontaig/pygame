@@ -63,7 +63,6 @@ class MyWindow(QMainWindow, form_class):
             temp_rdr_row.append(temp) 
         rdr_row = max(temp_rdr_row)
         self.tableWidget.clear()
-        self.tableWidget.setHorizontalHeaderLabels(['기존', '금월'])
         self.tableWidget.setRowCount(rdr_row)
         self.tableWidget.setColumnCount(rdr_col)
         c = 0
@@ -72,8 +71,8 @@ class MyWindow(QMainWindow, form_class):
             c = c+1
             for j in i:
                 r = r+1
-
                 self.tableWidget.setItem(r-1, c-1, QTableWidgetItem(j))
+        self.tableWidget.setHorizontalHeaderLabels(['기존', '금월'])
         #app.exec_()
 
     @pyqtSlot()
@@ -146,9 +145,9 @@ class MyWindow(QMainWindow, form_class):
 
         discount = self.discount_file(f3,df2,subset_df_w,subset_df_f)
         self.pd_save(discount[0],f4)
-        print('Total 사용량 보장공제액  :',discount[1])
-        print('Total 대가족 할인 공제액 :',discount[2])
-        print('Total 복지 할인 공제액   :',discount[3])
+        #print('Total 사용량 보장공제액  :',discount[1])
+        #print('Total 대가족 할인 공제액 :',discount[2])
+        #print('Total 복지 할인 공제액   :',discount[3])
         
         return
 
