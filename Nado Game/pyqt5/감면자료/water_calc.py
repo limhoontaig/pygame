@@ -1,6 +1,8 @@
 import collections
+from email import header
 import sys
 import os
+import openpyxl
 import pandas as pd
 from PyQt5.QtWidgets import *
 from PyQt5.QtWidgets import QAbstractItemView
@@ -36,7 +38,7 @@ class MyWindow(QMainWindow, form_class):
         self.tableWidget.setRowCount(28)
         self.tableWidget.setColumnCount(3)
         self.tableWidget.setAlternatingRowColors(True)
-        self.tableWidget.setHorizontalHeaderLabels(['No', '동호수'])
+        #self.tableWidget.setHorizontalHeaderLabels(['No', '동호수'])
         #self.tableWidget.resizeColumnToContents()
         #self.tableWidget.resizeRowToContents()
         self.tableWidget.setEditTriggers(QAbstractItemView.AllEditTriggers) # QAbstractItemView.NoEditTriggers
@@ -62,6 +64,10 @@ class MyWindow(QMainWindow, form_class):
         self.pushButton_10.clicked.connect(self.tableWidget.scrollToBottom)
         self.pushButton_11.clicked.connect(self.data_verify)
         self.pushButton_12.clicked.connect(self.data_verify)
+        self.pushButton_16.clicked.connect(self.data_change_save)
+        self.pushButton_13.clicked.connect(self.data_change_save)
+        self.pushButton_15.clicked.connect(self.data_change_save)
+        self.pushButton_14.clicked.connect(self.data_change_save)
         self.pushButton_16.setDisabled(True)
         self.pushButton_13.setDisabled(True)
         self.pushButton_15.setDisabled(True)
@@ -75,19 +81,79 @@ class MyWindow(QMainWindow, form_class):
         '''
         rowcount = self.tableWidget.rowCount()
         colcount = self.tableWidget.columnCount()
+        
+        c_l = []
+        for x in range(colcount):
+            d_l = self.tableWidget.horizontalHeaderItem(x).text()
+            c_l.append(d_l)
+        df_columns = c_l
+
+        
+        #df_columns = [self.tableWidget.horizontalHeaderItem(x).text() for x in range(0,colcount)]
         data_list = []
         for i in range(0, rowcount):
             data =[]
             for j in range(0, colcount):
-                d = self.tableWidget.item(i,j)
+                d = self.tableWidget.item(i,j).text()
                 data.append(d)
             data_list.append(data)
+        df = pd.DataFrame(data_list)
+        df.columns = df_columns
         
-        return data_list
+        return df
+
+    def data_change_save(self):
+        sname = self.sender().text()
+        if sname == '복지저장': # 코드 : 복지
+            file = self.lineEdit.text()
+
+        elif sname == '다자녀저장':
+            file = self.lineEdit.text()
+            
+        elif sname == '중증장애저장':
+            file = self.lineEdit_2.text()
+        else:
+            sname = '유공자저장'
+            file = self.lineEdit_2.text()
+
+        code = sname[:2]
+        with pd.ExcelFile(file) as f:
+            sheet = self.sheet_select(f,code)
+        df = self.data_query()
+        f_split = file.split('.')
+        file = f_split[0]+sheet+'.'+f_split[1]
+        print(file)
+
+        if os.path.isfile(file):
+            os.remove(file)
+            df.to_excel(file,sheet_name= sheet,index=False,header=True)
+        else:
+            df.to_excel(file,sheet_name= sheet,index=False,header=True)
+
+        if sname == '복지저장': # 코드 : 복지
+            self.lineEdit_9.setText(file)
+
+        elif sname == '다자녀저장':
+            self.lineEdit_12.setText(file)
+            
+        elif sname == '중증장애저장':
+            self.lineEdit_13.setText(file)
+        else:
+            sname = '유공자저장'
+            self.lineEdit_14.setText(file)
+        
+        '''with pd.ExcelWriter(file) as writer:
+            writer.book = openpyxl.load_workbook(file)
+            if sheet in writer.book.sheetnames:
+                writer.book.remove(writer.book[sheet])
+            df.to_excel(writer, sheet_name=sheet)'''
+        # with pd.ExcelWriter(file, mode='a', engine='openpyxl') as writer:
+
+        return
 
     def cellchanged_event(self, row, col):
         data = self.tableWidget.item(row,col)
-        print(data.text())
+        #print(data.text())
 
     def data_verify(self):
         sname = self.sender().text()
@@ -130,11 +196,13 @@ class MyWindow(QMainWindow, form_class):
             self.pushButton_15.setDisabled(True)
             self.pushButton_14.setDisabled(False)
         
-        f = pd.ExcelFile(file)
-        code = sname
-        sheet = self.sheet_select(f,code)
-        df = pd.read_excel(f,sheet_name = sheet)
-        self.set_tbl(df)
+        with pd.ExcelFile(file) as f:
+            code = sname
+            sheet = self.sheet_select(f,code)
+            df = pd.read_excel(f,sheet_name = sheet)
+            header = df.columns.values.tolist()
+        self.set_tbl(df, header)
+        print(header)
         return
 
     def sheet_select(self, f, code):
@@ -148,11 +216,10 @@ class MyWindow(QMainWindow, form_class):
 
 
 
-    def set_tbl(self, df):
+    def set_tbl(self, df, header):
 
         rdr_col = len(df.columns)
         rdr_row = len(df)
-        header = df.columns.values.tolist()
         self.tableWidget.clear()
         self.tableWidget.setHorizontalHeaderLabels(header)
         self.tableWidget.setRowCount(rdr_row)
@@ -204,10 +271,16 @@ class MyWindow(QMainWindow, form_class):
         # 각 옵션들 값을 확인
         f1 = self.lineEdit.text()
         f2 = self.lineEdit_2.text()
+        f5 = self.lineEdit_9.text()
+        f6 = self.lineEdit_12.text()
+        f7 = self.lineEdit_13.text()
+        f8 = self.lineEdit_14.text()
+
         f3 = self.lineEdit_3.text()
         f4 = self.lineEdit_4.text()
 
         # 파일 목록 확인
+        
         if '.xls' not in f1 or f1 == 0:
             QMessageBox.about(self, "경고", "수도 기초수급/다자녀 감면 파일을 추가하세요")
             return
@@ -224,14 +297,31 @@ class MyWindow(QMainWindow, form_class):
         if f4 == 0:
             QMessageBox.about(self, "경고", "저장 경로를 선택하세요")
             return
+        
+        # 검증 파일 생성 확인
+        if '.xls' not in f5 or f5 == 0:
+            QMessageBox.about(self, "경고", "수도 기초수급 감면 파일을 확인하세요")
+            return
+        
+        if '.xls' not in f6 or f6 == 0:
+            QMessageBox.about(self, "경고", "수도 다자녀 감면 파일을 확인하세요")
+            return
+        
+        if '.xls' not in f7 or f7 == 0:
+            QMessageBox.about(self, "경고", "수도 중증장애인 감면 파일을 확인하세요")
+            return
+        
+        if '.xls' not in f8 or f8 == 0:
+            QMessageBox.about(self, "경고", "수도 유공자 감면 파일을 확인하세요")
+            return
 
-        df2 = self.welfare_calc(f1)
+        df2 = self.welfare_calc(f5,f6)
         df = df2[0]
         #df.rename(columns = {'복지코드' : '기초'}, inplace = True)
         df_f = df2[1]
         #df_f.rename(columns = {'복지코드' : '가족'}, inplace = True)
 
-        df_temp = self.merits_calc(f2)
+        df_temp = self.merits_calc(f7, f8)
         df3 = df_temp[0]
         #df3.rename(columns = {'복지코드' : '중증'}, inplace = True)
         df4 = df_temp[1]
@@ -241,28 +331,26 @@ class MyWindow(QMainWindow, form_class):
         self.pd_save(discount,f4)
         return
 
-    def welfare_calc(self, f1):
-        f = pd.ExcelFile(f1)
-        parse_file = self.seperate_dongho(f)
-        df = parse_file[0]
-        df_f = parse_file[1]
+    def welfare_calc(self, f5, f6):
+        f = pd.ExcelFile(f5)
+        df = self.seperate_dongho(f)
+        f = pd.ExcelFile(f6)
+        df_f = self.seperate_dongho(f)
         total_복지 = len(df)
         self.lineEdit_5.setText(str(f'{total_복지:>7,}'))
         total_대가족 = len(df_f)
         self.lineEdit_6.setText(str(f'{total_대가족:>7,}'))
         return df, df_f
 
-    def merits_calc(self, f2):
+    def merits_calc(self, f7, f8):
         # # 수도 유공자할인 등록
-        f = pd.ExcelFile(f2)
-        parse_file = self.seperate_dongho(f)
-
-        #df_3["중증"]= 'T' #
-        df_3 = parse_file[0]
+        f = pd.ExcelFile(f7)
+        df_3 = self.seperate_dongho(f)
         total_중증 = len(df_3)
         self.lineEdit_7.setText(str(f'{total_중증:>7,}'))
         #df_4["유공자"]= '2'
-        df_4 = parse_file[1]
+        f = pd.ExcelFile(f8)
+        df_4 = self.seperate_dongho(f)
         total_유공자 = len(df_4)
         self.lineEdit_8.setText(str(f'{total_유공자:>7,}'))
 

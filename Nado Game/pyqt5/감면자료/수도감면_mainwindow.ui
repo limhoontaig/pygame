@@ -67,7 +67,7 @@
       <x>30</x>
       <y>92</y>
       <width>841</width>
-      <height>71</height>
+      <height>101</height>
      </rect>
     </property>
     <property name="font">
@@ -104,14 +104,60 @@
       <string>복지/가족</string>
      </property>
     </widget>
+    <widget class="QLineEdit" name="lineEdit_9">
+     <property name="geometry">
+      <rect>
+       <x>80</x>
+       <y>70</y>
+       <width>271</width>
+       <height>21</height>
+      </rect>
+     </property>
+    </widget>
+    <widget class="QLabel" name="label_7">
+     <property name="geometry">
+      <rect>
+       <x>10</x>
+       <y>70</y>
+       <width>64</width>
+       <height>15</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>기초생활</string>
+     </property>
+    </widget>
+    <widget class="QLabel" name="label_10">
+     <property name="geometry">
+      <rect>
+       <x>370</x>
+       <y>70</y>
+       <width>64</width>
+       <height>15</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>다자녀</string>
+     </property>
+    </widget>
+    <widget class="QLineEdit" name="lineEdit_12">
+     <property name="geometry">
+      <rect>
+       <x>440</x>
+       <y>70</y>
+       <width>271</width>
+       <height>21</height>
+      </rect>
+     </property>
+    </widget>
    </widget>
    <widget class="QGroupBox" name="groupBox_2">
     <property name="geometry">
      <rect>
       <x>30</x>
-      <y>172</y>
+      <y>204</y>
       <width>841</width>
-      <height>71</height>
+      <height>101</height>
      </rect>
     </property>
     <property name="font">
@@ -148,12 +194,58 @@
       <string>중증/유공</string>
      </property>
     </widget>
+    <widget class="QLineEdit" name="lineEdit_13">
+     <property name="geometry">
+      <rect>
+       <x>80</x>
+       <y>70</y>
+       <width>271</width>
+       <height>21</height>
+      </rect>
+     </property>
+    </widget>
+    <widget class="QLabel" name="label_11">
+     <property name="geometry">
+      <rect>
+       <x>10</x>
+       <y>70</y>
+       <width>64</width>
+       <height>15</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>중증장애</string>
+     </property>
+    </widget>
+    <widget class="QLabel" name="label_12">
+     <property name="geometry">
+      <rect>
+       <x>360</x>
+       <y>70</y>
+       <width>64</width>
+       <height>15</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>유공자</string>
+     </property>
+    </widget>
+    <widget class="QLineEdit" name="lineEdit_14">
+     <property name="geometry">
+      <rect>
+       <x>430</x>
+       <y>70</y>
+       <width>271</width>
+       <height>21</height>
+      </rect>
+     </property>
+    </widget>
    </widget>
    <widget class="QGroupBox" name="groupBox_4">
     <property name="geometry">
      <rect>
       <x>30</x>
-      <y>252</y>
+      <y>308</y>
       <width>841</width>
       <height>71</height>
      </rect>
@@ -197,7 +289,7 @@
     <property name="geometry">
      <rect>
       <x>30</x>
-      <y>335</y>
+      <y>391</y>
       <width>841</width>
       <height>71</height>
      </rect>
@@ -241,9 +333,9 @@
     <property name="geometry">
      <rect>
       <x>30</x>
-      <y>410</y>
+      <y>466</y>
       <width>841</width>
-      <height>171</height>
+      <height>121</height>
      </rect>
     </property>
     <property name="font">
@@ -357,8 +449,8 @@
     <widget class="QLabel" name="label_8">
      <property name="geometry">
       <rect>
-       <x>428</x>
-       <y>120</y>
+       <x>560</x>
+       <y>70</y>
        <width>90</width>
        <height>31</height>
       </rect>
@@ -403,8 +495,8 @@
     <widget class="QLineEdit" name="lineEdit_11">
      <property name="geometry">
       <rect>
-       <x>550</x>
-       <y>120</y>
+       <x>650</x>
+       <y>70</y>
        <width>181</width>
        <height>31</height>
       </rect>
@@ -700,7 +792,7 @@
       </font>
      </property>
      <property name="text">
-      <string>중증장애저징</string>
+      <string>중증장애저장</string>
      </property>
     </widget>
     <widget class="QPushButton" name="pushButton_16">
