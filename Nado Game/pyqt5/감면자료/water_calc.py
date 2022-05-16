@@ -367,16 +367,11 @@ class MyWindow(QMainWindow, form_class):
             for h in header:
                 if '동호수' in h:
                     h_index = header.index(h)
-                    sheet[h] =sheet[h].str.replace('동 ', '-')
-                    sheet[h] =sheet[h].str.replace('호', '')
-                    sheet[h] =sheet[h].str.replace('(', '')
-                    sheet[h] =sheet[h].str.replace(')', '')
-                    sheet[h] =sheet[h].str.replace(' 세곡동, 강남데시앙파크', '')
+                    sheet['dongho'] =sheet[h].str.findall('(\d{3,4})')
+                    sheet['동'] =sheet['dongho'].str[0]
+                    sheet['호'] =sheet['dongho'].str[1]
                 else:
                     pass
-            temp = sheet[header[h_index]].str.split('-', expand = True)
-            sheet['동'] = temp[0]
-            sheet['호'] = temp[1]
             df_1 = sheet[['동', '호']]
             df_1[items_code['item']] = items_code['code']
             sheet_data.append(df_1)
