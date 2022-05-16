@@ -51,7 +51,7 @@ class MyWindow(QMainWindow, form_class):
         self.lineEdit_2.setText(LE[1])
         self.lineEdit_3.setText(LE[2])
         self.lineEdit_4.setText(LE[3])
-        self.label_5.setText('프로그램 작성 : 임훈택 Rev 0, 2022.05.11 Issued')
+        self.label_5.setText('Program Developed by HoonTaig Lim, Rev 0 Issued, 2022.05.16')
 
         self.pushButton.clicked.connect(self.add_file)
         self.pushButton_2.clicked.connect(self.add_file)
@@ -101,9 +101,7 @@ class MyWindow(QMainWindow, form_class):
         divided by code
         '''
         sname = self.sender().text()
-        print(sname)
         code = sname[:2]
-        print(code)
         if code == '복지': # 코드 : 복지
             file = self.lineEdit.text()
             file = self.table_to_pd_excel(file, code)
@@ -150,9 +148,7 @@ class MyWindow(QMainWindow, form_class):
 
     def data_verify(self):
         sname = self.sender().text()
-        print(sname)
         code = sname[:2]
-        print(code)
         if code == '복지': # 코드 : 복지
             file = self.lineEdit.text()
             if '.xls' not in file or file == 0:
@@ -367,31 +363,21 @@ class MyWindow(QMainWindow, form_class):
                 s = df__.index[(df__["Unnamed: 0"] == "No")].tolist()
                 rows = s[0]
             sheet = pd.ExcelFile.parse(f, sheet_name=sheet,header=0,skiprows=rows+1)
-            print(sheet)
             header = sheet.columns.values.tolist() #dataframe에서 header list 작성
             for h in header:
                 if '동호수' in h:
                     h_index = header.index(h)
-                    dongho = h
                     sheet[h] =sheet[h].str.replace('동 ', '-')
                     sheet[h] =sheet[h].str.replace('호', '')
                     sheet[h] =sheet[h].str.replace('(', '')
                     sheet[h] =sheet[h].str.replace(')', '')
                     sheet[h] =sheet[h].str.replace(' 세곡동, 강남데시앙파크', '')
-                    print(sheet)
                 else:
                     pass
-            try:
-                temp = sheet[header[h_index]].str.split('-', expand = True)
-                sheet['동'] = temp[0]
-                sheet['호'] = temp[1]
-                df_1 = sheet[['동', '호']]
-            except:
-                temp = sheet[header[h_index]].str.split('동 ', expand = True)
-                sheet['동'] = temp[0]
-                temp_1 = temp[1].str.slice(stop = -1)
-                sheet['호'] = temp_1
-                df_1 = sheet[['동', '호']]
+            temp = sheet[header[h_index]].str.split('-', expand = True)
+            sheet['동'] = temp[0]
+            sheet['호'] = temp[1]
+            df_1 = sheet[['동', '호']]
             df_1[items_code['item']] = items_code['code']
             sheet_data.append(df_1)
 
