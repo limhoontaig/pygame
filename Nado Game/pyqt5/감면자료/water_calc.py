@@ -25,7 +25,7 @@ yyyy = now.strftime("%Y")
 LE =  [
     'D:/과장/1 1 부과자료/'+yyyy+'년/'+yyyymm+'/수도감면자료',
     'D:/과장/1 1 부과자료/'+yyyy+'년/'+yyyymm+'/수도감면자료',
-    'D:/과장/1 1 부과자료/'+yyyy+'년/Water_Template_File_for_XPERP_upload.xls',
+    'D:/과장/1 1 부과자료/'+yyyy+'년/Templates/Water_Template_File_for_XPERP_upload.xls',
     'D:/과장/1 1 부과자료/'+yyyy+'년/'+yyyymm+'/xperp_감면자료'
     ]
 
@@ -97,44 +97,41 @@ class MyWindow(QMainWindow, form_class):
 
     def data_change_save(self):
         sname = self.sender().text()
-        if sname == '복지저장': # 코드 : 복지
-            file = self.lineEdit.text()
-
-        elif sname == '다자녀저장':
-            file = self.lineEdit.text()
-            
-        elif sname == '중증장애저장':
-            file = self.lineEdit_2.text()
-        else:
-            sname = '유공자저장'
-            file = self.lineEdit_2.text()
-
         code = sname[:2]
+        print(sname, code)
+        if code == '복지': # 코드 : 복지
+            file = self.lineEdit.text()
+            file = self.table_to_pd_excel(file, code)
+            self.lineEdit_9.setText(file)
+
+        elif code == '다자': # 코드 다자녀
+            file = self.lineEdit.text()
+            file = self.table_to_pd_excel(file, code)
+            self.lineEdit_12.setText(file)
+            
+        elif code == '중증': # 코드 중증장애
+            file = self.lineEdit_2.text()
+            file = self.table_to_pd_excel(file, code)
+            self.lineEdit_13.setText(file)
+
+        else: # code in sname: # 코드 유공자
+            file = self.lineEdit_2.text()
+            file = self.table_to_pd_excel(file, code)
+            self.lineEdit_14.setText(file)
+
+    def table_to_pd_excel(self, file, code):
         with pd.ExcelFile(file) as f:
             sheet = self.sheet_select(f,code)
         df = self.data_query()
         f_split = file.split('.')
         file = f_split[0]+sheet+'.'+f_split[1]
-
         if os.path.isfile(file):
             os.remove(file)
             df.to_excel(file,sheet_name= sheet,index=False,header=True)
         else:
             df.to_excel(file,sheet_name= sheet,index=False,header=True)
 
-        if sname == '복지저장': # 코드 : 복지
-            self.lineEdit_9.setText(file)
-
-        elif sname == '다자녀저장':
-            self.lineEdit_12.setText(file)
-            
-        elif sname == '중증장애저장':
-            self.lineEdit_13.setText(file)
-        else:
-            sname = '유공자저장'
-            self.lineEdit_14.setText(file)
-        
-        return
+        return file
 
     def cellchanged_event(self, row, col):
         data = self.tableWidget.item(row,col)
