@@ -96,9 +96,14 @@ class MyWindow(QMainWindow, form_class):
         return df
 
     def data_change_save(self):
+        '''
+        verified data save after the data to verify and modify on the tableWidget
+        divided by code
+        '''
         sname = self.sender().text()
+        print(sname)
         code = sname[:2]
-        print(sname, code)
+        print(code)
         if code == '복지': # 코드 : 복지
             file = self.lineEdit.text()
             file = self.table_to_pd_excel(file, code)
@@ -120,6 +125,9 @@ class MyWindow(QMainWindow, form_class):
             self.lineEdit_14.setText(file)
 
     def table_to_pd_excel(self, file, code):
+        return
+        '''
+        This function does not use for business, only for verification purpose
         with pd.ExcelFile(file) as f:
             sheet = self.sheet_select(f,code)
         df = self.data_query()
@@ -132,13 +140,20 @@ class MyWindow(QMainWindow, form_class):
             df.to_excel(file,sheet_name= sheet,index=False,header=True)
 
         return file
+        '''
 
     def cellchanged_event(self, row, col):
+        #df = self.data_query()
+        #end_col = len(df.columns)
+        #code = self.tableWidget.item(row,end_col).text()
         data = self.tableWidget.item(row,col)
 
     def data_verify(self):
         sname = self.sender().text()
-        if sname == '복지': # 코드 : 복지
+        print(sname)
+        code = sname[:2]
+        print(code)
+        if code == '복지': # 코드 : 복지
             file = self.lineEdit.text()
             if '.xls' not in file or file == 0:
                 QMessageBox.about(self, "경고", "수도 다자녀/복지감면 파일을 추가하세요")
@@ -148,7 +163,7 @@ class MyWindow(QMainWindow, form_class):
             self.pushButton_15.setDisabled(True)
             self.pushButton_14.setDisabled(True)
 
-        elif sname == '다자녀':
+        elif code == '다자':
             file = self.lineEdit.text()
             if '.xls' not in file or file == 0:
                 QMessageBox.about(self, "경고", "수도 다자녀/복지감면 파일을 추가하세요")
@@ -157,7 +172,7 @@ class MyWindow(QMainWindow, form_class):
             self.pushButton_13.setDisabled(False)
             self.pushButton_15.setDisabled(True)
             self.pushButton_14.setDisabled(True)
-        elif sname == '중증장애':
+        elif code == '중증':
             file = self.lineEdit_2.text()
             if '.xls' not in file or file == 0:
                 QMessageBox.about(self, "경고", "수도 중증장애/유공자 감면 파일을 추가하세요")
@@ -167,7 +182,7 @@ class MyWindow(QMainWindow, form_class):
             self.pushButton_15.setDisabled(False)
             self.pushButton_14.setDisabled(True)
         else:
-            sname = '유공자'
+            code = '유공'
             file = self.lineEdit_2.text()
             if '.xls' not in file or file == 0:
                 QMessageBox.about(self, "경고", "수도 중증장애/유공자 감면 파일을 추가하세요")
@@ -178,9 +193,9 @@ class MyWindow(QMainWindow, form_class):
             self.pushButton_14.setDisabled(False)
         
         with pd.ExcelFile(file) as f:
-            code = sname
             sheet = self.sheet_select(f,code)
             df = pd.read_excel(f,sheet_name = sheet)
+            df['Code'] = code
             header = df.columns.values.tolist()
         self.set_tbl(df, header)
         return
@@ -192,9 +207,6 @@ class MyWindow(QMainWindow, form_class):
                 return sheet
             else:
                 pass
-
-
-
 
     def set_tbl(self, df, header):
 
@@ -253,10 +265,13 @@ class MyWindow(QMainWindow, form_class):
         # 각 옵션들 값을 확인
         f1 = self.lineEdit.text()
         f2 = self.lineEdit_2.text()
-        f5 = self.lineEdit_9.text()
-        f6 = self.lineEdit_12.text()
-        f7 = self.lineEdit_13.text()
-        f8 = self.lineEdit_14.text()
+        '''
+        This valuables are to be used for single file divided by kind of discount
+        f5 = self.lineEdit_9.text() # 복지 개별
+        f6 = self.lineEdit_12.text() # 다자녀
+        f7 = self.lineEdit_13.text() # 중증장애
+        f8 = self.lineEdit_14.text() # 유공자
+        '''
 
         f3 = self.lineEdit_3.text()
         f4 = self.lineEdit_4.text()
@@ -352,10 +367,18 @@ class MyWindow(QMainWindow, form_class):
                 s = df__.index[(df__["Unnamed: 0"] == "No")].tolist()
                 rows = s[0]
             sheet = pd.ExcelFile.parse(f, sheet_name=sheet,header=0,skiprows=rows+1)
+            print(sheet)
             header = sheet.columns.values.tolist() #dataframe에서 header list 작성
             for h in header:
                 if '동호수' in h:
                     h_index = header.index(h)
+                    dongho = h
+                    sheet[h] =sheet[h].str.replace('동 ', '-')
+                    sheet[h] =sheet[h].str.replace('호', '')
+                    sheet[h] =sheet[h].str.replace('(', '')
+                    sheet[h] =sheet[h].str.replace(')', '')
+                    sheet[h] =sheet[h].str.replace(' 세곡동, 강남데시앙파크', '')
+                    print(sheet)
                 else:
                     pass
             try:
