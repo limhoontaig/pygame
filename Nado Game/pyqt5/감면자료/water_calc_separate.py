@@ -45,28 +45,33 @@ class MyWidget(QDialog, form_class1):
         f1 = myWindow.lineEdit.text()
         f2 = myWindow.lineEdit_2.text()
         self.textEdit.setText(f1+'\n'+f2)
-        print(f1+'\n',f2)
         self.pushButton_7.clicked.connect(self.data_verify)
+        self.pushButton_8.clicked.connect(self.data_verify)
+        self.pushButton_11.clicked.connect(self.data_verify)
+        self.pushButton_12.clicked.connect(self.data_verify)
         
-        '''self.tableWidget.setAlternatingRowColors(True)
+        self.tableWidget.setAlternatingRowColors(True)
         self.tableWidget.setHorizontalHeaderLabels(['No', '사용가번호', '동호수'])
-        self.tableWidget.setEditTriggers(QAbstractItemView.AllEditTriggers) # QAbstractItemView.NoEditTriggers
-        self.tableWidget.cellChanged.connect(MyWindow.cellchanged_event)
-        self.tableWidget.setSortingEnabled(False) # default ; False
-        self.pushButton_8.clicked.connect(MyWindow.data_verify)
+        self.tableWidget.setEditTriggers(QAbstractItemView.NoEditTriggers) # QAbstractItemView.AllEditTriggers
+        self.tableWidget.cellChanged.connect(self.cellchanged_event)
+        self.tableWidget.setSortingEnabled(True) # default ; False
         self.pushButton_9.clicked.connect(self.tableWidget.scrollToTop)
         self.pushButton_10.clicked.connect(self.tableWidget.scrollToBottom)
-        self.pushButton_11.clicked.connect(MyWindow.data_verify)
-        self.pushButton_12.clicked.connect(MyWindow.data_verify)
-        self.pushButton_16.clicked.connect(MyWindow.data_change_save)
-        self.pushButton_13.clicked.connect(MyWindow.data_change_save)
-        self.pushButton_15.clicked.connect(MyWindow.data_change_save)
-        self.pushButton_14.clicked.connect(MyWindow.data_change_save)
+        self.pushButton_16.clicked.connect(self.data_change_save)
+        self.pushButton_15.clicked.connect(self.data_change_save)
+        self.pushButton_13.clicked.connect(self.data_change_save)
+        self.pushButton_14.clicked.connect(self.data_change_save)
         self.pushButton_16.setDisabled(True)
         self.pushButton_13.setDisabled(True)
         self.pushButton_15.setDisabled(True)
-        self.pushButton_14.setDisabled(True)'''
-        self.show()
+        self.pushButton_14.setDisabled(True)
+        #self.show()
+
+    def cellchanged_event(self, row, col):
+        #df = self.data_query()
+        #end_col = len(df.columns)
+        #code = self.tableWidget.item(row,end_col).text()
+        data = self.tableWidget.item(row,col)
 
     def data_query(self):
         '''
@@ -96,65 +101,59 @@ class MyWidget(QDialog, form_class1):
         sname = self.sender().text()
         code = sname[:2]
         if code == '복지': # 코드 : 복지
-            file = self.lineEdit.text()
+            file = myWindow.lineEdit.text()
             file_code = self.table_to_pd_excel(file, code)
-            self.lineEdit_9.setText(file_code)
+            myWindow.lineEdit_9.setText(file_code)
 
         elif code == '다자': # 코드 다자녀
-            file = self.lineEdit.text()
+            file = myWindow.lineEdit.text()
             file_code = self.table_to_pd_excel(file, code)
-            self.lineEdit_12.setText(file_code)
+            myWindow.lineEdit_12.setText(file_code)
             
         elif code == '중증': # 코드 중증장애
-            file = self.lineEdit_2.text()
+            file = myWindow.lineEdit_2.text()
             file_code = self.table_to_pd_excel(file, code)
-            self.lineEdit_13.setText(file_code)
+            myWindow.lineEdit_13.setText(file_code)
 
         else: # code in sname: # 코드 유공자
-            file = self.lineEdit_2.text()
+            file = myWindow.lineEdit_2.text()
             file_code = self.table_to_pd_excel(file, code)
-            self.lineEdit_14.setText(file_code)
+            myWindow.lineEdit_14.setText(file_code)
 
 
     def table_to_pd_excel(self, file, code):
-        return
-        '''
-        This function does not use for business, only for verification purpose
+        
         with pd.ExcelFile(file) as f:
             sheet = self.sheet_select(f,code)
         df = self.data_query()
         f_split = file.split('.')
         file = f_split[0]+sheet+'.'+f_split[1]
+        '''
         if os.path.isfile(file):
             os.remove(file)
             df.to_excel(file,sheet_name= sheet,index=False,header=True)
         else:
             df.to_excel(file,sheet_name= sheet,index=False,header=True)
-
-        return file
         '''
+        return file
 
-    def cellchanged_event(self, row, col):
-        #df = self.data_query()
-        #end_col = len(df.columns)
-        #code = self.tableWidget.item(row,end_col).text()
-        data = self.tableWidget.item(row,col)
+
 
     def data_verify(self):
-        sname = MyWidget.sender().text()
-        file = MyWindow.lineEdit.text()
-        if '.xls' not in file or file == 0:
-            QMessageBox.about(self, "경고", "수도 다자녀/복지감면 파일을 추가하세요")
-            return
-        self.pushButton_16.setDisabled(False)
-        self.pushButton_13.setDisabled(True)
-        self.pushButton_15.setDisabled(True)
-        self.pushButton_14.setDisabled(True)
+        sname = self.sender().text()
         code = sname[:2]
-        '''if code == '복지': # 코드 : 복지
+        if code == '복지': # 코드 : 복지
+            file = myWindow.lineEdit.text()
+            if '.xls' not in file or file == 0:
+                QMessageBox.about(self, "경고", "수도 다자녀/복지감면 파일을 추가하세요")
+                return
+            self.pushButton_16.setDisabled(False)
+            self.pushButton_13.setDisabled(True)
+            self.pushButton_15.setDisabled(True)
+            self.pushButton_14.setDisabled(True)
 
         elif code == '다자':
-            file = self.lineEdit.text()
+            file = myWindow.lineEdit.text()
             if '.xls' not in file or file == 0:
                 QMessageBox.about(self, "경고", "수도 다자녀/복지감면 파일을 추가하세요")
                 return
@@ -163,7 +162,7 @@ class MyWidget(QDialog, form_class1):
             self.pushButton_15.setDisabled(True)
             self.pushButton_14.setDisabled(True)
         elif code == '중증':
-            file = self.lineEdit_2.text()
+            file = myWindow.lineEdit_2.text()
             if '.xls' not in file or file == 0:
                 QMessageBox.about(self, "경고", "수도 중증장애/유공자 감면 파일을 추가하세요")
                 return
@@ -173,7 +172,7 @@ class MyWidget(QDialog, form_class1):
             self.pushButton_14.setDisabled(True)
         else:
             code = '유공'
-            file = self.lineEdit_2.text()
+            file = myWindow.lineEdit_2.text()
             if '.xls' not in file or file == 0:
                 QMessageBox.about(self, "경고", "수도 중증장애/유공자 감면 파일을 추가하세요")
                 return
@@ -181,7 +180,7 @@ class MyWidget(QDialog, form_class1):
             self.pushButton_13.setDisabled(True)
             self.pushButton_15.setDisabled(True)
             self.pushButton_14.setDisabled(False)
-        '''
+        
         with pd.ExcelFile(file) as f:
             sheet = self.sheet_select(f,code)
             df = pd.read_excel(f,sheet_name = sheet)
@@ -217,13 +216,13 @@ class MyWidget(QDialog, form_class1):
         width = []
         for column in range(header.count()):
             header.setSectionResizeMode(column, QHeaderView.ResizeToContents)
-            #width.append(header.sectionSize(column))
-        '''
+            width.append(header.sectionSize(column))
+        
         wfactor = twidth / sum(width)
         for column in range(header.count()):
             header.setSectionResizeMode(column, QHeaderView.Interactive)
             header.resizeSection(column, width[column]*wfactor)
-        '''
+        
 
 
 class MyWindow(QMainWindow, form_class):
