@@ -42,13 +42,17 @@ class MyWidget(QDialog, form_class1):
         self.tableWidget.setRowCount(28)
         self.tableWidget.setColumnCount(3)
         self.pushButton.clicked.connect(self.close)
-        self.textEdit.setText(myWindow.lineEdit.text())
+        f1 = myWindow.lineEdit.text()
+        f2 = myWindow.lineEdit_2.text()
+        self.textEdit.setText(f1+'\n'+f2)
+        print(f1+'\n',f2)
+        self.pushButton_7.clicked.connect(self.data_verify)
+        
         '''self.tableWidget.setAlternatingRowColors(True)
         self.tableWidget.setHorizontalHeaderLabels(['No', '사용가번호', '동호수'])
         self.tableWidget.setEditTriggers(QAbstractItemView.AllEditTriggers) # QAbstractItemView.NoEditTriggers
         self.tableWidget.cellChanged.connect(MyWindow.cellchanged_event)
         self.tableWidget.setSortingEnabled(False) # default ; False
-        self.pushButton_7.clicked.connect(MyWindow.data_verify)
         self.pushButton_8.clicked.connect(MyWindow.data_verify)
         self.pushButton_9.clicked.connect(self.tableWidget.scrollToTop)
         self.pushButton_10.clicked.connect(self.tableWidget.scrollToBottom)
@@ -137,8 +141,8 @@ class MyWidget(QDialog, form_class1):
         data = self.tableWidget.item(row,col)
 
     def data_verify(self):
-        #sname = MyWidget.sender().text()
-        file = self.lineEdit.text()
+        sname = MyWidget.sender().text()
+        file = MyWindow.lineEdit.text()
         if '.xls' not in file or file == 0:
             QMessageBox.about(self, "경고", "수도 다자녀/복지감면 파일을 추가하세요")
             return
@@ -146,8 +150,8 @@ class MyWidget(QDialog, form_class1):
         self.pushButton_13.setDisabled(True)
         self.pushButton_15.setDisabled(True)
         self.pushButton_14.setDisabled(True)
-        '''code = sname[:2]
-        if code == '복지': # 코드 : 복지
+        code = sname[:2]
+        '''if code == '복지': # 코드 : 복지
 
         elif code == '다자':
             file = self.lineEdit.text()
@@ -177,14 +181,14 @@ class MyWidget(QDialog, form_class1):
             self.pushButton_13.setDisabled(True)
             self.pushButton_15.setDisabled(True)
             self.pushButton_14.setDisabled(False)
-        
+        '''
         with pd.ExcelFile(file) as f:
             sheet = self.sheet_select(f,code)
             df = pd.read_excel(f,sheet_name = sheet)
             df['Code'] = code
             header = df.columns.values.tolist()
         self.set_tbl(df, header)
-        return'''
+        return
 
     def sheet_select(self, f, code):
         sheet_name = f.sheet_names
