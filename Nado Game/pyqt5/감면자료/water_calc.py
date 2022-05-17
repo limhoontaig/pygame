@@ -18,6 +18,7 @@ def resource_path(relative_path):
 form = resource_path("water_mainwindow.ui")
 form_class = uic.loadUiType(form)[0]
 
+# constants
 now = datetime.now()
 yyyymm = now.strftime("%Y")+now.strftime("%m")+'월'
 yyyy = now.strftime("%Y")
@@ -28,6 +29,9 @@ LE =  [
     'D:/과장/1 1 부과자료/'+yyyy+'년/Templates/Water_Template_File_for_XPERP_upload.xls',
     'D:/과장/1 1 부과자료/'+yyyy+'년/'+yyyymm+'/xperp_감면자료'
     ]
+division = ({'복지':'복지'},{'다자':'다자'},{'중증':'중증'},{'유공':'유공'})
+code = ({'복지':'3'},{'다자':'I'},{'중증':'T'},{'유공':'2'})
+
 
 class MyWindow(QMainWindow, form_class):
     def __init__(self):
@@ -204,7 +208,7 @@ class MyWindow(QMainWindow, form_class):
             else:
                 pass
 
-    def set_tbl(self, df, header):
+    def set_tbl(self, df, headers):
 
         rdr_col = len(df.columns)
         rdr_row = len(df)
@@ -217,7 +221,20 @@ class MyWindow(QMainWindow, form_class):
             for j in range(rdr_col):
                 self.tableWidget.setItem(i, j, QTableWidgetItem(str(df.iloc[i,j])))
                 #self.setSectionResizeMode(j, QHeaderView.ResizeToContents)
-        self.tableWidget.setHorizontalHeaderLabels(header)
+        self.tableWidget.setHorizontalHeaderLabels(headers)
+        header = self.tableWidget.horizontalHeader()
+        twidth = header.width()
+        width = []
+        for column in range(header.count()):
+            header.setSectionResizeMode(column, QHeaderView.ResizeToContents)
+            #width.append(header.sectionSize(column))
+        '''
+        wfactor = twidth / sum(width)
+        for column in range(header.count()):
+            header.setSectionResizeMode(column, QHeaderView.Interactive)
+            header.resizeSection(column, width[column]*wfactor)
+        '''
+
 
     @pyqtSlot()
     def add_file(self):
@@ -261,14 +278,6 @@ class MyWindow(QMainWindow, form_class):
         # 각 옵션들 값을 확인
         f1 = self.lineEdit.text()
         f2 = self.lineEdit_2.text()
-        '''
-        This valuables are to be used for single file divided by kind of discount
-        f5 = self.lineEdit_9.text() # 복지 개별
-        f6 = self.lineEdit_12.text() # 다자녀
-        f7 = self.lineEdit_13.text() # 중증장애
-        f8 = self.lineEdit_14.text() # 유공자
-        '''
-
         f3 = self.lineEdit_3.text()
         f4 = self.lineEdit_4.text()
 
@@ -290,93 +299,73 @@ class MyWindow(QMainWindow, form_class):
         if f4 == 0:
             QMessageBox.about(self, "경고", "저장 경로를 선택하세요")
             return
-        '''
-        # 검증 파일 생성 확인
-        if '.xls' not in f5 or f5 == 0:
-            QMessageBox.about(self, "경고", "수도 기초수급 감면 파일을 확인하세요")
-            return
-        
-        if '.xls' not in f6 or f6 == 0:
-            QMessageBox.about(self, "경고", "수도 다자녀 감면 파일을 확인하세요")
-            return
-        
-        if '.xls' not in f7 or f7 == 0:
-            QMessageBox.about(self, "경고", "수도 중증장애인 감면 파일을 확인하세요")
-            return
-        
-        if '.xls' not in f8 or f8 == 0:
-            QMessageBox.about(self, "경고", "수도 유공자 감면 파일을 확인하세요")
-            return
-        '''
 
-        df2 = self.welfare_calc(f1)
-        df = df2[0]
-        #df.rename(columns = {'복지코드' : '기초'}, inplace = True)
-        df_f = df2[1]
-        #df_f.rename(columns = {'복지코드' : '가족'}, inplace = True)
+        files = [f1,f2]
+        sheet_names = self.sheet_list(files)
+        total_df = self.seperate_dongho(sheet_names)
 
-        df_temp = self.merits_calc(f2)
-        df3 = df_temp[0]
-        #df3.rename(columns = {'복지코드' : '중증'}, inplace = True)
-        df4 = df_temp[1]
-        #df4.rename(columns = {'복지코드' : '유공'}, inplace = True)
+        df = total_df[0]
+        total_복지 = len(df)
+        self.lineEdit_5.setText(str(f'{total_복지:>7,}'))
+
+        df_f = total_df[1]
+        total_대가족 = len(df_f)
+        self.lineEdit_6.setText(str(f'{total_대가족:>7,}'))
+
+        df3 = total_df[2]
+        total_중증 = len(df3)
+        self.lineEdit_7.setText(str(f'{total_중증:>7,}'))
+
+        df4 = total_df[3]
+        total_유공자 = len(df4)
+        self.lineEdit_8.setText(str(f'{total_유공자:>7,}'))
+
         discount = self.template_make(f3,df,df_f,df3,df4)
-        
         self.pd_save(discount,f4)
         return
 
-    def welfare_calc(self, f1):
-        f = pd.ExcelFile(f1)
-        d = self.seperate_dongho(f)
-        df = d[0]
-        df_f = d[1]
-        total_복지 = len(df)
-        self.lineEdit_5.setText(str(f'{total_복지:>7,}'))
-        total_대가족 = len(df_f)
-        self.lineEdit_6.setText(str(f'{total_대가족:>7,}'))
-        return df, df_f
+    def sheet_list(self, files):
+        sheets =[]
+        for f in files:
+            file = pd.ExcelFile(f)
+            sheet_name = file.sheet_names
+            for s in sheet_name:
+                s = [file, s]
+                sheets.append(s)
+        return sheets
 
-    def merits_calc(self, f2):
-        # # 수도 유공자할인 등록
-        f = pd.ExcelFile(f2)
-        df = self.seperate_dongho(f)
-        df_3 = df[0]
-        total_중증 = len(df_3)
-        self.lineEdit_7.setText(str(f'{total_중증:>7,}'))
-        #df_4["유공자"]= '2'
-        df_4 = df[1]
-        total_유공자 = len(df_4)
-        self.lineEdit_8.setText(str(f'{total_유공자:>7,}'))
-
-        return df_3, df_4
-
-    def seperate_dongho(self, f):
-        sheet_name = f.sheet_names
-        sheet_data = []
-        for sheet in sheet_name:
+    def seperate_dongho(self, file):
+        df_data = []
+        for f, sheet in file:
             items_code = self.code_verify(sheet)
-            df__ = pd.read_excel(f,sheet_name = sheet)
-            cols = df__.columns
-            if cols[0] == 'No':
-                rows = -1
-            else:
-                s = df__.index[(df__["Unnamed: 0"] == "No")].tolist()
-                rows = s[0]
-            sheet = pd.ExcelFile.parse(f, sheet_name=sheet,header=0,skiprows=rows+1)
-            header = sheet.columns.values.tolist() #dataframe에서 header list 작성
+            rows = self.skip_row(f,sheet) 
+            df = pd.ExcelFile.parse(f, sheet_name=sheet,header=0,skiprows=rows+1)
+            header = df.columns.values.tolist() #dataframe에서 header list 작성
             for h in header:
                 if '동호수' in h:
                     h_index = header.index(h)
-                    sheet['dongho'] =sheet[h].str.findall('(\d{3,4})')
-                    sheet['동'] =sheet['dongho'].str[0]
-                    sheet['호'] =sheet['dongho'].str[1]
+                    df['dongho'] =df[h].str.findall('(\d{3,4})')
+                    df['동'] =df['dongho'].str[0]
+                    df['호'] =df['dongho'].str[1]
                 else:
                     pass
-            df_1 = sheet[['동', '호']]
+            df_1 = df[['동', '호']]
             df_1[items_code['item']] = items_code['code']
-            sheet_data.append(df_1)
+            df_data.append(df_1)
 
-        return sheet_data
+        return df_data
+
+
+    def skip_row(self,f,sheet):
+        df__ = pd.read_excel(f,sheet_name = sheet)
+        cols = df__.columns
+        if cols[0] == 'No':
+            rows = -1
+        else:
+            s = df__.index[(df__["Unnamed: 0"] == "No")].tolist()
+            rows = s[0]
+        return rows
+
 
     def code_verify(self, sheet):
         if '복지' in sheet:
