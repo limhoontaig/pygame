@@ -15,7 +15,7 @@ def resource_path(relative_path):
     base_path = getattr(sys, "_MAIPASS", os.path.dirname(os.path.abspath(__file__)))
     return os.path.join(base_path, relative_path)
 
-form = resource_path("water_mainwindow.ui")
+form = resource_path("water_separate_mainwindow.ui")
 form_class = uic.loadUiType(form)[0]
 form1 = resource_path("water_file_verify.ui")
 form_class1 = uic.loadUiType(form1)[0]
@@ -38,15 +38,16 @@ class MyWidget(QDialog, form_class1):
     def __init__(self):
         super().__init__()
         self.setupUi(self)
-
-        # self.tableWidget.setRowCount(28)
-        #self.tableWidget.setColumnCount(3)
-        self.tableWidget.setAlternatingRowColors(True)
+        myWindow = MyWindow()
+        self.tableWidget.setRowCount(28)
+        self.tableWidget.setColumnCount(3)
+        self.pushButton.clicked.connect(self.close)
+        self.textEdit.setText(myWindow.lineEdit.text())
+        '''self.tableWidget.setAlternatingRowColors(True)
         self.tableWidget.setHorizontalHeaderLabels(['No', '사용가번호', '동호수'])
         self.tableWidget.setEditTriggers(QAbstractItemView.AllEditTriggers) # QAbstractItemView.NoEditTriggers
         self.tableWidget.cellChanged.connect(MyWindow.cellchanged_event)
         self.tableWidget.setSortingEnabled(False) # default ; False
-        self.pushButton.clicked.connect(self.close)
         self.pushButton_7.clicked.connect(MyWindow.data_verify)
         self.pushButton_8.clicked.connect(MyWindow.data_verify)
         self.pushButton_9.clicked.connect(self.tableWidget.scrollToTop)
@@ -60,7 +61,7 @@ class MyWidget(QDialog, form_class1):
         self.pushButton_16.setDisabled(True)
         self.pushButton_13.setDisabled(True)
         self.pushButton_15.setDisabled(True)
-        self.pushButton_14.setDisabled(True)
+        self.pushButton_14.setDisabled(True)'''
         self.show()
 
     def data_query(self):
@@ -347,7 +348,7 @@ class MyWindow(QMainWindow, form_class):
     def seperate_dongho(self, file):
         df_data = []
         for f, sheet in file:
-            items_code = self.code_verify(sheet)
+            items = self.code_verify(sheet)
             rows = self.skip_row(f,sheet) 
             df = pd.ExcelFile.parse(f, sheet_name=sheet,header=0,skiprows=rows+1)
             header = df.columns.values.tolist() #dataframe에서 header list 작성
@@ -360,7 +361,7 @@ class MyWindow(QMainWindow, form_class):
                 else:
                     pass
             df_1 = df[['동', '호']]
-            df_1[items_code['item']] = items_code['code']
+            df_1[items['item']] = items['code']
             df_data.append(df_1)
 
         return df_data
