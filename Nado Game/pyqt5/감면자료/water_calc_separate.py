@@ -1,7 +1,7 @@
 import sys
 import os
 import pandas as pd
-from PyQt5.QtWidgets import *
+from PyQt5.QtWidgets import QTableWidget, QTableWidgetItem, QDialog, QFileDialog, QApplication,QMainWindow, QMessageBox
 from PyQt5.QtWidgets import QAbstractItemView, QHeaderView
 
 from PyQt5.QtCore import pyqtSlot, QObject, pyqtSignal
