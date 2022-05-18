@@ -1,8 +1,5 @@
-import collections
-from email import header
 import sys
 import os
-import openpyxl
 import pandas as pd
 from PyQt5.QtWidgets import *
 from PyQt5.QtWidgets import QAbstractItemView, QHeaderView
@@ -42,9 +39,7 @@ class MyWidget(QDialog, form_class1):
         self.tableWidget.setRowCount(28)
         self.tableWidget.setColumnCount(3)
         self.pushButton.clicked.connect(self.close)
-        f1 = myWindow.lineEdit.text()
-        f2 = myWindow.lineEdit_2.text()
-        self.textEdit.setText(f1+'\n'+f2)
+        
         self.pushButton_7.clicked.connect(self.data_verify)
         self.pushButton_8.clicked.connect(self.data_verify)
         self.pushButton_11.clicked.connect(self.data_verify)
@@ -187,6 +182,14 @@ class MyWidget(QDialog, form_class1):
             df['Code'] = code
             header = df.columns.values.tolist()
         self.set_tbl(df, header)
+        f1 = myWindow.lineEdit.text()
+        f2 = myWindow.lineEdit_2.text()
+        if code == '복지' or code == '다자':
+            self.textEdit.clear()
+            self.textEdit.setText(f1)
+        else:
+            self.textEdit.clear()            
+            self.textEdit.setText(f2)
         return
 
     def sheet_select(self, f, code):
@@ -218,7 +221,7 @@ class MyWidget(QDialog, form_class1):
             header.setSectionResizeMode(column, QHeaderView.ResizeToContents)
             width.append(header.sectionSize(column))
         
-        wfactor = twidth / sum(width)
+        wfactor = int(twidth / sum(width))
         for column in range(header.count()):
             header.setSectionResizeMode(column, QHeaderView.Interactive)
             header.resizeSection(column, width[column]*wfactor)
@@ -363,7 +366,7 @@ class MyWindow(QMainWindow, form_class):
                     df['호'] =df['dongho'].str[1]
                 else:
                     pass
-            df_1 = df[['동', '호']]
+            df_1 = df[['동', '호']].copy()
             df_1[items['item']] = items['code']
             df_data.append(df_1)
 
