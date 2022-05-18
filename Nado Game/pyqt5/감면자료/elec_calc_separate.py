@@ -113,12 +113,12 @@ class ElWidget(QDialog, form_class_1):
         except:
             QMessageBox.about(self, "경고", "'장애종류' 키값이 없습니다. 파일을 확인하세요")
             return
-        new = ['금월파일']+df_col +['금월 할인종류']+kind_of_welfare
+        new = ['금월파일 항목','']+df_col +['','금월 할인 종류','']+kind_of_welfare
 
         new_col_names = ['동', '호', '대상자명','할인종류','장애종류','장애등급','할인요금']
         used_kind_of_welfare = ['장애인 할인', '다자녀 할인', '대가족 할인', '의료기기 할인', '기초수급 할인', '출산가구 할인', '복지추가감액',
                                 '기초수급 할인 (주거, 교육)', '차상위계층 할인', '사회복지 할인', '독립유공 할인']
-        old = ['기존파일']+new_col_names +['기존 할인 종류']+ used_kind_of_welfare
+        old = ['기존파일 항목','']+new_col_names +['','기존 할인 종류','']+ used_kind_of_welfare
         
         data = []
         data.append(old)
