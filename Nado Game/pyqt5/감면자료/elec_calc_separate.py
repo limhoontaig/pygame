@@ -10,8 +10,10 @@ def resource_path(relative_path):
     base_path = getattr(sys, "_MAIPASS", os.path.dirname(os.path.abspath(__file__)))
     return os.path.join(base_path, relative_path)
 
-form = resource_path("elec_mainwindow.ui")
+form = resource_path("elec_separate_mainwindow.ui")
 form_class = uic.loadUiType(form)[0]
+form_1 = resource_path("elec_file_verify.ui")
+form_class_1 = uic.loadUiType(form_1)[0]
 
 now = datetime.now()
 yyyymm = now.strftime("%Y")+now.strftime("%m")+'월'
@@ -24,35 +26,24 @@ LE =  [
     'D:/과장/1 1 부과자료/'+yyyy+'년/'+yyyymm+'/xperp_감면자료'
     ]
 
-class MyWindow(QMainWindow, form_class):
+class ElWidget(QDialog, form_class_1):
     def __init__(self):
         super().__init__()
-        self.LE = LE
         self.setupUi(self)
+        elWindow = ElWindow()
 
         self.tableWidget.setRowCount(28)
         self.tableWidget.setColumnCount(2)
         self.tableWidget.setAlternatingRowColors(True)
         self.tableWidget.setHorizontalHeaderLabels(['기존', '금월'])
         self.tableWidget.setSortingEnabled(True) # default ; False
-
-        self.lineEdit.setText(LE[0])
-        self.lineEdit_2.setText(LE[1])
-        self.lineEdit_3.setText(LE[2])
-        self.lineEdit_4.setText(LE[3])
-        self.label_5.setText('프로그램 작성 : 임훈택 Rev 0, 2022.05.11 Issued')
-
-        self.pushButton.clicked.connect(self.add_file)
-        self.pushButton_2.clicked.connect(self.add_file)
-        self.pushButton_3.clicked.connect(self.add_file)
-        self.pushButton_4.clicked.connect(self.add_file)
-        self.pushButton_5.clicked.connect(self.start)
+        
+        self.pushButton_6.clicked.connect(self.close)
         self.pushButton_7.clicked.connect(self.item_verify)
         self.pushButton_8.clicked.connect(self.kind_verify)
         self.pushButton_9.clicked.connect(self.tableWidget.scrollToTop)
         self.pushButton_10.clicked.connect(self.tableWidget.scrollToBottom)
-
-        self.pushButton_6.clicked.connect(self.close)
+        self.show()
 
     def set_tbl(self, data):
 
@@ -72,8 +63,104 @@ class MyWindow(QMainWindow, form_class):
             for j in i:
                 r = r+1
                 self.tableWidget.setItem(r-1, c-1, QTableWidgetItem(j))
-        self.tableWidget.setHorizontalHeaderLabels(['기존', '금월'])
+        # self.tableWidget.setHorizontalHeaderLabels(['기존', '금월'])
+        headers = ['기존', '금월']
+        self.tableWidget.setHorizontalHeaderLabels(headers)
+        header = self.tableWidget.horizontalHeader()
+        twidth = header.width()
+        width = []
+        for column in range(header.count()):
+            header.setSectionResizeMode(column, QHeaderView.ResizeToContents)
+            width.append(header.sectionSize(column))
+        
+        wfactor = int(twidth / sum(width))
+        for column in range(header.count()):
+            header.setSectionResizeMode(column, QHeaderView.Interactive)
+            header.resizeSection(column, width[column]*wfactor)
         #app.exec_()
+
+    def item_verify(self):
+        f1 = elWindow.lineEdit.text()
+        if '.xls' not in f1 or f1 == 0:
+            QMessageBox.about(self, "경고", "한전 복지감면 파일을 추가하세요")
+            return
+        df = pd.read_excel(f1,skiprows=2)#, dtype={'동':int, '호':int}) #,thousands=',')
+        df_col_names = df.columns.tolist()
+        used_col_names = ['동', '호', '동호명', '가구수', '계약\n종별', '요금적용\n전력', '사용량', '기본요금', '전력량\n요금', 
+            '연료비조정\n요금', '필수사용\n공제', '복지추가\n감액', '할인\n구분', '복지할인', '요금개편\n차액', 
+            '절전할인', '자동이체\n/인터넷', '단수', '전기요금', '부가세', '전력\n기금', '전기\n바우처', '정산', '출산가구소급', 
+            '당월소계', 'TV수신료', '청구금액']
+
+        sub_list = list(set(df_col_names) ^ set(used_col_names))
+        data = [used_col_names]
+        data.append(df_col_names)
+        self.set_tbl(data)
+        self.textEdit.clear()
+        for s in sub_list:
+            self.textEdit.append(str(s))
+        return
+
+    def kind_verify(self):
+        f2 = elWindow.lineEdit_2.text()
+        if '.xls' not in f2 or f2 == 0:
+            QMessageBox.about(self, "경고", "한전 감면 종류 파일을 추가하세요")
+            return
+        df_w = pd.read_excel(f2,skiprows=2, thousands=',')#, dtype={'동':int, '호':int}) #,thousands=',')
+        
+        df_col = df_w.columns.to_list()
+        try:
+            kind_of_welfare = list(df_w['장애종류'].unique())
+        except:
+            QMessageBox.about(self, "경고", "'장애종류' 키값이 없습니다. 파일을 확인하세요")
+            return
+        new = ['금월파일']+df_col +['금월 할인종류']+kind_of_welfare
+
+        new_col_names = ['동', '호', '대상자명','할인종류','장애종류','장애등급','할인요금']
+        used_kind_of_welfare = ['장애인 할인', '다자녀 할인', '대가족 할인', '의료기기 할인', '기초수급 할인', '출산가구 할인', '복지추가감액',
+                                '기초수급 할인 (주거, 교육)', '차상위계층 할인', '사회복지 할인', '독립유공 할인']
+        old = ['기존파일']+new_col_names +['기존 할인 종류']+ used_kind_of_welfare
+        
+        data = []
+        data.append(old)
+        data.append(new)
+
+        #print(data)
+
+        sub_list = list(set(old) ^ set(new))
+        self.set_tbl(data)
+        self.textEdit.clear()
+        for s in sub_list:
+                self.textEdit.append(str(s))
+        return
+
+
+
+class ElWindow(QMainWindow, form_class):
+    def __init__(self):
+        super().__init__()
+        self.LE = LE
+        self.setupUi(self)
+
+
+        self.lineEdit.setText(LE[0])
+        self.lineEdit_2.setText(LE[1])
+        self.lineEdit_3.setText(LE[2])
+        self.lineEdit_4.setText(LE[3])
+        self.label_5.setText('프로그램 작성 : 임훈택 Rev 0, 2022.05.11 Issued')
+
+        self.pushButton.clicked.connect(self.add_file)
+        self.pushButton_2.clicked.connect(self.add_file)
+        self.pushButton_3.clicked.connect(self.add_file)
+        self.pushButton_4.clicked.connect(self.add_file)
+        self.pushButton_5.clicked.connect(self.start)
+
+        self.pushButton_6.clicked.connect(self.close)
+        self.pushButton_7.clicked.connect(self.my_window)
+
+
+    def my_window(self):
+        elwidget = ElWidget()
+        elwidget.exec_()
 
     @pyqtSlot()
     def add_file(self):
@@ -151,26 +238,6 @@ class MyWindow(QMainWindow, form_class):
         
         return
 
-    def item_verify(self):
-        f1 = self.lineEdit.text()
-        if '.xls' not in f1 or f1 == 0:
-            QMessageBox.about(self, "경고", "한전 복지감면 파일을 추가하세요")
-            return
-        df = pd.read_excel(f1,skiprows=2)#, dtype={'동':int, '호':int}) #,thousands=',')
-        df_col_names = df.columns.tolist()
-        used_col_names = ['동', '호', '동호명', '가구수', '계약\n종별', '요금적용\n전력', '사용량', '기본요금', '전력량\n요금', 
-            '연료비조정\n요금', '필수사용\n공제', '복지추가\n감액', '할인\n구분', '복지할인', '요금개편\n차액', 
-            '절전할인', '자동이체\n/인터넷', '단수', '전기요금', '부가세', '전력\n기금', '전기\n바우처', '정산', '출산가구소급', 
-            '당월소계', 'TV수신료', '청구금액']
-
-        sub_list = list(set(df_col_names) ^ set(used_col_names))
-        data = [used_col_names]
-        data.append(df_col_names)
-        self.set_tbl(data)
-        self.textEdit.clear()
-        for s in sub_list:
-            self.textEdit.append(str(s))
-        return
     
     def welfare_calc(self, f1):
         df = pd.read_excel(f1,skiprows=2)#, dtype={'동':int, '호':int}) #,thousands=',')
@@ -196,38 +263,6 @@ class MyWindow(QMainWindow, form_class):
         df2[df2col_f] = df2[df2col_f].astype('int')
         return df2, 필수사용공제, 복지추가감액
 
-    def kind_verify(self):
-        f2 = self.lineEdit_2.text()
-        if '.xls' not in f2 or f2 == 0:
-            QMessageBox.about(self, "경고", "한전 감면 종류 파일을 추가하세요")
-            return
-        df_w = pd.read_excel(f2,skiprows=2, thousands=',')#, dtype={'동':int, '호':int}) #,thousands=',')
-        
-        df_col = df_w.columns.to_list()
-        try:
-            kind_of_welfare = list(df_w['장애종류'].unique())
-        except:
-            QMessageBox.about(self, "경고", "'장애종류' 키값이 없습니다. 파일을 확인하세요")
-            return
-        new = df_col + kind_of_welfare
-
-        new_col_names = ['동', '호', '대상자명','할인종류','장애종류','장애등급','할인요금']
-        used_kind_of_welfare = ['장애인 할인', '다자녀 할인', '대가족 할인', '의료기기 할인', '기초수급 할인', '출산가구 할인', '복지추가감액',
-                                '기초수급 할인 (주거, 교육)', '차상위계층 할인', '사회복지 할인', '독립유공 할인']
-        old = new_col_names + used_kind_of_welfare
-        
-        data = []
-        data.append(old)
-        data.append(new)
-
-        #print(data)
-
-        sub_list = list(set(old) ^ set(new))
-        self.set_tbl(data)
-        self.textEdit.clear()
-        for s in sub_list:
-                self.textEdit.append(str(s))
-        return
 
     def kind_calc(self, f2):
         df_w = pd.read_excel(f2,skiprows=2, thousands=',')#, dtype={'동':int, '호':int}) #,thousands=',')
@@ -344,6 +379,6 @@ class MyWindow(QMainWindow, form_class):
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
-    myWindow = MyWindow()
-    myWindow.show()
+    elWindow = ElWindow()
+    elWindow.show()
     app.exec_()
