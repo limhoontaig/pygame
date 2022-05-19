@@ -257,11 +257,15 @@ class ElWindow(QMainWindow, form_class):
 
     def kind_calc(self, f2):
         df_w = pd.read_excel(f2,skiprows=2, thousands=',')#, dtype={'동':int, '호':int}) #,thousands=',')
-        
-        code_dict = self.code_dict(['전기가족','전기복지'])
+        con = df_w[df_w['할인종류'].str.contains('추가복지감액')].index
+        df_w.drop(con, inplace=True)
+        code_dict = self.code_dict()
         print(code_dict[0])
+        print(code_dict[1])
+        print(code_dict[2])
+        '''
         new_col_names = ['동', '호', '대상자명','할인종류','장애종류','장애등급','할인요금']
-
+        
         df_w.columns = new_col_names
 
         used_kind_of_welfare = ['장애인 할인', '다자녀 할인', '대가족 할인', '의료기기 할인', '기초수급 할인', '출산가구 할인', '복지추가감액',
@@ -277,11 +281,16 @@ class ElWindow(QMainWindow, form_class):
         contains_addition = df_w['할인종류'].str.contains('추가복지감액')
         contains_welfare = ~df_w['할인종류'].str.contains('다자녀 할인|대가족 할인|출산가구 할인|의료기기 할인|복지추가감액')
         # contains_welfare = df_w['할인종류'].str.contains('장애인 할인|독립유공 할인|국가유공 할인|민주유공 할인|사회복지 할인|기초수급 할인|차상위계층 할인|기초수급 할인 (주거, 교육)')
-
+        '''
         # 대가족할인 조건를 충족하는 데이터를 필터링하여 새로운 변수에 저장합니다.
-        subset_df_f = df_w[contains_family].copy()
-        subset_df_f.set_index(['동','호'],inplace=True)
+        #subset_df_f = df_w[contains_family].copy()
+        #subset_df_f.set_index(['동','호'],inplace=True)
+        df_w.set_index(['동','호'],inplace=True)
         #subset_df_f['복지코드'] = subset_df_f['할인종류']
+        for kind, code in code_dict[2].items():
+            df_w.loc[df_w.할인종류 == kind, '복지코드'] = code
+
+        '''
         subset_df_f.loc[subset_df_f.할인종류 == '대가족 할인', '복지코드'] = '1'
         subset_df_f.loc[subset_df_f.할인종류 == '출산가구 할인', '복지코드'] = '2'
         subset_df_f.loc[subset_df_f.할인종류 == '다자녀 할인', '복지코드'] = '3'
@@ -301,32 +310,29 @@ class ElWindow(QMainWindow, form_class):
         subset_df_w.loc[subset_df_w.할인종류 == '차상위계층 할인', '복지코드'] = 'I'
         # subset_df_w.loc[subset_df_w.할인종류 == '복지추가감액', '복지코드'] = 'E'
         subset_df_w
+        '''
 
-        return subset_df_f, subset_df_w  
+        # return subset_df_f, subset_df_w  
+        return df_w
 
-    def code_dict(self, div):
-        #f5 = self.lineEdit_15.text()
-        f5 = r'E:\source\pygame\Nado Game\pyqt5\감면자료\xperp code comparasion table.xlsx'
-        with pd.ExcelFile(f5) as f:
-            df = pd.read_excel(f,sheet_name=1, skiprows=0)
-        df.dropna(inplace=True)
-
-        df['종별분류'] = df['종별'].str.cat(df[['분류']])
-        kind_div = []
-        kind = df['종별분류'].unique()
-        for k in div:
-            kind_div.append(k) 
+    def code_dict(self):
+        file = r'C:\source\pygame\Nado Game\pyqt5\감면자료\xperp code comparasion table.xlsx'
+        with pd.ExcelFile(file) as f:
+            df = pd.read_excel(f, sheet_name = 1)
+        sheet = f.sheet_names
+        df.dropna(inplace = True)
         code_dict = []
-        for kind in kind_div:
-            df1 = df[(df['종별분류'] == kind)]
-            string_list = df1['종류'].tolist()
-            int_list = df1['코드'].tolist()
-            kind = [kind]
-            kind_dict = dict(zip(string_list, int_list))
-            kind.append(kind_dict)
-            code_dict.append(kind)
-            
+        is_elec = df['종별'] == '전기'
+        df_elec = df[is_elec]
+        kind_list = df_elec['종류'].tolist()
+        code_list = df_elec['코드'].tolist()
+        kind_dict = dict(zip(kind_list, code_list))
+        code_dict.append(kind_list)
+        code_dict.append(code_list)
+        code_dict.append(kind_dict)
+        print(code_dict)
         return code_dict
+  
 
     def code_make(self, sheet):
         
