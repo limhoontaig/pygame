@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>898</width>
-    <height>673</height>
+    <height>732</height>
    </rect>
   </property>
   <property name="font">
@@ -289,7 +289,7 @@
     <property name="geometry">
      <rect>
       <x>30</x>
-      <y>391</y>
+      <y>451</y>
       <width>841</width>
       <height>71</height>
      </rect>
@@ -333,7 +333,7 @@
     <property name="geometry">
      <rect>
       <x>30</x>
-      <y>466</y>
+      <y>526</y>
       <width>841</width>
       <height>121</height>
      </rect>
@@ -507,7 +507,7 @@
     <property name="geometry">
      <rect>
       <x>30</x>
-      <y>590</y>
+      <y>650</y>
       <width>311</width>
       <height>31</height>
      </rect>
@@ -525,7 +525,7 @@
     <property name="geometry">
      <rect>
       <x>560</x>
-      <y>590</y>
+      <y>650</y>
       <width>151</width>
       <height>41</height>
      </rect>
@@ -544,7 +544,7 @@
     <property name="geometry">
      <rect>
       <x>720</x>
-      <y>590</y>
+      <y>650</y>
       <width>151</width>
       <height>41</height>
      </rect>
@@ -563,7 +563,7 @@
     <property name="geometry">
      <rect>
       <x>380</x>
-      <y>590</y>
+      <y>650</y>
       <width>151</width>
       <height>41</height>
      </rect>
@@ -577,6 +577,50 @@
     <property name="text">
      <string>자료 검증</string>
     </property>
+   </widget>
+   <widget class="QGroupBox" name="groupBox_6">
+    <property name="geometry">
+     <rect>
+      <x>29</x>
+      <y>381</y>
+      <width>841</width>
+      <height>71</height>
+     </rect>
+    </property>
+    <property name="font">
+     <font>
+      <family>맑은 고딕</family>
+      <pointsize>10</pointsize>
+      <weight>50</weight>
+      <bold>false</bold>
+     </font>
+    </property>
+    <property name="title">
+     <string>수도용 코드 조견표 파일</string>
+    </property>
+    <widget class="QLineEdit" name="lineEdit_15">
+     <property name="geometry">
+      <rect>
+       <x>10</x>
+       <y>30</y>
+       <width>691</width>
+       <height>31</height>
+      </rect>
+     </property>
+    </widget>
+    <widget class="QPushButton" name="pushButton_8">
+     <property name="geometry">
+      <rect>
+       <x>730</x>
+       <y>29</y>
+       <width>91</width>
+       <height>31</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>Code Table</string>
+     </property>
+    </widget>
    </widget>
   </widget>
   <widget class="QStatusBar" name="statusbar"/>

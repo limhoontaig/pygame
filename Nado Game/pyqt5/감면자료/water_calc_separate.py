@@ -26,6 +26,7 @@ LE =  [
     'D:/과장/1 1 부과자료/'+yyyy+'년/'+yyyymm+'/수도감면자료',
     'D:/과장/1 1 부과자료/'+yyyy+'년/'+yyyymm+'/수도감면자료',
     'D:/과장/1 1 부과자료/'+yyyy+'년/Templates/Water_Template_File_for_XPERP_upload.xls',
+    'D:/과장/1 1 부과자료/'+yyyy+'년/Templates/xperp_code_comparasion_table.xlsx',
     'D:/과장/1 1 부과자료/'+yyyy+'년/'+yyyymm+'/xperp_감면자료'
     ]
 
@@ -234,12 +235,14 @@ class MyWindow(QMainWindow, form_class):
         self.lineEdit.setText(LE[0])
         self.lineEdit_2.setText(LE[1])
         self.lineEdit_3.setText(LE[2])
-        self.lineEdit_4.setText(LE[3])
+        self.lineEdit_15.setText(LE[3])
+        self.lineEdit_4.setText(LE[4])
         self.label_5.setText('Program Developed by HoonTaig Lim, Rev 0 Issued, 2022.05.16')
 
         self.pushButton.clicked.connect(self.add_file)
         self.pushButton_2.clicked.connect(self.add_file)
         self.pushButton_3.clicked.connect(self.add_file)
+        self.pushButton_8.clicked.connect(self.add_file)
         self.pushButton_4.clicked.connect(self.add_file)
         self.pushButton_5.clicked.connect(self.start)
         self.pushButton_7.clicked.connect(self.my_window)
@@ -280,13 +283,21 @@ class MyWindow(QMainWindow, form_class):
             else: 
                 self.lineEdit_3.setText(LE[2])
         
-        else:
+        elif sname == 'Code Table':
             init_dir = self.LE[3]
+            fname = QFileDialog.getOpenFileName(self, '엑셀 데이타 파일을 선택하세요', init_dir, 'All Files (*) :: Excel (*.xls *.xlsx)')
+            if len(fname[0]) != 0:
+                self.lineEdit_15.setText(fname[0]) 
+            else: 
+                self.lineEdit_15.setText(LE[2])
+        
+        else:
+            init_dir = self.LE[4]
             fname = QFileDialog.getExistingDirectory(self, '저장 Direttory를 선택하새요', init_dir)
             if len(fname) != 0:
                 self.lineEdit_4.setText(fname)
             else:
-                self.lineEdit_4.setText(LE[3])
+                self.lineEdit_4.setText(LE[4])
 
     # 계산 시작
     def start(self):
@@ -295,6 +306,7 @@ class MyWindow(QMainWindow, form_class):
         f2 = self.lineEdit_2.text()
         f3 = self.lineEdit_3.text()
         f4 = self.lineEdit_4.text()
+        f5 = self.lineEdit_15.text()
 
         # 파일 목록 확인
         
@@ -308,6 +320,10 @@ class MyWindow(QMainWindow, form_class):
 
         if '.xls' not in f3 or f3 == 0:
             QMessageBox.about(self, "경고", "Template File을 추가하세요")
+            return
+
+        if '.xls' not in f5 or f5 == 0:
+            QMessageBox.about(self, "경고", "Code Comparasion Table File을 추가하세요")
             return
 
         # 저장 경로 확인
@@ -388,8 +404,8 @@ class MyWindow(QMainWindow, form_class):
         return rows
 
     def code_dict(self, div):
-        file = (r'E:\source\pygame\Nado Game\pyqt5\감면자료\xperp code comparasion table.xlsx')
-        with pd.ExcelFile(file) as f:
+        f5 = self.lineEdit_15.text()
+        with pd.ExcelFile(f5) as f:
             df = pd.read_excel(f,sheet_name=1, skiprows=0)
         df.dropna(inplace=True)
 
