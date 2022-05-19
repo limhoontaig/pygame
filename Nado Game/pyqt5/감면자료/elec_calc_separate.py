@@ -257,6 +257,9 @@ class ElWindow(QMainWindow, form_class):
 
     def kind_calc(self, f2):
         df_w = pd.read_excel(f2,skiprows=2, thousands=',')#, dtype={'동':int, '호':int}) #,thousands=',')
+        
+        code_dict = self.code_dict(['전기가족','전기복지'])
+        print(code_dict[0])
         new_col_names = ['동', '호', '대상자명','할인종류','장애종류','장애등급','할인요금']
 
         df_w.columns = new_col_names
@@ -300,6 +303,45 @@ class ElWindow(QMainWindow, form_class):
         subset_df_w
 
         return subset_df_f, subset_df_w  
+
+    def code_dict(self, div):
+        #f5 = self.lineEdit_15.text()
+        f5 = r'E:\source\pygame\Nado Game\pyqt5\감면자료\xperp code comparasion table.xlsx'
+        with pd.ExcelFile(f5) as f:
+            df = pd.read_excel(f,sheet_name=1, skiprows=0)
+        df.dropna(inplace=True)
+
+        df['종별분류'] = df['종별'].str.cat(df[['분류']])
+        kind_div = []
+        kind = df['종별분류'].unique()
+        for k in div:
+            kind_div.append(k) 
+        code_dict = []
+        for kind in kind_div:
+            df1 = df[(df['종별분류'] == kind)]
+            string_list = df1['종류'].tolist()
+            int_list = df1['코드'].tolist()
+            kind = [kind]
+            kind_dict = dict(zip(string_list, int_list))
+            kind.append(kind_dict)
+            code_dict.append(kind)
+            
+        return code_dict
+
+    def code_make(self, sheet):
+        
+        if '복지' in sheet:
+            code = '기초생활'
+            return code
+        elif '다자녀' in sheet:
+            code = '다자녀'
+            return code
+        elif '유공자' in sheet:
+            code = '유공자'
+            return code
+        else:
+            code = '중증장애'
+            return code
 
     def discount_file(self, f3,df2,subset_df_f,subset_df_w):
         df_x = pd.read_excel(f3,skiprows=0)
