@@ -255,6 +255,39 @@ class ElWindow(QMainWindow, form_class):
         return df1, 필수사용공제, 복지추가감액
 
 
+
+    '''
+    def code_dict(kind_code):
+    file = r'C:\source\pygame\Nado Game\pyqt5\감면자료\xperp code comparasion table.xlsx'
+    with pd.ExcelFile(file) as f:
+        df = pd.read_excel(f, sheet_name = 1)
+    sheet = f.sheet_names
+    df.dropna(inplace = True)
+    code_dict = []
+    for c in kind_code:
+        is_elec = df['분류'] == c
+        df_elec = df[is_elec]
+        kind_list = df_elec['종류'].tolist()
+        code_list = df_elec['코드'].tolist()
+        kind_dict = dict(zip(kind_list, code_list))
+        code_dict.append(kind_list)
+        code_dict.append(code_list)
+        code_dict.append(kind_dict)
+    print(code_dict)
+    return code_dict
+f1 = (r'C:\source\pygame\Nado Game\pyqt5\감면자료\0144666733_202204_20220414.xls') 
+df_w = pd.read_excel(f1,skiprows=2)#, dtype={'동':int, '호':int}) #,thousands=',')
+df.dropna(subset=['동', '호'],inplace=True)
+con = df_w[df_w['할인종류'].str.contains('추가복지감액')].index
+df_w.drop(con, inplace=True)
+code_dict = code_dict(['가족','복지'])
+df_w.set_index(['동','호'],inplace=True)
+for kind, code in code_dict[2].items():
+    df_w.loc[df_w.할인종류 == kind, '복지코드'] = code
+df_w
+
+    '''
+
     def kind_calc(self, f2):
         df_w = pd.read_excel(f2,skiprows=2, thousands=',')#, dtype={'동':int, '호':int}) #,thousands=',')
         con = df_w[df_w['할인종류'].str.contains('추가복지감액')].index
