@@ -241,27 +241,18 @@ class ElWindow(QMainWindow, form_class):
     
     def welfare_calc(self, f1):
         df = pd.read_excel(f1,skiprows=2)#, dtype={'동':int, '호':int}) #,thousands=',')
-        
-        df.rename(columns = {'필수사용\n공제':'필수사용공제'},inplace=True)
-        df.rename(columns = {'복지추가\n감액':'복지추가 감액' },inplace=True)
+        df.dropna(subset=['동', '호'],inplace=True)
+        col_sel =['동','호', '필수사용\n공제','복지추가\n감액']
+        필수사용공제 = df[col_sel[2]].sum()
+        복지추가감액 = df[col_sel[3]].sum()
+        df1= df[col_sel].copy()
+        df1['sum'] = df1[col_sel[2]] + df1[col_sel[3]]
+        df1[col_sel[2]] = df1['sum']
+        df1[col_sel[:3]] = df1[col_sel[:3]].astype('int')
+        df2 = df1[col_sel[:3]].copy()
+        tot=df2[col_sel[2]].sum()
 
-        df_col_names = df.columns.tolist()
-        필수사용공제 = df['필수사용공제'].sum()
-        복지추가감액 = df['복지추가 감액'].sum()
-        sum_column = df['필수사용공제'] + df['복지추가 감액']
-        df['sum'] = sum_column
-        df.rename(columns = {'필수사용공제':'O_필수사용공제'},inplace=True)
-        df.rename(columns = {'sum':'필수사용공제'},inplace=True)
-
-        df1 = df.dropna(subset=['동','필수사용공제'])
-        # Template Columns중에서 필수 Columns만 복사하여 DataFrame 생성용 Columns list 생성
-        df2col =['동','호', '필수사용공제']
-        # df2 DataFrame columns중에서 dtype float를 int로 바꿀 Columns list 생성
-        df2col_f =['동','호', '필수사용공제']
-        # SettingWithCopyWarning Error 방지를 위하여 copy() method적용
-        df2 = df1[df2col].copy()
-        df2[df2col_f] = df2[df2col_f].astype('int')
-        return df2, 필수사용공제, 복지추가감액
+        return df1, 필수사용공제, 복지추가감액
 
 
     def kind_calc(self, f2):
@@ -321,9 +312,9 @@ class ElWindow(QMainWindow, form_class):
         # discount = pd.merge(discount, subset_df_a, how = 'outer', on = ['동','호'])
 
         # 사용량 보장공제를 한전금액(필수사용공제) Data로 Update
-        discount['사용량보장공제'] = discount['필수사용공제']
+        discount['사용량보장공제'] = discount['필수사용\n공제']
         # 사용량 보장공제 임시데이터 columns를 drop
-        discount = discount.drop(['필수사용공제'],axis=1)
+        discount = discount.drop(['필수사용\n공제'],axis=1)
         # Template df에 필수사용공제 merge
         discount = pd.merge(discount, subset_df_f, how = 'outer', on = ['동','호'])
         discount['대가족할인액'] = discount['할인요금']
