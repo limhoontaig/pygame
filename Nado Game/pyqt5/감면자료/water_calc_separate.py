@@ -28,8 +28,6 @@ LE =  [
     'D:/과장/1 1 부과자료/'+yyyy+'년/Templates/Water_Template_File_for_XPERP_upload.xls',
     'D:/과장/1 1 부과자료/'+yyyy+'년/'+yyyymm+'/xperp_감면자료'
     ]
-division_dict = ({'복지':'복지'},{'다자':'다자'},{'중증':'중증'},{'유공':'유공'})
-code_dict = ({'복지':'3'},{'다자':'I'},{'중증':'T'},{'유공':'2'})
 
 class MyWidget(QDialog, form_class1):
     def __init__(self):
@@ -322,22 +320,26 @@ class MyWindow(QMainWindow, form_class):
         total_df = self.seperate_dongho(sheet_names)
 
         df = total_df[0]
+        df_c = total_df[1]
         total_복지 = len(df)
         self.lineEdit_5.setText(str(f'{total_복지:>7,}'))
 
-        df_f = total_df[1]
+        df_f = total_df[2]
+        df_f_c = total_df[3]
         total_대가족 = len(df_f)
         self.lineEdit_6.setText(str(f'{total_대가족:>7,}'))
 
-        df3 = total_df[2]
+        df3 = total_df[4]
+        df3_c = total_df[5]
         total_중증 = len(df3)
         self.lineEdit_7.setText(str(f'{total_중증:>7,}'))
 
-        df4 = total_df[3]
+        df4 = total_df[6]
+        df4_c = total_df[7]
         total_유공자 = len(df4)
         self.lineEdit_8.setText(str(f'{total_유공자:>7,}'))
 
-        discount = self.template_make(f3,df,df_f,df3,df4)
+        discount = self.template_make(f3,df,df_f,df3,df4,df_c,df_f_c,df3_c,df4_c)
         self.pd_save(discount,f4)
         return
 
@@ -347,14 +349,16 @@ class MyWindow(QMainWindow, form_class):
             file = pd.ExcelFile(f)
             sheet_name = file.sheet_names
             for s in sheet_name:
-                s = [file, s]
+                c = self.code_make(s)
+                s = [file, s, c]
                 sheets.append(s)
         return sheets
 
     def seperate_dongho(self, file):
         df_data = []
-        for f, sheet in file:
-            items = self.code_verify(sheet)
+        for f, sheet,code in file:
+            c_d = self.code_dict(['수도감면'])
+            code_dict = c_d[0][1]
             rows = self.skip_row(f,sheet) 
             df = pd.ExcelFile.parse(f, sheet_name=sheet,header=0,skiprows=rows+1)
             header = df.columns.values.tolist() #dataframe에서 header list 작성
@@ -367,11 +371,11 @@ class MyWindow(QMainWindow, form_class):
                 else:
                     pass
             df_1 = df[['동', '호']].copy()
-            df_1[items['item']] = items['code']
+            df_1[code] = code_dict[code]
             df_data.append(df_1)
+            df_data.append(code)
 
         return df_data
-
 
     def skip_row(self,f,sheet):
         df = pd.read_excel(f,sheet_name = sheet)
@@ -383,28 +387,52 @@ class MyWindow(QMainWindow, form_class):
             rows = s[0]
         return rows
 
+    def code_dict(self, div):
+        file = (r'E:\source\pygame\Nado Game\pyqt5\감면자료\xperp code comparasion table.xlsx')
+        with pd.ExcelFile(file) as f:
+            df = pd.read_excel(f,sheet_name=1, skiprows=0)
+        df.dropna(inplace=True)
 
-    def code_verify(self, sheet):
+        df['종별분류'] = df['종별'].str.cat(df[['분류']])
+        kind_div = []
+        kind = df['종별분류'].unique()
+        for k in div:
+            kind_div.append(k) 
+        code_dict = []
+        for kind in kind_div:
+            df1 = df[(df['종별분류'] == kind)]
+            string_list = df1['종류'].tolist()
+            int_list = df1['코드'].tolist()
+            kind = [kind]
+            kind_dict = dict(zip(string_list, int_list))
+            kind.append(kind_dict)
+            code_dict.append(kind)
+            
+        return code_dict
+
+    def code_make(self, sheet):
+        
         if '복지' in sheet:
-            code = {'item':'복지', 'code':'3'}
+            code = '기초생활'
             return code
         elif '다자녀' in sheet:
-            code = {'item':'다자녀', 'code':'I'}
+            code = '다자녀'
             return code
         elif '유공자' in sheet:
-            code = {'item':'유공', 'code':'2'}
+            code = '유공자'
             return code
         else:
-            code = {'item':'중증', 'code':'T'}
+            code = '중증장애'
             return code
 
-    def template_make(self, f3,df,df_f,df_3,df_4):
+    def template_make(self, f3,df,df_f,df_3,df_4,df_c,df_f_c,df3_c,df4_c):
         dis = pd.merge(df, df_f, how = 'outer', on = ['동','호'])
         dis1 = pd.merge(dis, df_3, how = 'outer', on = ['동','호'])
         dis2 = pd.merge(dis1, df_4, how = 'outer', on = ['동','호'])
         # 종류별 concatnate 문자열 처리를 위하여 fill nan 처리 
         dis2.fillna('', inplace=True)
-        dis2['Code'] = dis2['복지'].str.cat(dis2[['다자녀','중증','유공']])
+
+        dis2['Code'] = dis2[df_c].str.cat(dis2[[df_f_c,df3_c,df4_c]])
         # 4개 조건을 조합하기 위하여 코드 합하기 및 길이가 2이상인 데이터 처리
         dis2.loc[dis2['Code'].str.len()>1, 'Code'] = 'V'
         dis3 = dis2[['동','호','Code']]
