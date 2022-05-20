@@ -23,7 +23,8 @@ LE =  [
     'D:/과장/1 1 부과자료/'+yyyy+'년/'+yyyymm+'/한전부과자료',
     'D:/과장/1 1 부과자료/'+yyyy+'년/'+yyyymm+'/한전부과자료',
     'D:/과장/1 1 부과자료/'+yyyy+'년/Templates/Elec_Template_File_for_XPERP_upload.xls',
-    'D:/과장/1 1 부과자료/'+yyyy+'년/'+yyyymm+'/xperp_감면자료'
+    'D:/과장/1 1 부과자료/'+yyyy+'년/'+yyyymm+'/xperp_감면자료',
+    'D:/과장/1 1 부과자료/'+yyyy+'년/Templates/xperp_code_comparasion_table.xlsx'
     ]
 
 class ElWidget(QDialog, form_class_1):
@@ -113,19 +114,15 @@ class ElWidget(QDialog, form_class_1):
         except:
             QMessageBox.about(self, "경고", "'장애종류' 키값이 없습니다. 파일을 확인하세요")
             return
-        new = ['금월파일 항목','']+df_col +['','금월 할인 종류','']+kind_of_welfare
+        new = ['파일 항목','']+df_col +['','할인 종류','']+kind_of_welfare
 
         new_col_names = ['동', '호', '대상자명','할인종류','장애종류','장애등급','할인요금']
         used_kind_of_welfare = ['장애인 할인', '다자녀 할인', '대가족 할인', '의료기기 할인', '기초수급 할인', '출산가구 할인', '복지추가감액',
                                 '기초수급 할인 (주거, 교육)', '차상위계층 할인', '사회복지 할인', '독립유공 할인']
-        old = ['기존파일 항목','']+new_col_names +['','기존 할인 종류','']+ used_kind_of_welfare
-        
+        old = ['파일 항목','']+new_col_names +['','할인 종류','']+ used_kind_of_welfare
         data = []
         data.append(old)
         data.append(new)
-
-        #print(data)
-
         sub_list = list(set(old) ^ set(new))
         self.set_tbl(data)
         self.textEdit.clear()
@@ -133,30 +130,27 @@ class ElWidget(QDialog, form_class_1):
                 self.textEdit.append(str(s))
         return
 
-
-
 class ElWindow(QMainWindow, form_class):
     def __init__(self):
         super().__init__()
         self.LE = LE
         self.setupUi(self)
 
-
         self.lineEdit.setText(LE[0])
         self.lineEdit_2.setText(LE[1])
         self.lineEdit_3.setText(LE[2])
         self.lineEdit_4.setText(LE[3])
+        self.lineEdit_15.setText(LE[4])
         self.label_5.setText('프로그램 작성 : 임훈택 Rev 0, 2022.05.11 Issued')
 
         self.pushButton.clicked.connect(self.add_file)
         self.pushButton_2.clicked.connect(self.add_file)
         self.pushButton_3.clicked.connect(self.add_file)
         self.pushButton_4.clicked.connect(self.add_file)
+        self.pushButton_8.clicked.connect(self.add_file)
         self.pushButton_5.clicked.connect(self.start)
-
         self.pushButton_6.clicked.connect(self.close)
         self.pushButton_7.clicked.connect(self.my_window)
-
 
     def my_window(self):
         elwidget = ElWidget()
@@ -183,6 +177,14 @@ class ElWindow(QMainWindow, form_class):
             else:
                 self.lineEdit_2.setText(LE[1])
         
+        elif sname == 'Code Table':
+            init_dir = self.LE[4]
+            fname = QFileDialog.getOpenFileName(self, '엑셀 데이타 파일을 선택하세요', init_dir, 'All Files (*) :: Excel (*.xls *.xlsx)')
+            if len(fname[0]) != 0:
+                self.lineEdit_2.setText(fname[0])
+            else:
+                self.lineEdit_2.setText(LE[1])
+
         elif sname == 'Template':
             init_dir = self.LE[2]
             fname = QFileDialog.getOpenFileName(self, '엑셀 데이타 파일을 선택하세요', init_dir, 'All Files (*) :: Excel (*.xls *.xlsx)')
@@ -206,6 +208,7 @@ class ElWindow(QMainWindow, form_class):
         f2 = self.lineEdit_2.text()
         f3 = self.lineEdit_3.text()
         f4 = self.lineEdit_4.text()
+        f5 = self.lineEdit_15.text()
 
         # 파일 목록 확인
         if '.xls' not in f1 or f1 == 0:
@@ -213,6 +216,10 @@ class ElWindow(QMainWindow, form_class):
             return
         
         if '.xls' not in f2 or f2 == 0:
+            QMessageBox.about(self, "경고", "한전 감면 종류 파일을 추가하세요")
+            return
+
+        if '.xls' not in f5 or f5 == 0:
             QMessageBox.about(self, "경고", "한전 감면 종류 파일을 추가하세요")
             return
 
@@ -229,16 +236,10 @@ class ElWindow(QMainWindow, form_class):
         subset_df = self.kind_calc(f2)
         subset_df_w = subset_df[0]
         subset_df_f = subset_df[1]
-
         discount = self.discount_file(f3,df2,subset_df_w,subset_df_f)
         self.pd_save(discount[0],f4)
-        #print('Total 사용량 보장공제액  :',discount[1])
-        #print('Total 대가족 할인 공제액 :',discount[2])
-        #print('Total 복지 할인 공제액   :',discount[3])
-        
         return
 
-    
     def welfare_calc(self, f1):
         df = pd.read_excel(f1,skiprows=2)#, dtype={'동':int, '호':int}) #,thousands=',')
         df.dropna(subset=['동', '호'],inplace=True)
@@ -250,167 +251,86 @@ class ElWindow(QMainWindow, form_class):
         df1[col_sel[2]] = df1['sum']
         df1[col_sel[:3]] = df1[col_sel[:3]].astype('int')
         df2 = df1[col_sel[:3]].copy()
-        tot=df2[col_sel[2]].sum()
+        return df2, 필수사용공제, 복지추가감액
 
-        return df1, 필수사용공제, 복지추가감액
-
-
-
-    '''
-    def code_dict(kind_code):
-    file = r'C:\source\pygame\Nado Game\pyqt5\감면자료\xperp code comparasion table.xlsx'
-    with pd.ExcelFile(file) as f:
-        df = pd.read_excel(f, sheet_name = 1)
-    sheet = f.sheet_names
-    df.dropna(inplace = True)
-    code_dict = []
-    for c in kind_code:
-        is_elec = df['분류'] == c
-        df_elec = df[is_elec]
-        kind_list = df_elec['종류'].tolist()
-        code_list = df_elec['코드'].tolist()
-        kind_dict = dict(zip(kind_list, code_list))
-        code_dict.append(kind_list)
-        code_dict.append(code_list)
-        code_dict.append(kind_dict)
-    print(code_dict)
-    return code_dict
-f1 = (r'C:\source\pygame\Nado Game\pyqt5\감면자료\0144666733_202204_20220414.xls') 
-df_w = pd.read_excel(f1,skiprows=2)#, dtype={'동':int, '호':int}) #,thousands=',')
-df.dropna(subset=['동', '호'],inplace=True)
-con = df_w[df_w['할인종류'].str.contains('추가복지감액')].index
-df_w.drop(con, inplace=True)
-code_dict = code_dict(['가족','복지'])
-df_w.set_index(['동','호'],inplace=True)
-for kind, code in code_dict[2].items():
-    df_w.loc[df_w.할인종류 == kind, '복지코드'] = code
-df_w
-
-    '''
-
-    def kind_calc(self, f2):
-        df_w = pd.read_excel(f2,skiprows=2, thousands=',')#, dtype={'동':int, '호':int}) #,thousands=',')
-        con = df_w[df_w['할인종류'].str.contains('추가복지감액')].index
-        df_w.drop(con, inplace=True)
-        code_dict = self.code_dict()
-        print(code_dict[0])
-        print(code_dict[1])
-        print(code_dict[2])
-        '''
-        new_col_names = ['동', '호', '대상자명','할인종류','장애종류','장애등급','할인요금']
-        
-        df_w.columns = new_col_names
-
-        used_kind_of_welfare = ['장애인 할인', '다자녀 할인', '대가족 할인', '의료기기 할인', '기초수급 할인', '출산가구 할인', '복지추가감액',
-                                '기초수급 할인 (주거, 교육)', '차상위계층 할인', '사회복지 할인', '독립유공 할인']
-        kind_of_welfare = df_w['장애종류'].unique()
-        
-        df_w = df_w[['동','호','할인종류','할인요금']]
-
-        # 할인종류 컬럼을 선택합니다.
-        # 컬럼의 값에 대가족할인 항목을 또는(|) 대가족할인 항목늬 문자열이 포함되어있는지 판단합니다.
-        # 그 결과를 새로운 변수에 할당합니다.
-        contains_family = df_w['할인종류'].str.contains('다자녀 할인|대가족 할인|출산가구 할인|의료기기 할인')
-        contains_addition = df_w['할인종류'].str.contains('추가복지감액')
-        contains_welfare = ~df_w['할인종류'].str.contains('다자녀 할인|대가족 할인|출산가구 할인|의료기기 할인|복지추가감액')
-        # contains_welfare = df_w['할인종류'].str.contains('장애인 할인|독립유공 할인|국가유공 할인|민주유공 할인|사회복지 할인|기초수급 할인|차상위계층 할인|기초수급 할인 (주거, 교육)')
-        '''
-        # 대가족할인 조건를 충족하는 데이터를 필터링하여 새로운 변수에 저장합니다.
-        #subset_df_f = df_w[contains_family].copy()
-        #subset_df_f.set_index(['동','호'],inplace=True)
-        df_w.set_index(['동','호'],inplace=True)
-        #subset_df_f['복지코드'] = subset_df_f['할인종류']
-        for kind, code in code_dict[2].items():
-            df_w.loc[df_w.할인종류 == kind, '복지코드'] = code
-
-        '''
-        subset_df_f.loc[subset_df_f.할인종류 == '대가족 할인', '복지코드'] = '1'
-        subset_df_f.loc[subset_df_f.할인종류 == '출산가구 할인', '복지코드'] = '2'
-        subset_df_f.loc[subset_df_f.할인종류 == '다자녀 할인', '복지코드'] = '3'
-        subset_df_f.loc[subset_df_f.할인종류 == '의료기기 할인', '복지코드'] = '4'
-        subset_df_f
-
-        # 복지할인 조건를 충족(대가족할인이 아닌것 ~)하는 데이터를 필터링하여 새로운 변수에 저장합니다.
-        subset_df_w = df_w[contains_welfare].copy()
-        subset_df_w.set_index(['동','호'],inplace=True)
-        subset_df_w.loc[subset_df_w.할인종류 == '독립유공 할인', '복지코드'] = 'A'
-        subset_df_w.loc[subset_df_w.할인종류 == '국가유공 할인', '복지코드'] = 'B'
-        subset_df_w.loc[subset_df_w.할인종류 == '민주유공 할인', '복지코드'] = 'C'
-        subset_df_w.loc[subset_df_w.할인종류 == '장애인 할인', '복지코드'] = 'D'
-        subset_df_w.loc[subset_df_w.할인종류 == '사회복지 할인', '복지코드'] = 'E'
-        subset_df_w.loc[subset_df_w.할인종류 == '기초수급 할인', '복지코드'] = 'H'
-        subset_df_w.loc[subset_df_w.할인종류 == '기초수급 할인 (주거, 교육)', '복지코드'] = 'H'
-        subset_df_w.loc[subset_df_w.할인종류 == '차상위계층 할인', '복지코드'] = 'I'
-        # subset_df_w.loc[subset_df_w.할인종류 == '복지추가감액', '복지코드'] = 'E'
-        subset_df_w
-        '''
-
-        # return subset_df_f, subset_df_w  
-        return df_w
-
-    def code_dict(self):
-        file = r'C:\source\pygame\Nado Game\pyqt5\감면자료\xperp code comparasion table.xlsx'
+    def code_dict_make(self, kind_code):
+        file = self.lineEdit_15.text()
+        # file = r'E:\source\pygame\Nado Game\pyqt5\감면자료\xperp code comparasion table.xlsx'
         with pd.ExcelFile(file) as f:
             df = pd.read_excel(f, sheet_name = 1)
         sheet = f.sheet_names
         df.dropna(inplace = True)
         code_dict = []
-        is_elec = df['종별'] == '전기'
-        df_elec = df[is_elec]
-        kind_list = df_elec['종류'].tolist()
-        code_list = df_elec['코드'].tolist()
-        kind_dict = dict(zip(kind_list, code_list))
-        code_dict.append(kind_list)
-        code_dict.append(code_list)
-        code_dict.append(kind_dict)
-        print(code_dict)
+        for c in kind_code:
+            is_elec = df['분류'] == c
+            df_elec = df[is_elec]
+            kind_list = df_elec['종류'].tolist()
+            code_list = df_elec['코드'].tolist()
+            kind_dict = dict(zip(kind_list, code_list))
+            code_dict.append(kind_list)
+            code_dict.append(code_list)
+            code_dict.append(kind_dict)
         return code_dict
-  
 
-    def code_make(self, sheet):
-        
-        if '복지' in sheet:
-            code = '기초생활'
-            return code
-        elif '다자녀' in sheet:
-            code = '다자녀'
-            return code
-        elif '유공자' in sheet:
-            code = '유공자'
-            return code
-        else:
-            code = '중증장애'
-            return code
+    def df_create(self, f1):
+        df = pd.read_excel(f1,skiprows=2)
+        df.dropna(subset=['동', '호'],inplace=True)
+        con = df[df['할인종류'].str.contains('추가복지감액')].index
+        df.drop(con, inplace=True)
+        df_w = df[['동', '호','할인종류','할인요금']].copy()
+        return df_w
+
+    def kind_calc(self, f1):
+        df = self.df_create(f1)
+        code = ['가족','복지']
+        code_dict = self.code_dict_make(code)
+        kind_list = [code_dict[0],code_dict[3]]
+        kind_dict = [code_dict[2],code_dict[5]]
+        df_list = []
+        for i in range(len(kind_list)):
+            df_1 = df[df['할인종류'].isin(kind_list[i])].copy()
+            for kind, code in kind_dict[i].items():
+                df_1.loc[df_1.할인종류 == kind, '복지코드'] = code
+            df_1.set_index(['동','호'],inplace=True)
+            df_list.append(df_1)
+        return df_list
 
     def discount_file(self, f3,df2,subset_df_f,subset_df_w):
+        
         df_x = pd.read_excel(f3,skiprows=0)
+        
         # xperp upload template 양식의 columns list 생성
-        # df_x_cl = df_x.columns.tolist()
         # 동호를 indexing하여 dataFrame merge 준비
+        
         df_x.set_index(['동','호'],inplace=True)
         # discount df 생성 (Template df(df_x)에 필수사용공제(df2) merge
+        
         discount = pd.merge(df_x, df2[0], how = 'outer', on = ['동','호'])
         # discount = pd.merge(discount, subset_df_a, how = 'outer', on = ['동','호'])
 
         # 사용량 보장공제를 한전금액(필수사용공제) Data로 Update
         discount['사용량보장공제'] = discount['필수사용\n공제']
+        
         # 사용량 보장공제 임시데이터 columns를 drop
         discount = discount.drop(['필수사용\n공제'],axis=1)
+        
         # Template df에 필수사용공제 merge
         discount = pd.merge(discount, subset_df_f, how = 'outer', on = ['동','호'])
         discount['대가족할인액'] = discount['할인요금']
         discount['대가족할인구분'] = discount['복지코드']
         discount = discount.drop(['복지코드','할인요금','할인종류'],axis=1)
         discount = pd.merge(discount, subset_df_w, how = 'outer', on = ['동','호'])
+
         #discount1 = discount.reset_index()
         discount['복지할인액'] = discount['할인요금']
         discount['복지할인구분'] = discount['복지코드']
         discount = discount.drop(['복지코드','할인요금','할인종류'],axis=1)
-        total_사용량보장공제 = discount['사용량보장공제'].sum()
-        total_대가족할인액 = discount['대가족할인액'].sum()
-        total_복지할인액 = discount['복지할인액'].sum()
-        sub_total = total_대가족할인액 + total_복지할인액
-        grand_total = sub_total + total_사용량보장공제
+        
+        total_사용량보장공제 = int(discount['사용량보장공제'].sum())
+        total_대가족할인액 = int(discount['대가족할인액'].sum())
+        total_복지할인액 = int(discount['복지할인액'].sum())
+        sub_total = int(total_대가족할인액 + total_복지할인액)
+        grand_total = int(sub_total + total_사용량보장공제)
         # display the result of computation
         self.lineEdit_5.setText(str(f'{total_사용량보장공제:>20,}'))
         self.lineEdit_6.setText(str(f'{total_대가족할인액:>20,}'))
@@ -431,11 +351,15 @@ df_w
         file_name = f4+'/'+dt1
 
         #file save
-        if os.path.isfile(file_name):
-            os.remove(file_name)
-            discount.to_excel(file_name,index=False,header=False)
-        else:
-            discount.to_excel(file_name,index=False,header=False)
+        try:
+            if os.path.isfile(file_name):
+                os.remove(file_name)
+                discount.to_excel(file_name,index=False,header=True)
+            else:
+                discount.to_excel(file_name,index=False,header=True)
+        except:
+            QMessageBox.about(self, "경고", "파일을 사용하고 있습니다. 파일을 닫아주세요.")
+            
         
         dttemp = file_name.split('.')
         dt2 = dttemp[0] + '.xls'
