@@ -2,7 +2,7 @@ import sys
 import os
 import pandas as pd
 from PyQt5.QtWidgets import *
-from PyQt5.QtCore import pyqtSlot, QObject, pyqtSignal
+from PyQt5.QtCore import pyqtSlot, QObject, pyqtSignal,QDate
 from PyQt5 import uic
 from datetime import datetime
 
@@ -20,6 +20,7 @@ yyyymm = now.strftime("%Y")+now.strftime("%m")+'월'
 yyyy = now.strftime("%Y")
 
 LE =  [
+    'C:/source/pygame/Nado Game/pyqt5/자재관리/입고대장.xlsx',
     'D:/과장/1 1 부과자료/'+yyyy+'년/'+yyyymm+'/한전부과자료',
     'D:/과장/1 1 부과자료/'+yyyy+'년/'+yyyymm+'/한전부과자료',
     'D:/과장/1 1 부과자료/'+yyyy+'년/Templates/Elec_Template_File_for_XPERP_upload.xls',
@@ -137,6 +138,29 @@ class ElWindow(QMainWindow, form_class):
         self.LE = LE
         self.setupUi(self)
 
+        # 자재입고 입력 init setup
+        self.dateEdit_5.setDate(QDate.currentDate())
+        self.dateEdit_5.setCalendarPopup(True)
+        data = self.init_data_make()
+        for d in data[0]:
+            self.set_tbl(d)
+        self.table_display()
+
+        self.tableWidget_5.scrollToBottom
+
+        #items_data = data[0]
+        #['독립유공 할인', '국가유공 할인', '민주유공 할인', '장애인 할인', '사회복지 할인', '기초수급 할인', '기초수급 할인 (주거/교육)', '차상위계층 할인']
+        #spec_data=data[1]
+        #['대가족 할인', '출산가구 할인', '다자녀 할인', '의료기기 할인']
+        self.comboBox_5.addItems(data[1])
+        self.comboBox_5.activated.connect(self.comboBox_5Activated)
+        self.comboBox_6.addItems(data[2])
+        self.pushButton.clicked.connect(self.addComboBoxItem)
+        self.pushButton_2.clicked.connect(self.addComboBoxSpecItem)
+        self.pushButton_7.clicked.connect(self.inTableToSaveExcelFile)
+        self.pushButton_6.clicked.connect(self.addInMaterialToTable)
+        self.lineEdit.textChanged.connect(self.lineEditChanged)
+        self.lineEdit_2.textChanged.connect(self.lineEdit_2Changed)
         '''self.lineEdit.setText(LE[0])
         self.lineEdit_2.setText(LE[1])
         self.lineEdit_3.setText(LE[2])
@@ -153,6 +177,164 @@ class ElWindow(QMainWindow, form_class):
         self.pushButton_6.clicked.connect(self.close)
         self.pushButton_7.clicked.connect(self.my_window)
     '''
+    def comboBox_5Activated(self):
+        file = LE[0]#r'C:\source\pygame\Nado Game\pyqt5\자재관리\입고대장.xlsx'
+        with pd.ExcelFile(file) as f:
+            df = pd.read_excel(f,skiprows=0)
+            df.fillna('')
+        df1 = df[(df['품명'] == self.comboBox_5.currentText())]
+        spec = df1['규격'].unique()
+        self.comboBox_6.clear()
+        self.comboBox_6.addItems(spec)
+
+    def init_data_make(self):
+        file = LE[0]#r'C:\source\pygame\Nado Game\pyqt5\자재관리\입고대장.xlsx'
+        with pd.ExcelFile(file) as f:
+            df = pd.read_excel(f,skiprows=0)
+            items = df['품명'].unique()
+            spec = df['규격'].unique()
+            df[['입고수량', '구입금액','단가']] = df[['입고수량', '구입금액','단가']].astype('str')
+            df.fillna(' ')
+            list = df.values.tolist()
+        return list, items, spec    
+
+    def inTableToSaveExcelFile(self):
+        file = LE[0]#r'C:\source\pygame\Nado Game\pyqt5\자재관리\입고대장.xlsx'
+        #with pd.ExcelFile(file) as f:
+        #    sheet = self.sheet_select(f,code)
+        df = self.data_query()
+        #f_split = file.split('.')
+        #file = f_split[0]+sheet+'.'+f_split[1]
+        
+        if os.path.isfile(file):
+            os.remove(file)
+            df.to_excel(file,index=False,header=True)
+        else:
+            df.to_excel(file,index=False,header=True)
+        
+        return 
+
+    def data_query(self):
+        '''
+        data query from tablewidget to pandas dataframe
+        '''
+        rowcount = self.tableWidget_5.rowCount()
+        colcount = self.tableWidget_5.columnCount()
+        
+        headers = [self.tableWidget_5.horizontalHeaderItem(x).text() for x in range(0,colcount)]
+        print(headers)
+        data_list = []
+        for i in range(0, rowcount):
+            data =[]
+            for j in range(0, colcount):
+                d = self.tableWidget_5.item(i,j).text()
+                data.append(d)
+            data_list.append(data)
+        df = pd.DataFrame(data_list) # list to dataframe
+        print(df)
+        df.columns = headers # set the hwaders on dataframe
+        
+        return df
+
+    def lineEditChanged(self):
+        try:
+            if len(self.lineEdit_2.text())==0:
+                pass
+
+        except:
+            in_qty = self.lineEdit.text()
+            in_price = self.lineEdit_2.text()
+            unit_p = str(round(int(in_price)/int(in_qty)))
+            self.lineEdit_3.setText(unit_p)
+            return
+
+    def lineEdit_2Changed(self):
+        try:
+            in_qty = self.lineEdit.text()
+            in_price = self.lineEdit_2.text()
+            unit_p = str(round(int(in_price)/int(in_qty)))
+            self.lineEdit_3.setText(unit_p)
+        except:
+            QMessageBox.about(self, "경고", "가격 및 수량 자료를 입력하세요")
+            return
+
+    def addComboBoxItem(self) :
+        self.comboBox_5.addItem(self.lineEdit_5.text())
+        print("Item Added")
+    
+    def addComboBoxSpecItem(self) :
+        self.comboBox_6.addItem(self.lineEdit_8.text())
+        print("Item Added")
+    
+    def addInMaterialToTable(self):
+        
+        in_data = []
+        in_data.append(self.dateEdit_5.text())
+        in_data.append(self.comboBox_5.currentText())
+        in_data.append(self.comboBox_6.currentText())
+        if len(self.lineEdit.text())==0:
+            QMessageBox.about(self, "경고", "수량 자료를 입력하세요")
+            return
+        else:
+            in_data.append(self.lineEdit.text())
+        if len(self.lineEdit_2.text())==0:
+            QMessageBox.about(self, "경고", "가격 자료를 입력하세요")
+            return
+        else:
+            in_data.append(self.lineEdit_2.text())
+        in_data.append(self.lineEdit_3.text())
+        if len(self.lineEdit_4.text())==0:
+            in_data.append('**')
+        else:
+            in_data.append(self.lineEdit_4.text())
+        if len(self.lineEdit_6.text())==0:
+            in_data.append('**')
+        else:
+            in_data.append(self.lineEdit_6.text())
+        print(in_data)
+
+        self.set_tbl(in_data)
+    
+    
+    def set_tbl(self,data):
+        #data = ['2022-05-21', '독립유공 할인', '대가족 할인', '120', '45789', '382', 'as', 'S']
+        rowCount = self.tableWidget_5.rowCount()
+        #self.tableWidget_5.insertRow(rowCount)
+        print(rowCount)
+        rdr_col = len(data)
+        rdr_row = 1
+        #self.tableWidget_5.clear()
+        self.tableWidget_5.setRowCount(rowCount+1)
+        self.tableWidget_5.setColumnCount(len(data))
+        c = 0
+        for i in data:
+            # r = 0
+            self.tableWidget_5.setItem(rowCount, c, QTableWidgetItem(i))
+            c = c+1
+
+            #for j in i:
+            #    r = r+1
+        # self.tableWidget.setHorizontalHeaderLabels(['기존', '금월'])
+        self.table_display()
+
+    def table_display(self):
+        headers = ['입고일', '품명','규격','입고수량','구입금액','단가','구입업체','비고']
+        self.tableWidget_5.setHorizontalHeaderLabels(headers)
+        header = self.tableWidget_5.horizontalHeader()
+        twidth = header.width()
+        width = []
+        for column in range(header.count()):
+            header.setSectionResizeMode(column, QHeaderView.ResizeToContents)
+            width.append(header.sectionSize(column))
+        
+        wfactor = int(twidth / sum(width))
+        for column in range(header.count()):
+            header.setSectionResizeMode(column, QHeaderView.Interactive)
+            header.resizeSection(column, width[column]*wfactor)
+        self.tableWidget_5.scrollToBottom
+        
+    
+    
     def my_window(self):
         elwidget = ElWidget()
         elwidget.exec_()
