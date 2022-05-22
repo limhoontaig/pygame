@@ -43,11 +43,11 @@
       <x>20</x>
       <y>70</y>
       <width>1071</width>
-      <height>491</height>
+      <height>521</height>
      </rect>
     </property>
     <property name="currentIndex">
-     <number>0</number>
+     <number>1</number>
     </property>
     <widget class="QWidget" name="tab_5">
      <attribute name="title">
@@ -509,47 +509,52 @@
       </property>
       <column>
        <property name="text">
-        <string>입고일</string>
+        <string>사용일</string>
        </property>
       </column>
       <column>
        <property name="text">
-        <string>품    명</string>
+        <string>동</string>
        </property>
       </column>
       <column>
        <property name="text">
-        <string>규     격</string>
+        <string>호</string>
        </property>
       </column>
       <column>
        <property name="text">
-        <string>총 입고수량</string>
+        <string>구분</string>
        </property>
       </column>
       <column>
        <property name="text">
-        <string>구입 금액</string>
+        <string>품명</string>
        </property>
       </column>
       <column>
        <property name="text">
-        <string>구입 단가</string>
+        <string>규격</string>
        </property>
       </column>
       <column>
        <property name="text">
-        <string>구입 업체</string>
+        <string>사용수량</string>
        </property>
       </column>
       <column>
        <property name="text">
-        <string>재고 수량</string>
+        <string>단가</string>
        </property>
       </column>
       <column>
        <property name="text">
-        <string>비   고</string>
+        <string>재고수량</string>
+       </property>
+      </column>
+      <column>
+       <property name="text">
+        <string>비고</string>
        </property>
       </column>
      </widget>
@@ -612,7 +617,7 @@
       <property name="geometry">
        <rect>
         <x>100</x>
-        <y>300</y>
+        <y>340</y>
         <width>91</width>
         <height>41</height>
        </rect>
@@ -760,17 +765,20 @@
       <property name="geometry">
        <rect>
         <x>130</x>
-        <y>250</y>
+        <y>290</y>
         <width>201</width>
         <height>31</height>
        </rect>
+      </property>
+      <property name="text">
+       <string>비고</string>
       </property>
      </widget>
      <widget class="QLabel" name="label_19">
       <property name="geometry">
        <rect>
         <x>20</x>
-        <y>250</y>
+        <y>290</y>
         <width>91</width>
         <height>31</height>
        </rect>
@@ -815,6 +823,44 @@
       </property>
       <property name="text">
        <string>Exit</string>
+      </property>
+     </widget>
+     <widget class="QLineEdit" name="lineEdit_9">
+      <property name="geometry">
+       <rect>
+        <x>130</x>
+        <y>250</y>
+        <width>201</width>
+        <height>31</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>사용수량</string>
+      </property>
+     </widget>
+     <widget class="QLabel" name="label_26">
+      <property name="geometry">
+       <rect>
+        <x>20</x>
+        <y>250</y>
+        <width>91</width>
+        <height>31</height>
+       </rect>
+      </property>
+      <property name="frameShape">
+       <enum>QFrame::Panel</enum>
+      </property>
+      <property name="frameShadow">
+       <enum>QFrame::Sunken</enum>
+      </property>
+      <property name="lineWidth">
+       <number>2</number>
+      </property>
+      <property name="text">
+       <string>사용수량</string>
+      </property>
+      <property name="alignment">
+       <set>Qt::AlignCenter</set>
       </property>
      </widget>
     </widget>
