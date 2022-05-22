@@ -75,8 +75,9 @@ class ElWindow(QMainWindow, form_class):
     df_on_stock['재고'] = df_on_stock['입고수량'] - df_on_stock['사용수량']
     df_on_stock.reset_index()
     sdf=df_on_stock.sort_values(by=['품명','규격','사용일'])
-    sdf['누적재고'] = sdf['재고'].cumsum()
-    sdf.xs('LED 전구',level='품명')
+    sdf1 = sdf.xs('LED 전구',level='품명')
+    sdf1['누적재고'] = sdf1['재고'].cumsum()
+    sdf1
     '''
     def init_out_data_make(self):
         df = self.out_df()
