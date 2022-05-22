@@ -42,33 +42,23 @@ class ElWindow(QMainWindow, form_class):
         #['독립유공 할인', '국가유공 할인', '민주유공 할인', '장애인 할인', '사회복지 할인', '기초수급 할인', '기초수급 할인 (주거/교육)', '차상위계층 할인']
         #spec_data=data[1]
         #['대가족 할인', '출산가구 할인', '다자녀 할인', '의료기기 할인']
-        self.comboBox_5.activated.connect(self.comboBox_5Activated)
-        self.comboBox_9.activated.connect(self.comboBox_9Activated)
-        self.comboBox_10.activated.connect(self.out_dongho)
-        self.pushButton.clicked.connect(self.addComboBoxItem)
-        self.pushButton_2.clicked.connect(self.addComboBoxSpecItem)
+        self.comboBox_5.activated.connect(self.comboBox_5Activated)#입고품목 선택시 품목 규격 콤보박스 항목 선택
+        self.comboBox_9.activated.connect(self.comboBox_9Activated)#사용 품목규격 선택시 품목 재고 보임
+        self.comboBox_5.activated.connect(self.in_stock_view)#입고 품목 선택시 품목 재고 보임
+        self.comboBox_7.activated.connect(self.out_stock_view)#사용 품목규격 선택시 품목 재고 보임
+        self.comboBox_6.activated.connect(self.in_stock_view)#입고 품목규격 선택시 품목 재고 보임
+        self.comboBox_9.activated.connect(self.out_stock_view)#사용 품목 선택시 품목 재고 보임
+        #self.comboBox_9.activated.connect(self.comboBox_9Activated)#사용품목 선택시 품목 규격 콤보박스 항목 선택
+        self.comboBox_10.activated.connect(self.out_dongho)#동 선택시 호수 콤보 선택
+
+        self.pushButton.clicked.connect(self.addComboBoxItem)# 신규 품목 추가
+        self.pushButton_2.clicked.connect(self.addComboBoxSpecItem) #신규 항목 추가
         self.pushButton_7.clicked.connect(self.inTableToSaveExcelFile)
         self.pushButton_6.clicked.connect(self.addInMaterialToTable)
         self.pushButton_11.clicked.connect(self.addOutMaterialToTable)
         self.lineEdit.textChanged.connect(self.lineEditChanged)
         self.lineEdit_2.textChanged.connect(self.lineEdit_2Changed)
 
-        '''self.lineEdit.setText(LE[0])
-        self.lineEdit_2.setText(LE[1])
-        self.lineEdit_3.setText(LE[2])
-        self.lineEdit_4.setText(LE[3])
-        self.lineEdit_15.setText(LE[4])
-        self.label_5.setText('프로그램 작성 : 임훈택 Rev 0, 2022.05.11 Issued')
-
-        self.pushButton.clicked.connect(self.add_file)
-        self.pushButton_2.clicked.connect(self.add_file)
-        self.pushButton_3.clicked.connect(self.add_file)
-        self.pushButton_4.clicked.connect(self.add_file)
-        self.pushButton_8.clicked.connect(self.add_file)
-        self.pushButton_5.clicked.connect(self.start)
-        self.pushButton_6.clicked.connect(self.close)
-        self.pushButton_7.clicked.connect(self.my_window)
-    '''
     
     def init_out_data_make(self):
         df = self.out_df()
@@ -76,7 +66,20 @@ class ElWindow(QMainWindow, form_class):
         self.out_dongho()
         self.comboBox_8.clear()
         self.comboBox_8.addItems(['공용','세대'])
-        self.comboBox_9Init()
+        self.out_combo_items_spec()
+        
+        
+    def out_combo_items_spec(self):    
+        df = self.in_df_make()
+        items = df['품명'].unique()
+        items.sort()
+        self.comboBox_9.clear()
+        self.comboBox_9.addItems(items)    
+        df = df[(df['품명'] == self.comboBox_9.currentText())]
+        spec = df['규격'].unique()
+        spec.sort()
+        self.comboBox_7.addItems(spec)
+        return df
         
     def addOutMaterialToTable(self):
         
@@ -94,21 +97,42 @@ class ElWindow(QMainWindow, form_class):
         print(data)
 
         self.set_tbl_6(data)
+
+    def out_stock_view(self):
+        #self.comboBox_9Activated()
+        list = [self.comboBox_9.currentText(), self.comboBox_7.currentText()]
+        print(list)
+        on_stock_qty = self.items_spec_onstock(list[0], list[1])
+        self.lineEdit_10.setText(on_stock_qty)
+
+    def in_stock_view(self):
+        list = [self.comboBox_5.currentText(), self.comboBox_6.currentText()]
+        print(list)
+        on_stock_qty = self.items_spec_onstock(list[0], list[1])
+        self.lineEdit_11.setText(on_stock_qty)
+
+    def items_spec_onstock(self, items, spec):
+        df_on_stock = self.on_stock()
+        try:
+            on_stock_qty = df_on_stock.loc[[(items, spec)]].values.tolist()
+            return str(on_stock_qty[0][2])
+        except:
+            on_stock_qty = '신규항목임'
+            return on_stock_qty
     
-        def on_stock(self):
-            dfIn = self.in_df()
-            df_in = dfIn[['품명','규격', '입고수량']].copy()
-            df_in_sum = df_in.groupby(['품명','규격']).sum()
+    def on_stock(self):
+        dfIn = self.in_df()
+        df_in = dfIn[['품명','규격', '입고수량']].copy()
+        df_in_sum = df_in.groupby(['품명','규격']).sum()
 
-            dfOut = self.out_df()
-            df_out = dfOut[['품명','규격', '사용수량']].copy()
-            df_out_sum = df_out.groupby(['품명','규격']).sum()
+        dfOut = self.out_df()
+        df_out = dfOut[['품명','규격', '사용수량']].copy()
+        df_out_sum = df_out.groupby(['품명','규격']).sum()
 
-            df_on_stock = pd.merge(df_in_sum, df_out_sum, how = 'outer', on = ['품명','규격'])
-            df_on_stock.fillna(0, inplace=True)
-            df_on_stock['재고'] = df_on_stock['입고수량'] - df_on_stock['사용수량']
-            print(df_on_stock)
-            return df_on_stock
+        df_on_stock = pd.merge(df_in_sum, df_out_sum, how = 'outer', on = ['품명','규격'])
+        df_on_stock.fillna(0, inplace=True)
+        df_on_stock['재고'] = df_on_stock['입고수량'] - df_on_stock['사용수량']
+        return df_on_stock
     
     def set_tbl_6(self,data):
         rowCount = self.tableWidget_6.rowCount()
@@ -166,18 +190,22 @@ class ElWindow(QMainWindow, form_class):
     def comboBox_9Init(self):
         df = self.in_df_make()
         items = df['품명'].unique()
+        items.sort()
         self.comboBox_9.clear()
         self.comboBox_9.addItems(items)
         df1 = df[(df['품명'] == self.comboBox_9.currentText())]
         spec = df1['규격'].unique()
+        spec.sort()
         self.comboBox_7.clear()
         self.comboBox_7.addItems(spec)
 
     def comboBox_9Activated(self):
         df = self.in_df_make()
         items = df['품명'].unique()
+        items.sort()
         df1 = df[(df['품명'] == self.comboBox_9.currentText())]
         spec = df1['규격'].unique()
+        spec.sort()
         self.comboBox_7.clear()
         self.comboBox_7.addItems(spec)
 
@@ -197,18 +225,14 @@ class ElWindow(QMainWindow, form_class):
         df = self.in_df_make()
         df = df[(df['품명'] == self.comboBox_5.currentText())]
         items = df['품명'].unique()
+        items.sort()
         spec = df['규격'].unique()
+        spec.sort()
         self.comboBox_6.clear()
         self.comboBox_6.addItems(spec)
 
     def init_in_data_make(self):
-        file = LE[0]#r'C:\source\pygame\Nado Game\pyqt5\자재관리\입고대장.xlsx'
-        with pd.ExcelFile(file) as f:
-            df = pd.read_excel(f,skiprows=0)
-        items = df['품명'].unique()
-        spec = df['규격'].unique()
-        self.comboBox_5.addItems(items)
-        self.comboBox_6.addItems(spec)
+        df = self.in_combo_items_spec()
         df[['입고수량', '구입금액','단가']] = df[['입고수량', '구입금액','단가']].astype('str')
         df.fillna(' ')
         list = df.values.tolist()
@@ -218,6 +242,18 @@ class ElWindow(QMainWindow, form_class):
         self.table_display()
 
         self.tableWidget_5.scrollToBottom
+
+    def in_combo_items_spec(self):
+        df = self.in_df_make()
+        items = df['품명'].unique()
+        items.sort()
+        self.comboBox_5.clear()
+        self.comboBox_5.addItems(items)    
+        df = df[(df['품명'] == self.comboBox_5.currentText())]
+        spec = df['규격'].unique()
+        spec.sort()
+        self.comboBox_6.addItems(spec)
+        return df
 
     def inTableToSaveExcelFile(self):
         file = LE[0]#r'C:\source\pygame\Nado Game\pyqt5\자재관리\입고대장.xlsx'
@@ -281,11 +317,11 @@ class ElWindow(QMainWindow, form_class):
 
     def addComboBoxItem(self) :
         self.comboBox_5.addItem(self.lineEdit_5.text())
-        print("Item Added")
+        self.lineEdit_5.setText('')
     
     def addComboBoxSpecItem(self) :
         self.comboBox_6.addItem(self.lineEdit_8.text())
-        print("Item Added")
+        self.lineEdit_8.setText('')
     
     def addInMaterialToTable(self):
         
