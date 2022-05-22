@@ -545,6 +545,15 @@
         <height>321</height>
        </rect>
       </property>
+      <property name="sortingEnabled">
+       <bool>true</bool>
+      </property>
+      <attribute name="horizontalHeaderDefaultSectionSize">
+       <number>60</number>
+      </attribute>
+      <attribute name="horizontalHeaderMinimumSectionSize">
+       <number>30</number>
+      </attribute>
       <column>
        <property name="text">
         <string>사용일</string>
@@ -578,16 +587,6 @@
       <column>
        <property name="text">
         <string>사용수량</string>
-       </property>
-      </column>
-      <column>
-       <property name="text">
-        <string>단가</string>
-       </property>
-      </column>
-      <column>
-       <property name="text">
-        <string>재고수량</string>
        </property>
       </column>
       <column>
@@ -873,7 +872,10 @@
        </rect>
       </property>
       <property name="text">
-       <string>사용수량</string>
+       <string/>
+      </property>
+      <property name="alignment">
+       <set>Qt::AlignCenter</set>
       </property>
      </widget>
      <widget class="QLabel" name="label_26">
@@ -912,6 +914,12 @@
       </property>
       <property name="text">
        <string>재고수량</string>
+      </property>
+      <property name="alignment">
+       <set>Qt::AlignCenter</set>
+      </property>
+      <property name="readOnly">
+       <bool>true</bool>
       </property>
      </widget>
      <widget class="QLabel" name="label_27">
