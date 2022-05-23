@@ -17,11 +17,18 @@ now = datetime.now()
 yyyymm = now.strftime("%Y")+now.strftime("%m")+'월'
 yyyy = now.strftime("%Y")
 
-LE =  [
-    'C:/source/pygame/Nado Game/pyqt5/자재관리/입고대장.xlsx',
-    'C:/source/pygame/Nado Game/pyqt5/자재관리/사용대장.xlsx',
-    'C:/source/pygame/Nado Game/pyqt5/자재관리/동호대장.xlsx',
-    ]
+if os.path.isfile(r'E:\source\pygame\Nado Game\pyqt5\자재관리\입고대장.xlsx'):
+    LE =  [
+        'E:/source/pygame/Nado Game/pyqt5/자재관리/입고대장.xlsx',
+        'E:/source/pygame/Nado Game/pyqt5/자재관리/사용대장.xlsx',
+        'E:/source/pygame/Nado Game/pyqt5/자재관리/동호대장.xlsx',
+        ]
+else: 
+    LE =  [
+        'C:/source/pygame/Nado Game/pyqt5/자재관리/입고대장.xlsx',
+        'C:/source/pygame/Nado Game/pyqt5/자재관리/사용대장.xlsx',
+        'C:/source/pygame/Nado Game/pyqt5/자재관리/동호대장.xlsx',
+        ]
 
 
 class ElWindow(QMainWindow, form_class):
