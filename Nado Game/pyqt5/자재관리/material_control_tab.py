@@ -17,11 +17,18 @@ now = datetime.now()
 yyyymm = now.strftime("%Y")+now.strftime("%m")+'월'
 yyyy = now.strftime("%Y")
 
-LE =  [
-    'C:/source/pygame/Nado Game/pyqt5/자재관리/입고대장.xlsx',
-    'C:/source/pygame/Nado Game/pyqt5/자재관리/사용대장.xlsx',
-    'C:/source/pygame/Nado Game/pyqt5/자재관리/동호대장.xlsx',
-    ]
+if os.path.isfile(r'E:\source\pygame\Nado Game\pyqt5\자재관리\입고대장.xlsx'):
+    LE =  [
+        'E:/source/pygame/Nado Game/pyqt5/자재관리/입고대장.xlsx',
+        'E:/source/pygame/Nado Game/pyqt5/자재관리/사용대장.xlsx',
+        'E:/source/pygame/Nado Game/pyqt5/자재관리/동호대장.xlsx',
+        ]
+else: 
+    LE =  [
+        'C:/source/pygame/Nado Game/pyqt5/자재관리/입고대장.xlsx',
+        'C:/source/pygame/Nado Game/pyqt5/자재관리/사용대장.xlsx',
+        'C:/source/pygame/Nado Game/pyqt5/자재관리/동호대장.xlsx',
+        ]
 
 
 class ElWindow(QMainWindow, form_class):
@@ -55,30 +62,7 @@ class ElWindow(QMainWindow, form_class):
         self.lineEdit.textChanged.connect(self.lineEditChanged)
         self.lineEdit_2.textChanged.connect(self.lineEdit_2Changed)
 
-    '''
-    file = r'C:\source\pygame\Nado Game\pyqt5\자재관리\입고대장.xlsx'
-    with pd.ExcelFile(file) as f:
-        df = pd.read_excel(f,skiprows=0)
-        df.rename(columns ={'입고일': '사용일'}, inplace=True)
-        #df_in = df[['품명','규격', '입고수량']].copy()
-    df_in_sum = df.groupby(['품명','규격','사용일']).sum()
 
-    file = r'C:\source\pygame\Nado Game\pyqt5\자재관리\사용대장.xlsx'
-    with pd.ExcelFile(file) as f:
-        df = pd.read_excel(f,skiprows=0)
-        #df_out = df[['품명','규격', '사용수량']].copy()
-    df_out_sum = df.groupby(['품명','규격','사용일']).sum()
-
-    df_on_stock = pd.merge(df_in_sum, df_out_sum, how = 'outer', on = ['사용일','품명','규격'])
-    df_on_stock
-    df_on_stock.fillna(0, inplace=True)
-    df_on_stock['재고'] = df_on_stock['입고수량'] - df_on_stock['사용수량']
-    df_on_stock.reset_index()
-    sdf=df_on_stock.sort_values(by=['품명','규격','사용일'])
-    sdf1 = sdf.xs('LED 전구',level='품명')
-    sdf1['누적재고'] = sdf1['재고'].cumsum()
-    sdf1
-    '''
     def init_out_data_make(self):
         df = self.out_df()
         self.out_file_to_table(df)
