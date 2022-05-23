@@ -44,6 +44,7 @@ class ElWindow(QMainWindow, form_class):
         self.dateEdit_6.setCalendarPopup(True)
         self.init_in_data_make()
         self.init_out_data_make()
+        self.init_onstock_query()
         
         self.comboBox_5.activated.connect(self.comboBox_5Activated)#입고품목 선택시 품목 규격 콤보박스 항목 선택
         self.comboBox_9.activated.connect(self.comboBox_9Activated)#사용 품목규격 선택시 품목 재고 보임
@@ -61,6 +62,39 @@ class ElWindow(QMainWindow, form_class):
         self.pushButton_11.clicked.connect(self.addOutMaterialToTable)
         self.lineEdit.textChanged.connect(self.lineEditChanged)
         self.lineEdit_2.textChanged.connect(self.lineEdit_2Changed)
+
+
+    def init_onstock_query(self):
+        df = self.on_stock()
+        df_list = df.values.tolist()
+        print(df_list)
+        for list in df_list:
+            self.set_tbl(list)
+            print(list)
+        self.onstock_query_combo_items_spec()
+
+
+    def onstock_query_combo_items_spec(self):    
+        df = self.in_df_make()
+        items = df['품명'].unique()
+        items.sort()
+        self.comboBox.clear()
+        self.comboBox.addItems(items)    
+        df = df[(df['품명'] == self.comboBox.currentText())]
+        spec = df['규격'].unique()
+        spec.sort()
+        self.comboBox_4.addItems(spec)
+        return df
+
+    def set_tbl(self,data):
+        rowCount = self.tableWidget.rowCount()
+        self.tableWidget.setRowCount(rowCount+1)
+        self.tableWidget.setColumnCount(len(data))
+        c = 0
+        for i in data:
+            self.tableWidget.setItem(rowCount, c, QTableWidgetItem(i))
+            c = c+1
+        self.table_display()
 
 
     def init_out_data_make(self):
@@ -105,11 +139,13 @@ class ElWindow(QMainWindow, form_class):
         df = self.in_df_make()
         items = df['품명'].unique()
         items.sort()
+        items.insert(0, 'All')
         self.comboBox_9.clear()
         self.comboBox_9.addItems(items)    
         df = df[(df['품명'] == self.comboBox_9.currentText())]
         spec = df['규격'].unique()
         spec.sort()
+        spec.insert(0,'All')
         self.comboBox_7.addItems(spec)
         return df
         
@@ -134,6 +170,7 @@ class ElWindow(QMainWindow, form_class):
             data.append(self.lineEdit_6.text())
 
         self.set_tbl_6(data)
+        self. outTableToSaveExcelFile()
 
     def out_stock_view(self):
         #self.comboBox_9Activated()
@@ -380,6 +417,7 @@ class ElWindow(QMainWindow, form_class):
             in_data.append(self.lineEdit_6.text())
 
         self.set_tbl(in_data)
+        self.inTableToSaveExcelFile()
     
     
     def set_tbl(self,data):

@@ -963,47 +963,32 @@
       </property>
       <column>
        <property name="text">
-        <string>입고일</string>
+        <string>품명</string>
        </property>
       </column>
       <column>
        <property name="text">
-        <string>품    명</string>
+        <string>규격</string>
        </property>
       </column>
       <column>
        <property name="text">
-        <string>규     격</string>
+        <string>입고수량</string>
        </property>
       </column>
       <column>
        <property name="text">
-        <string>총 입고수량</string>
+        <string>사용수량</string>
        </property>
       </column>
       <column>
        <property name="text">
-        <string>구입 금액</string>
+        <string>재고수량</string>
        </property>
       </column>
       <column>
        <property name="text">
-        <string>구입 단가</string>
-       </property>
-      </column>
-      <column>
-       <property name="text">
-        <string>총 사용수량</string>
-       </property>
-      </column>
-      <column>
-       <property name="text">
-        <string>재고 수량</string>
-       </property>
-      </column>
-      <column>
-       <property name="text">
-        <string>비   고</string>
+        <string>비고</string>
        </property>
       </column>
      </widget>
