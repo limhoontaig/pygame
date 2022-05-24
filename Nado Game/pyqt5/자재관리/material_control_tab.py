@@ -464,6 +464,9 @@ class ElWindow(QMainWindow, form_class):
             return
 
     def addComboBoxItem(self) :
+        '''
+        This function uses to add the new items
+        '''
         self.comboBox_5.addItem(self.lineEdit_5.text())
         self.lineEdit_5.setText('')
     
