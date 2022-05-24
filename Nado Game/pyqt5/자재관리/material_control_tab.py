@@ -1,6 +1,7 @@
 import sys
 import os
 import pandas as pd
+import numpy as np
 from PyQt5.QtWidgets import *
 from PyQt5.QtCore import pyqtSlot, QObject, pyqtSignal,QDate
 from PyQt5 import uic
@@ -42,10 +43,13 @@ class ElWindow(QMainWindow, form_class):
         self.dateEdit_5.setCalendarPopup(True)
         self.dateEdit_6.setDate(QDate.currentDate())
         self.dateEdit_6.setCalendarPopup(True)
+        self.dateEdit.setDate(QDate.currentDate())
+        self.dateEdit.setCalendarPopup(True)
         self.init_in_data_make()
         self.init_out_data_make()
         self.init_onstock_query()
         
+        self.comboBox.activated.connect(self.onstock_query_combo_spec)#입고품목 선택시 품목 규격 콤보박스 항목 선택
         self.comboBox_5.activated.connect(self.comboBox_5Activated)#입고품목 선택시 품목 규격 콤보박스 항목 선택
         self.comboBox_9.activated.connect(self.comboBox_9Activated)#사용 품목규격 선택시 품목 재고 보임
         self.comboBox_5.activated.connect(self.in_stock_view)#입고 품목 선택시 품목 재고 보임
@@ -59,42 +63,90 @@ class ElWindow(QMainWindow, form_class):
         self.pushButton_7.clicked.connect(self.inTableToSaveExcelFile)
         self.pushButton_9.clicked.connect(self.outTableToSaveExcelFile)
         self.pushButton_6.clicked.connect(self.addInMaterialToTable)
+        self.pushButton_12.clicked.connect(self.onstock_view)
         self.pushButton_11.clicked.connect(self.addOutMaterialToTable)
         self.lineEdit.textChanged.connect(self.lineEditChanged)
         self.lineEdit_2.textChanged.connect(self.lineEdit_2Changed)
 
 
     def init_onstock_query(self):
-        df = self.on_stock()
-        df_list = df.values.tolist()
+        df_list = self.on_stock()
         print(df_list)
         for list in df_list:
-            self.set_tbl(list)
-            print(list)
+            self.set_tbl_onstock(list)
         self.onstock_query_combo_items_spec()
 
+    def onstock_view(self):
+        df = self.on_stock()
+        df[['입고수량', '사용수량','재고']] = df[['입고수량', '사용수량','재고']].astype('str')
+        df_sel = self.df_selection(df)
+
+        df_list = df_sel.values.tolist()
+        
+        for l in df_list:
+            self.set_tbl_onstock(l)
+        self.table_display()
+
+
+    def df_selection(self, df)
+            
+    def set_tbl_onstock(self,df_list):
+        rowCount = self.tableWidget.rowCount()
+        self.tableWidget.setRowCount(rowCount+1)
+        self.tableWidget.setColumnCount(len(data)+1)
+        c = 0
+        for i in df_list:
+            self.tableWidget.setItem(rowCount, c, QTableWidgetItem(i))
+            c = c+1
+
+    def on_stock(self):
+        dfIn = self.in_df()
+        df_in = dfIn[['품명','규격', '입고수량']].copy()
+        df_in_sum = df_in.groupby(['품명','규격']).sum()
+
+        dfOut = self.out_df()
+        df_out = dfOut[['품명','규격', '사용수량']].copy()
+        df_out_sum = df_out.groupby(['품명','규격']).sum()
+
+        df_on_stock = pd.merge(df_in_sum, df_out_sum, how = 'outer', on = ['품명','규격'])
+        df_on_stock.fillna(0, inplace=True)
+        try:
+            df_on_stock['재고'] = df_on_stock['입고수량'] - df_on_stock['사용수량']
+            df_m = df_on_stock.reset_index().copy()
+            return df_m
+        except:
+            pass
+
+    def onstock_query_combo_spec(self):    
+        df = self.in_df_make()
+        if self.comboBox.currentText() == 'All':
+            self.comboBox_4.clear()
+            self.comboBox_4.addItems(['All'])
+        else:
+            df = df[(df['품명'] == self.comboBox.currentText())]
+            spec = df['규격'].unique()
+            spec.sort()
+            self.comboBox_4.clear()
+            self.comboBox_4.addItems(spec)
 
     def onstock_query_combo_items_spec(self):    
         df = self.in_df_make()
         items = df['품명'].unique()
         items.sort()
+        items = np.insert(items, 0,'All')
+        #items = items.insert(0,'All')
         self.comboBox.clear()
         self.comboBox.addItems(items)    
-        df = df[(df['품명'] == self.comboBox.currentText())]
-        spec = df['규격'].unique()
-        spec.sort()
-        self.comboBox_4.addItems(spec)
+        if self.comboBox.currentText() == 'All':
+            self.comboBox_4.addItems(['All'])
+            
+        else:
+            df = df[(df['품명'] == self.comboBox.currentText())]
+            spec = df['규격'].unique()
+            spec.sort()
+            self.comboBox_4.addItems(spec)
         return df
 
-    def set_tbl(self,data):
-        rowCount = self.tableWidget.rowCount()
-        self.tableWidget.setRowCount(rowCount+1)
-        self.tableWidget.setColumnCount(len(data))
-        c = 0
-        for i in data:
-            self.tableWidget.setItem(rowCount, c, QTableWidgetItem(i))
-            c = c+1
-        self.table_display()
 
 
     def init_out_data_make(self):
@@ -139,13 +191,11 @@ class ElWindow(QMainWindow, form_class):
         df = self.in_df_make()
         items = df['품명'].unique()
         items.sort()
-        items.insert(0, 'All')
         self.comboBox_9.clear()
         self.comboBox_9.addItems(items)    
         df = df[(df['품명'] == self.comboBox_9.currentText())]
         spec = df['규격'].unique()
         spec.sort()
-        spec.insert(0,'All')
         self.comboBox_7.addItems(spec)
         return df
         
@@ -192,22 +242,6 @@ class ElWindow(QMainWindow, form_class):
             on_stock_qty = '신규항목임'
             return on_stock_qty
     
-    def on_stock(self):
-        dfIn = self.in_df()
-        df_in = dfIn[['품명','규격', '입고수량']].copy()
-        df_in_sum = df_in.groupby(['품명','규격']).sum()
-
-        dfOut = self.out_df()
-        df_out = dfOut[['품명','규격', '사용수량']].copy()
-        df_out_sum = df_out.groupby(['품명','규격']).sum()
-
-        df_on_stock = pd.merge(df_in_sum, df_out_sum, how = 'outer', on = ['품명','규격'])
-        df_on_stock.fillna(0, inplace=True)
-        try:
-            df_on_stock['재고'] = df_on_stock['입고수량'] - df_on_stock['사용수량']
-            return df_on_stock
-        except:
-            pass
     
     def set_tbl_6(self,data):
         rowCount = self.tableWidget_6.rowCount()

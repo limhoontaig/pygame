@@ -1097,6 +1097,19 @@
        </rect>
       </property>
      </widget>
+     <widget class="QPushButton" name="pushButton_12">
+      <property name="geometry">
+       <rect>
+        <x>940</x>
+        <y>20</y>
+        <width>91</width>
+        <height>41</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>조회</string>
+      </property>
+     </widget>
     </widget>
     <widget class="QWidget" name="tab_3">
      <attribute name="title">
@@ -1462,7 +1475,7 @@
      <x>0</x>
      <y>0</y>
      <width>1118</width>
-     <height>26</height>
+     <height>21</height>
     </rect>
    </property>
   </widget>
