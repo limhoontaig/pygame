@@ -39,6 +39,10 @@ class ElWindow(QMainWindow, form_class):
         self.setupUi(self)
 
         # 자재입고 입력 init setup
+        self.dateEdit_2.setDate(QDate.currentDate())
+        self.dateEdit_2.setCalendarPopup(True)
+        self.dateEdit_4.setDate(QDate.currentDate())
+        self.dateEdit_4.setCalendarPopup(True)
         self.dateEdit_5.setDate(QDate.currentDate())
         self.dateEdit_5.setCalendarPopup(True)
         self.dateEdit_6.setDate(QDate.currentDate())
@@ -48,9 +52,12 @@ class ElWindow(QMainWindow, form_class):
         self.init_in_data_make()
         self.init_out_data_make()
         self.init_onstock_query()
+        self.init_in_query()
+
         
         #self.dateEdit.selectionChanged.connect(self.set_calendar_today_color)
         self.comboBox.activated.connect(self.onstock_query_combo_spec)#입고품목 선택시 품목 규격 콤보박스 항목 선택
+        self.comboBox_2.activated.connect(self.in_query_combo_spec)#입고품목 선택시 품목 규격 콤보박스 항목 선택
         self.comboBox_5.activated.connect(self.comboBox_5Activated)#입고품목 선택시 품목 규격 콤보박스 항목 선택
         self.comboBox_9.activated.connect(self.comboBox_9Activated)#사용 품목규격 선택시 품목 재고 보임
         self.comboBox_5.activated.connect(self.in_stock_view)#입고 품목 선택시 품목 재고 보임
@@ -69,6 +76,44 @@ class ElWindow(QMainWindow, form_class):
         self.lineEdit.textChanged.connect(self.lineEditChanged)
         self.lineEdit_2.textChanged.connect(self.lineEdit_2Changed)
 
+
+    def init_in_query(self):
+        self.in_query_combo_items_spec()
+        #df = self.on_stock()
+        #df_list = df.values.tolist()
+        #for list in df_list:
+        #    self.set_tb
+        #pass
+
+    def in_query_combo_items_spec(self):    
+        df = self.in_df_make()
+        items = df['품명'].unique()
+        items.sort()
+        items = np.insert(items, 0,'All')
+        self.comboBox_2.clear()
+        self.comboBox_2.addItems(items)    
+        if self.comboBox_2.currentText() == 'All':
+            self.comboBox_13.addItems(['All'])
+            
+        else:
+            df = df[(df['품명'] == self.comboBox.currentText())]
+            spec = df['규격'].unique()
+            spec.sort()
+            self.comboBox_13.addItems(spec)
+        return df
+
+    def in_query_combo_spec(self):
+        
+        df = self.in_df_make()
+        if self.comboBox_2.currentText() == 'All':
+            self.comboBox_13.clear()
+            self.comboBox_13.addItems(['All'])
+        else:
+            df = df[(df['품명'] == self.comboBox_2.currentText())]
+            spec = df['규격'].unique()
+            spec.sort()
+            self.comboBox_13.clear()
+            self.comboBox_13.addItems(spec)
 
     def set_calendar_today_color(self):
         #today = QDate.currentDate()
