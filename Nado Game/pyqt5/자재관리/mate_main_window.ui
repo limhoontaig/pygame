@@ -47,7 +47,7 @@
      </rect>
     </property>
     <property name="currentIndex">
-     <number>4</number>
+     <number>3</number>
     </property>
     <widget class="QWidget" name="tab_5">
      <attribute name="title">
@@ -1152,22 +1152,22 @@
       </column>
       <column>
        <property name="text">
+        <string>품목누계</string>
+       </property>
+      </column>
+      <column>
+       <property name="text">
         <string>구입금액</string>
        </property>
       </column>
       <column>
        <property name="text">
-        <string>구입단가</string>
+        <string>단가</string>
        </property>
       </column>
       <column>
        <property name="text">
-        <string>사용수량</string>
-       </property>
-      </column>
-      <column>
-       <property name="text">
-        <string>재고수량</string>
+        <string>구입업체</string>
        </property>
       </column>
       <column>
@@ -1565,7 +1565,7 @@
      <x>0</x>
      <y>0</y>
      <width>1118</width>
-     <height>21</height>
+     <height>26</height>
     </rect>
    </property>
   </widget>

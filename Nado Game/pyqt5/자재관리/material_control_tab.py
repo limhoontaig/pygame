@@ -79,11 +79,53 @@ class ElWindow(QMainWindow, form_class):
 
     def init_in_query(self):
         self.in_query_combo_items_spec()
-        #df = self.on_stock()
-        #df_list = df.values.tolist()
-        #for list in df_list:
-        #    self.set_tb
+        df = self.in_df()
+        df_in = self.in_out_status(df)
+        df_list = df_in.values.tolist()
+        for list in df_list:
+            self.set_tbl_2(list)
         #pass
+
+    def set_tbl_2(self, df_list):
+        rowCount = self.tableWidget_2.rowCount()
+        self.tableWidget_2.setRowCount(rowCount+1)
+        self.tableWidget_2.setColumnCount(len(df_list))
+        c = 0
+        for i in df_list:
+            self.tableWidget_2.setItem(rowCount, c, QTableWidgetItem(i))
+            c = c+1
+
+    def in_out_status(self, df):
+        items = df['품명'].unique()
+        df_lists = []
+        for item in items:
+            df_specs = df[(df['품명'] == item)]
+            specs = df_specs['규격'].unique()
+            for spec in specs:
+                df_sel = df[(df['품명'] == item) & (df['규격'] == spec)].copy()
+                try:
+                    df_temp = df_sel.sort_values(by=['입고일']).copy()
+                    df_copy = df_temp[['입고수량']].copy()
+                except:
+                    df_temp = df_sel.sort_values(by=['사용일']).copy()
+                    df_copy = df_temp[['사용수량']].copy()
+                df_copy['품목누계'] = df_copy.cumsum()
+                df_temp['품목누계']=df_copy['품목누계']
+                df_lists.append(df_temp)
+        df_con = df_lists[0]
+        for df_list in df_lists[1:]:
+            df_con = pd.concat([df_con, df_list])
+        df_con.columns.tolist()
+        try:
+            df_con_1= df_con[['입고일', '품명', '규격', '입고수량', '품목누계', '구입금액', '단가', '구입업체', '비고' ]]
+            df_con_1.sort_values(by=['입고일', '품명','규격'], inplace=True)
+            df_con_1[['입고수량', '구입금액','단가','품목누계']] = df_con[['입고수량', '구입금액','단가','품목누계']].astype('str')
+        except:
+            df_con[['사용일', '품명', '규격', '사용수량', '품목누계', '비고' ]]
+            df_con.sort_values(by=['사용일', '품명','규격'])
+        print(df_con)
+        return df_con_1
+
 
     def in_query_combo_items_spec(self):    
         df = self.in_df_make()
