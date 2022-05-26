@@ -104,6 +104,67 @@ class ElWindow(QMainWindow, form_class):
             self.set_tbl_3(list)
         #pass
 
+    def in_status_view(self):
+        colcount = self.tableWidget_2.columnCount()
+        headers = [self.tableWidget_2.horizontalHeaderItem(x).text() for x in range(0,colcount)]
+        self.tableWidget_2.clear()
+        self.tableWidget_2.setRowCount(0)
+        self.tableWidget_2.setHorizontalHeaderLabels(headers)
+        df_sel = self.df_in_status_selection()
+        df_list = df_sel.values.tolist()
+        for l in df_list:
+            self.set_tbl_2(l)
+        self.table_display()
+
+    def in_status_selection_in(self, df):
+        date = self.dateEdit.text()
+        items = self.comboBox_2.currentText()
+        spec = self.comboBox_13.currentText()
+        d_con = df['입고일'] <=date
+        i_con = df['품명'] == items
+        s_con = df['규격'] == spec
+        if items == 'All':
+            df_sel = df[(d_con)]
+            return df_sel
+        else:
+            df_sel = df[(d_con & i_con & s_con)]
+            return df_sel
+
+    def in_status_selection_out(self, df):
+        date = self.dateEdit_4.text()
+        items = self.comboBox_2.currentText()
+        spec = self.comboBox_13.currentText()
+        d_con = df['사용일'] <=date
+        i_con = df['품명'] == items
+        s_con = df['규격'] == spec
+        if items == 'All':
+            df_sel = df[(d_con)]
+            return df_sel
+        else:
+            df_sel = df[(d_con & i_con & s_con)]
+            return df_sel
+
+    def df_in_status_selection(self):
+        dfI = self.in_df()
+        dfIn = self.onstock_selection_in(dfI)
+        df_in = dfIn[['품명','규격', '입고수량']].copy()
+        df_in_sum = df_in.groupby(['품명','규격']).sum()
+
+        dfO = self.out_df()
+        dfOut = self.onstock_selection_out(dfO)
+        df_out = dfOut[['품명','규격', '사용수량']].copy()
+        df_out_sum = df_out.groupby(['품명','규격']).sum()
+
+        df_on_stock = pd.merge(df_in_sum, df_out_sum, how = 'outer', on = ['품명','규격'])
+        df_on_stock.fillna(0, inplace=True)
+        try:
+            df_on_stock['재고'] = df_on_stock['입고수량'] - df_on_stock['사용수량']
+            df_on_stock[['입고수량', '사용수량','재고']] = df_on_stock[['입고수량', '사용수량','재고']].astype('str')
+            df_m = df_on_stock.reset_index().copy()
+            return df_m
+        except:
+            pass
+
     def set_tbl_3(self, df_list):
         rowCount = self.tableWidget_3.rowCount()
         self.tableWidget_3.setRowCount(rowCount+1)
@@ -181,7 +242,7 @@ class ElWindow(QMainWindow, form_class):
             df_con_1 = df_con[['사용일', '동','호','구분','품명', '규격', '사용수량', '품목누계', '비고' ]]
             
             df_con_1.sort_values(by=['사용일', '품명','규격'])
-            df_con_1[['사용수량', '동','호']] = df_con[['사용수량', '동','호']].astype('str')
+            df_con_1[['사용수량', '동','호','품목누계']] = df_con[['사용수량', '동','호','품목누계']].astype('str')
 
         return df_con_1
 
