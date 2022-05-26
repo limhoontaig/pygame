@@ -39,7 +39,10 @@ class ElWindow(QMainWindow, form_class):
         self.setupUi(self)
 
         # 자재입고 입력 init setup
-        self.dateEdit_2.setDate(QDate.currentDate())
+        now = QDate.currentDate()
+        now.toString(Qt.ISODate)
+        today = now.addMonths(-3)
+        self.dateEdit_2.setDate(today)
         self.dateEdit_2.setCalendarPopup(True)
         self.dateEdit_4.setDate(QDate.currentDate())
         self.dateEdit_4.setCalendarPopup(True)
@@ -47,9 +50,6 @@ class ElWindow(QMainWindow, form_class):
         self.dateEdit_5.setCalendarPopup(True)
         self.dateEdit_6.setDate(QDate.currentDate())
         self.dateEdit_6.setCalendarPopup(True)
-        now = QDate.currentDate()
-        now.toString(Qt.ISODate)
-        today = now.addMonths(-3)
         self.dateEdit_3.setDate(today)
         self.dateEdit_3.setCalendarPopup(True)
         self.dateEdit_7.setDate(QDate.currentDate())
@@ -80,7 +80,8 @@ class ElWindow(QMainWindow, form_class):
         self.pushButton_7.clicked.connect(self.inTableToSaveExcelFile)
         self.pushButton_9.clicked.connect(self.outTableToSaveExcelFile)
         self.pushButton_6.clicked.connect(self.addInMaterialToTable)
-        self.pushButton_12.clicked.connect(self.onstock_view)
+        self.pushButton_12.clicked.connect(self.onstock_view)# 자재 품목/규격 별 제고 조회
+        self.pushButton_13.clicked.connect(self.in_status_view) # 품목/규격 별 자대 입고 현황 조회 
         self.pushButton_11.clicked.connect(self.addOutMaterialToTable)
         self.lineEdit.textChanged.connect(self.lineEditChanged)
         self.lineEdit_2.textChanged.connect(self.lineEdit_2Changed)
@@ -111,49 +112,28 @@ class ElWindow(QMainWindow, form_class):
         self.tableWidget_2.setRowCount(0)
         self.tableWidget_2.setHorizontalHeaderLabels(headers)
         df_sel = self.df_in_status_selection()
+        print(df_sel)
         df_list = df_sel.values.tolist()
         for l in df_list:
             self.set_tbl_2(l)
         self.table_display()
 
-    def in_status_selection_in(self, df):
-        date = self.dateEdit.text()
-        items = self.comboBox_2.currentText()
-        spec = self.comboBox_13.currentText()
-        d_con = df['입고일'] <=date
-        i_con = df['품명'] == items
-        s_con = df['규격'] == spec
-        if items == 'All':
-            df_sel = df[(d_con)]
-            return df_sel
-        else:
-            df_sel = df[(d_con & i_con & s_con)]
-            return df_sel
-
-    def in_status_selection_out(self, df):
-        date = self.dateEdit_4.text()
-        items = self.comboBox_2.currentText()
-        spec = self.comboBox_13.currentText()
-        d_con = df['사용일'] <=date
-        i_con = df['품명'] == items
-        s_con = df['규격'] == spec
-        if items == 'All':
-            df_sel = df[(d_con)]
-            return df_sel
-        else:
-            df_sel = df[(d_con & i_con & s_con)]
-            return df_sel
-
     def df_in_status_selection(self):
         dfI = self.in_df()
-        dfIn = self.onstock_selection_in(dfI)
+        dfIn = self.in_status_selection(dfI)
+        '''
         df_in = dfIn[['품명','규격', '입고수량']].copy()
         df_in_sum = df_in.groupby(['품명','규격']).sum()
+        print('df_in_sum', df_in_sum)
+        '''
 
         dfO = self.out_df()
-        dfOut = self.onstock_selection_out(dfO)
+        dfOut = self.out_status_selection(dfO)
+        '''
         df_out = dfOut[['품명','규격', '사용수량']].copy()
         df_out_sum = df_out.groupby(['품명','규격']).sum()
+        print('df_out_sum', df_out_sum)
+        '''
 
         df_on_stock = pd.merge(df_in_sum, df_out_sum, how = 'outer', on = ['품명','규격'])
         df_on_stock.fillna(0, inplace=True)
@@ -164,6 +144,39 @@ class ElWindow(QMainWindow, form_class):
             return df_m
         except:
             pass
+
+    def in_status_selection(self, df):
+        from_date = self.dateEdit_2.text()
+        to_date = self.dateEdit_4.text()
+        items = self.comboBox_2.currentText()
+        spec = self.comboBox_13.currentText()
+        date_to_con = df['입고일'] <= to_date
+        date_from_con = df['입고일'] >= from_date
+        i_con = df['품명'] == items
+        s_con = df['규격'] == spec
+        if items == 'All':
+            df_sel = df[(date_from_con & date_to_con)]
+            return df_sel
+        else:
+            df_sel = df[(date_from_con & date_to_con & i_con & s_con)]
+            return df_sel
+
+    def out_status_selection(self, df):
+        from_date = self.dateEdit_2.text()
+        to_date = self.dateEdit_4.text()
+        items = self.comboBox_2.currentText()
+        spec = self.comboBox_13.currentText()
+        d_to_con = df['사용일'] <=to_date
+        d_from_con = df['사용일'] >=from_date
+        i_con = df['품명'] == items
+        s_con = df['규격'] == spec
+        if items == 'All':
+            df_sel = df[(d_to_con & d_from_con)]
+            return df_sel
+        else:
+            df_sel = df[(d_to_con & d_from_con & i_con & s_con)]
+            return df_sel
+
 
     def set_tbl_3(self, df_list):
         rowCount = self.tableWidget_3.rowCount()
