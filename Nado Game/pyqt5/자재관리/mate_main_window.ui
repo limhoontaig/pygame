@@ -47,7 +47,7 @@
      </rect>
     </property>
     <property name="currentIndex">
-     <number>3</number>
+     <number>4</number>
     </property>
     <widget class="QWidget" name="tab_5">
      <attribute name="title">
@@ -97,49 +97,62 @@
         <height>391</height>
        </rect>
       </property>
+      <attribute name="horizontalHeaderDefaultSectionSize">
+       <number>90</number>
+      </attribute>
       <column>
        <property name="text">
-        <string>입고일</string>
+        <string>구분</string>
        </property>
       </column>
       <column>
        <property name="text">
-        <string>품    명</string>
+        <string>일자</string>
        </property>
       </column>
       <column>
        <property name="text">
-        <string>규     격</string>
+        <string>시간</string>
        </property>
       </column>
       <column>
        <property name="text">
-        <string>입고수량</string>
+        <string>품명</string>
        </property>
       </column>
       <column>
        <property name="text">
-        <string>구입 금액</string>
+        <string>규격</string>
        </property>
       </column>
       <column>
        <property name="text">
-        <string>구입 단가</string>
+        <string>수량</string>
        </property>
       </column>
       <column>
        <property name="text">
-        <string>구입 업체</string>
+        <string>금액</string>
        </property>
       </column>
       <column>
        <property name="text">
-        <string>재고 수량</string>
+        <string>단가</string>
        </property>
       </column>
       <column>
        <property name="text">
-        <string>비   고</string>
+        <string>업체</string>
+       </property>
+      </column>
+      <column>
+       <property name="text">
+        <string>수량</string>
+       </property>
+      </column>
+      <column>
+       <property name="text">
+        <string>비고</string>
        </property>
       </column>
      </widget>
@@ -556,7 +569,17 @@
       </attribute>
       <column>
        <property name="text">
-        <string>사용일</string>
+        <string>구분</string>
+       </property>
+      </column>
+      <column>
+       <property name="text">
+        <string>일자</string>
+       </property>
+      </column>
+      <column>
+       <property name="text">
+        <string>시간</string>
        </property>
       </column>
       <column>
@@ -571,7 +594,7 @@
       </column>
       <column>
        <property name="text">
-        <string>구분</string>
+        <string>공용</string>
        </property>
       </column>
       <column>
@@ -1366,6 +1389,21 @@
       </column>
       <column>
        <property name="text">
+        <string>동</string>
+       </property>
+      </column>
+      <column>
+       <property name="text">
+        <string>호</string>
+       </property>
+      </column>
+      <column>
+       <property name="text">
+        <string>구분</string>
+       </property>
+      </column>
+      <column>
+       <property name="text">
         <string>품명</string>
        </property>
       </column>
@@ -1381,7 +1419,7 @@
       </column>
       <column>
        <property name="text">
-        <string>재고수량</string>
+        <string>품목누계</string>
        </property>
       </column>
       <column>
@@ -1565,7 +1603,7 @@
      <x>0</x>
      <y>0</y>
      <width>1118</width>
-     <height>26</height>
+     <height>21</height>
     </rect>
    </property>
   </widget>

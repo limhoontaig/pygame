@@ -3,7 +3,7 @@ import os
 import pandas as pd
 import numpy as np
 from PyQt5.QtWidgets import *
-from PyQt5.QtCore import pyqtSlot, QObject, pyqtSignal,QDate
+from PyQt5.QtCore import pyqtSlot, QObject, pyqtSignal,QDate, QTime, Qt
 from PyQt5 import uic
 from datetime import datetime
 
@@ -47,17 +47,26 @@ class ElWindow(QMainWindow, form_class):
         self.dateEdit_5.setCalendarPopup(True)
         self.dateEdit_6.setDate(QDate.currentDate())
         self.dateEdit_6.setCalendarPopup(True)
+        now = QDate.currentDate()
+        now.toString(Qt.ISODate)
+        today = now.addMonths(-3)
+        self.dateEdit_3.setDate(today)
+        self.dateEdit_3.setCalendarPopup(True)
+        self.dateEdit_7.setDate(QDate.currentDate())
+        self.dateEdit_7.setCalendarPopup(True)
         self.dateEdit.setDate(QDate.currentDate())
         self.dateEdit.setCalendarPopup(True)
         self.init_in_data_make()
         self.init_out_data_make()
         self.init_onstock_query()
         self.init_in_query()
+        self.init_out_query()
 
         
         #self.dateEdit.selectionChanged.connect(self.set_calendar_today_color)
         self.comboBox.activated.connect(self.onstock_query_combo_spec)#입고품목 선택시 품목 규격 콤보박스 항목 선택
         self.comboBox_2.activated.connect(self.in_query_combo_spec)#입고품목 선택시 품목 규격 콤보박스 항목 선택
+        self.comboBox_3.activated.connect(self.out_query_combo_spec)#입고품목 선택시 품목 규격 콤보박스 항목 선택
         self.comboBox_5.activated.connect(self.comboBox_5Activated)#입고품목 선택시 품목 규격 콤보박스 항목 선택
         self.comboBox_9.activated.connect(self.comboBox_9Activated)#사용 품목규격 선택시 품목 재고 보임
         self.comboBox_5.activated.connect(self.in_stock_view)#입고 품목 선택시 품목 재고 보임
@@ -86,6 +95,41 @@ class ElWindow(QMainWindow, form_class):
             self.set_tbl_2(list)
         #pass
 
+    def init_out_query(self):
+        self.out_query_combo_items_spec()
+        df = self.out_df()
+        df_in = self.in_out_status(df)
+        df_list = df_in.values.tolist()
+        for list in df_list:
+            self.set_tbl_3(list)
+        #pass
+
+    def set_tbl_3(self, df_list):
+        rowCount = self.tableWidget_3.rowCount()
+        self.tableWidget_3.setRowCount(rowCount+1)
+        self.tableWidget_3.setColumnCount(len(df_list))
+        c = 0
+        for i in df_list:
+            self.tableWidget_3.setItem(rowCount, c, QTableWidgetItem(i))
+            c = c+1
+
+    def out_query_combo_items_spec(self):    
+        df = self.in_df_make()
+        items = df['품명'].unique()
+        items.sort()
+        items = np.insert(items, 0,'All')
+        self.comboBox_3.clear()
+        self.comboBox_3.addItems(items)    
+        if self.comboBox_3.currentText() == 'All':
+            self.comboBox_14.addItems(['All'])
+            
+        else:
+            df = df[(df['품명'] == self.comboBox_3.currentText())]
+            spec = df['규격'].unique()
+            spec.sort()
+            self.comboBox_14.addItems(spec)
+        return df
+
     def set_tbl_2(self, df_list):
         rowCount = self.tableWidget_2.rowCount()
         self.tableWidget_2.setRowCount(rowCount+1)
@@ -94,6 +138,19 @@ class ElWindow(QMainWindow, form_class):
         for i in df_list:
             self.tableWidget_2.setItem(rowCount, c, QTableWidgetItem(i))
             c = c+1
+
+    def out_query_combo_spec(self):
+        
+        df = self.in_df_make()
+        if self.comboBox_3.currentText() == 'All':
+            self.comboBox_14.clear()
+            self.comboBox_14.addItems(['All'])
+        else:
+            df = df[(df['품명'] == self.comboBox_3.currentText())]
+            spec = df['규격'].unique()
+            spec.sort()
+            self.comboBox_14.clear()
+            self.comboBox_14.addItems(spec)
 
     def in_out_status(self, df):
         items = df['품명'].unique()
@@ -115,15 +172,17 @@ class ElWindow(QMainWindow, form_class):
         df_con = df_lists[0]
         for df_list in df_lists[1:]:
             df_con = pd.concat([df_con, df_list])
-        df_con.columns.tolist()
+        #df_con.columns.tolist()
         try:
             df_con_1= df_con[['입고일', '품명', '규격', '입고수량', '품목누계', '구입금액', '단가', '구입업체', '비고' ]]
             df_con_1.sort_values(by=['입고일', '품명','규격'], inplace=True)
             df_con_1[['입고수량', '구입금액','단가','품목누계']] = df_con[['입고수량', '구입금액','단가','품목누계']].astype('str')
         except:
-            df_con[['사용일', '품명', '규격', '사용수량', '품목누계', '비고' ]]
-            df_con.sort_values(by=['사용일', '품명','규격'])
-        print(df_con)
+            df_con_1 = df_con[['사용일', '동','호','구분','품명', '규격', '사용수량', '품목누계', '비고' ]]
+            
+            df_con_1.sort_values(by=['사용일', '품명','규격'])
+            df_con_1[['사용수량', '동','호']] = df_con[['사용수량', '동','호']].astype('str')
+
         return df_con_1
 
 
@@ -161,6 +220,7 @@ class ElWindow(QMainWindow, form_class):
         #today = QDate.currentDate()
         self.dateEdit.showToday()
         #pass
+
     def init_onstock_query(self):
         self.onstock_query_combo_items_spec()
         df = self.on_stock()
@@ -400,17 +460,6 @@ class ElWindow(QMainWindow, form_class):
         self.tableWidget_5.scrollToBottom
         self.table_display()
     
-    def out_df(self):
-        file = LE[1] #r'C:\source\pygame\Nado Game\pyqt5\자재관리\사용대장.xlsx'
-        with pd.ExcelFile(file) as f:
-            df = pd.read_excel(f,skiprows=0)
-        return df
-
-    def in_df(self):
-        file = LE[0] #r'C:\source\pygame\Nado Game\pyqt5\자재관리\입고대장.xlsx'
-        with pd.ExcelFile(file) as f:
-            df = pd.read_excel(f,skiprows=0)
-        return df
 
 
     def dong_ho(self):
@@ -465,6 +514,18 @@ class ElWindow(QMainWindow, form_class):
             df = pd.read_excel(f,skiprows=0)
         return df
     
+    def out_df(self):
+        file = LE[1] #r'C:\source\pygame\Nado Game\pyqt5\자재관리\사용대장.xlsx'
+        with pd.ExcelFile(file) as f:
+            df = pd.read_excel(f,skiprows=0)
+        return df
+
+    def in_df(self):
+        file = LE[0] #r'C:\source\pygame\Nado Game\pyqt5\자재관리\입고대장.xlsx'
+        with pd.ExcelFile(file) as f:
+            df = pd.read_excel(f,skiprows=0)
+        return df
+
     def comboBox_5Activated(self):
         df = self.in_df_make()
         df = df[(df['품명'] == self.comboBox_5.currentText())]
@@ -564,7 +625,10 @@ class ElWindow(QMainWindow, form_class):
     def addInMaterialToTable(self):
         
         in_data = []
+        in_data.append('입고')
         in_data.append(self.dateEdit_5.text())
+        time = QTime.currentTime()
+        in_data.append(time.toString())
         in_data.append(self.comboBox_5.currentText())
         in_data.append(self.comboBox_6.currentText())
         if len(self.lineEdit.text())==0:
