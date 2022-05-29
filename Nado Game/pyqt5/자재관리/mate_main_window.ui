@@ -46,8 +46,11 @@
       <height>521</height>
      </rect>
     </property>
+    <property name="tabShape">
+     <enum>QTabWidget::Triangular</enum>
+    </property>
     <property name="currentIndex">
-     <number>3</number>
+     <number>4</number>
     </property>
     <widget class="QWidget" name="tab_5">
      <attribute name="title">
@@ -360,6 +363,9 @@
         <height>31</height>
        </rect>
       </property>
+      <property name="alignment">
+       <set>Qt::AlignCenter</set>
+      </property>
      </widget>
      <widget class="QLineEdit" name="lineEdit_2">
       <property name="geometry">
@@ -370,6 +376,9 @@
         <height>31</height>
        </rect>
       </property>
+      <property name="alignment">
+       <set>Qt::AlignCenter</set>
+      </property>
      </widget>
      <widget class="QLineEdit" name="lineEdit_3">
       <property name="geometry">
@@ -379,6 +388,9 @@
         <width>141</width>
         <height>31</height>
        </rect>
+      </property>
+      <property name="alignment">
+       <set>Qt::AlignCenter</set>
       </property>
      </widget>
      <widget class="QLineEdit" name="lineEdit_4">
@@ -522,6 +534,9 @@
       </property>
       <property name="text">
        <string>재고수량</string>
+      </property>
+      <property name="alignment">
+       <set>Qt::AlignCenter</set>
       </property>
      </widget>
     </widget>
@@ -831,7 +846,7 @@
        </rect>
       </property>
       <property name="text">
-       <string>비고</string>
+       <string/>
       </property>
      </widget>
      <widget class="QLabel" name="label_19">
@@ -936,7 +951,7 @@
        </rect>
       </property>
       <property name="text">
-       <string>재고수량</string>
+       <string/>
       </property>
       <property name="alignment">
        <set>Qt::AlignCenter</set>
@@ -1136,7 +1151,7 @@
     </widget>
     <widget class="QWidget" name="tab_3">
      <attribute name="title">
-      <string>월별 입고 조회</string>
+      <string>입고/사용 조회</string>
      </attribute>
      <widget class="QTableWidget" name="tableWidget_2">
       <property name="geometry">
@@ -1202,7 +1217,7 @@
      <widget class="QLabel" name="label_4">
       <property name="geometry">
        <rect>
-        <x>400</x>
+        <x>480</x>
         <y>20</y>
         <width>61</width>
         <height>31</height>
@@ -1252,7 +1267,7 @@
      <widget class="QComboBox" name="comboBox_2">
       <property name="geometry">
        <rect>
-        <x>470</x>
+        <x>550</x>
         <y>20</y>
         <width>141</width>
         <height>31</height>
@@ -1272,7 +1287,7 @@
      <widget class="QCheckBox" name="checkBox">
       <property name="geometry">
        <rect>
-        <x>190</x>
+        <x>320</x>
         <y>20</y>
         <width>81</width>
         <height>31</height>
@@ -1285,7 +1300,7 @@
      <widget class="QLabel" name="label_8">
       <property name="geometry">
        <rect>
-        <x>270</x>
+        <x>190</x>
         <y>20</y>
         <width>21</width>
         <height>31</height>
@@ -1310,7 +1325,7 @@
      <widget class="QDateEdit" name="dateEdit_4">
       <property name="geometry">
        <rect>
-        <x>300</x>
+        <x>220</x>
         <y>20</y>
         <width>91</width>
         <height>31</height>
@@ -1320,7 +1335,7 @@
      <widget class="QPushButton" name="pushButton_13">
       <property name="geometry">
        <rect>
-        <x>840</x>
+        <x>920</x>
         <y>20</y>
         <width>91</width>
         <height>31</height>
@@ -1333,7 +1348,7 @@
      <widget class="QComboBox" name="comboBox_13">
       <property name="geometry">
        <rect>
-        <x>690</x>
+        <x>770</x>
         <y>20</y>
         <width>141</width>
         <height>31</height>
@@ -1343,7 +1358,7 @@
      <widget class="QLabel" name="label_30">
       <property name="geometry">
        <rect>
-        <x>620</x>
+        <x>700</x>
         <y>20</y>
         <width>61</width>
         <height>31</height>
@@ -1365,10 +1380,30 @@
        <set>Qt::AlignCenter</set>
       </property>
      </widget>
+     <widget class="QComboBox" name="comboBox_12">
+      <property name="geometry">
+       <rect>
+        <x>400</x>
+        <y>20</y>
+        <width>71</width>
+        <height>31</height>
+       </rect>
+      </property>
+      <item>
+       <property name="text">
+        <string>입고</string>
+       </property>
+      </item>
+      <item>
+       <property name="text">
+        <string>사용</string>
+       </property>
+      </item>
+     </widget>
     </widget>
     <widget class="QWidget" name="tab_2">
      <attribute name="title">
-      <string>월별 사용 조회</string>
+      <string>상세 입고/사용 통합 조회</string>
      </attribute>
      <widget class="QTableWidget" name="tableWidget_3">
       <property name="geometry">
