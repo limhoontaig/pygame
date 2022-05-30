@@ -50,7 +50,7 @@
      <enum>QTabWidget::Triangular</enum>
     </property>
     <property name="currentIndex">
-     <number>4</number>
+     <number>3</number>
     </property>
     <widget class="QWidget" name="tab_5">
      <attribute name="title">
@@ -105,17 +105,7 @@
       </attribute>
       <column>
        <property name="text">
-        <string>구분</string>
-       </property>
-      </column>
-      <column>
-       <property name="text">
         <string>일자</string>
-       </property>
-      </column>
-      <column>
-       <property name="text">
-        <string>시간</string>
        </property>
       </column>
       <column>
@@ -130,12 +120,12 @@
       </column>
       <column>
        <property name="text">
-        <string>수량</string>
+        <string>입고수량</string>
        </property>
       </column>
       <column>
        <property name="text">
-        <string>금액</string>
+        <string>구입금액</string>
        </property>
       </column>
       <column>
@@ -145,12 +135,7 @@
       </column>
       <column>
        <property name="text">
-        <string>업체</string>
-       </property>
-      </column>
-      <column>
-       <property name="text">
-        <string>수량</string>
+        <string>구입업체</string>
        </property>
       </column>
       <column>
@@ -584,17 +569,7 @@
       </attribute>
       <column>
        <property name="text">
-        <string>구분</string>
-       </property>
-      </column>
-      <column>
-       <property name="text">
         <string>일자</string>
-       </property>
-      </column>
-      <column>
-       <property name="text">
-        <string>시간</string>
        </property>
       </column>
       <column>

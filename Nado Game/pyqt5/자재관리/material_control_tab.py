@@ -90,8 +90,6 @@ class MatWindow(QMainWindow, form_class):
 
 
     def init_detailed_total_query(self):
-        #sname = self.sender().text()
-        #print(sname)
         self.in_out_query_combo_items_spec()
         df_list = self.detailed_in_out_list()
         df_in_out = self.detailed_in_out_df(df_list)
@@ -163,11 +161,9 @@ class MatWindow(QMainWindow, form_class):
     def detailed_in_out_list(self):
         dfI = self.in_df()
         dfI['입출'] ='입고'
-        dfI.rename(columns = {'입고일':'일자'}, inplace=True)
         dfIn = self.df_status_selection(dfI)
         dfO = self.out_df()
         dfO['입출'] = '사용'
-        dfO.rename(columns = {'사용일':'일자'}, inplace=True)
         dfOut = self.df_status_selection(dfO)
         items_in = set(dfIn['품명'].unique())
         specs_in = set(dfIn['규격'].unique())
@@ -183,13 +179,13 @@ class MatWindow(QMainWindow, form_class):
                 df_on_stock = pd.merge(dfIn_sel, dfOut_sel, how = 'outer', on = ['입출','일자','품명','규격'])
                 df_on_stock.fillna(0, inplace=True)
                 df_on_stock.sort_values(by= '일자', inplace=True)
-                df_total = df_on_stock[['일자','품명','규격','입출','입고수량','구입금액','단가','구분','동','호','사용수량','품목누계']]
+                df_total = df_on_stock[['일자','품명','규격','입출','입고수량','구입금액','단가','동','호','사용수량']]
                 df_total.reset_index(drop=True, inplace=True)
                 df_total['sum'] = df_total['입고수량'] - df_total['사용수량']
                 df_temp = df_total[['sum']].copy()
                 df_temp_1  = df_temp.cumsum()
                 df_total['sum'] = df_temp_1['sum']
-                df_total[['입고수량','구입금액','단가','동','호','사용수량','품목누계','sum']].astype('int')
+                df_total[['입고수량','구입금액','단가','동','사용수량','sum']].astype('int')
                 if df_total.empty:
                     pass
                 else:
@@ -203,8 +199,8 @@ class MatWindow(QMainWindow, form_class):
         for part in df_list[1:]:
             df_con = pd.concat([df_con, part])
             df_con.reset_index(drop=True, inplace=True)
-        df_con[['입고수량','구입금액','단가','동','호','사용수량','품목누계','sum']]= df_con[['입고수량','구입금액','단가','동','호','사용수량','품목누계','sum']].astype('int')
-        df_con[['입고수량','구입금액','단가','동','호','사용수량','품목누계','sum']] = df_con[['입고수량','구입금액','단가','동','호','사용수량','품목누계','sum']].astype('str')
+        df_con[['입고수량','구입금액','단가','동','사용수량','sum']]= df_con[['입고수량','구입금액','단가','동','사용수량','sum']].astype('int')
+        df_con[['입고수량','구입금액','단가','동','호','사용수량','sum']] = df_con[['입고수량','구입금액','단가','동','호','사용수량','sum']].astype('str')
         return df_con
 
 
@@ -244,19 +240,19 @@ class MatWindow(QMainWindow, form_class):
     def df_in_status_selection(self):
         dfI = self.in_df()
         dfIn = self.in_status_selection(dfI)
-        '''
+        
         df_in = dfIn[['품명','규격', '입고수량']].copy()
         df_in_sum = df_in.groupby(['품명','규격']).sum()
         print('df_in_sum', df_in_sum)
-        '''
+        
 
         dfO = self.out_df()
         dfOut = self.out_status_selection(dfO)
-        '''
+        
         df_out = dfOut[['품명','규격', '사용수량']].copy()
         df_out_sum = df_out.groupby(['품명','규격']).sum()
         print('df_out_sum', df_out_sum)
-        '''
+        
 
         df_on_stock = pd.merge(df_in_sum, df_out_sum, how = 'outer', on = ['품명','규격'])
         df_on_stock.fillna(0, inplace=True)
@@ -273,8 +269,8 @@ class MatWindow(QMainWindow, form_class):
         to_date = self.dateEdit_4.text()
         items = self.comboBox_2.currentText()
         spec = self.comboBox_13.currentText()
-        date_to_con = df['입고일'] <= to_date
-        date_from_con = df['입고일'] >= from_date
+        date_to_con = df['일자'] <= to_date
+        date_from_con = df['일자'] >= from_date
         i_con = df['품명'] == items
         s_con = df['규격'] == spec
         if items == 'All':
@@ -289,8 +285,8 @@ class MatWindow(QMainWindow, form_class):
         to_date = self.dateEdit_4.text()
         items = self.comboBox_2.currentText()
         spec = self.comboBox_13.currentText()
-        d_to_con = df['사용일'] <=to_date
-        d_from_con = df['사용일'] >=from_date
+        d_to_con = df['일자'] <=to_date
+        d_from_con = df['일자'] >=from_date
         i_con = df['품명'] == items
         s_con = df['규격'] == spec
         if items == 'All':
@@ -317,7 +313,6 @@ class MatWindow(QMainWindow, form_class):
             spec = df['규격'].unique()
             spec.sort()
             self.comboBox_14.addItems(spec)
-        #return df
 
     def set_tbl_2(self, df_list):
         rowCount = self.tableWidget_2.rowCount()
@@ -350,10 +345,10 @@ class MatWindow(QMainWindow, form_class):
             for spec in specs:
                 df_sel = df[(df['품명'] == item) & (df['규격'] == spec)].copy()
                 try:
-                    df_temp = df_sel.sort_values(by=['입고일']).copy()
+                    df_temp = df_sel.sort_values(by=['일자']).copy()
                     df_copy = df_temp[['입고수량']].copy()
                 except:
-                    df_temp = df_sel.sort_values(by=['사용일']).copy()
+                    df_temp = df_sel.sort_values(by=['일자']).copy()
                     df_copy = df_temp[['사용수량']].copy()
                 df_copy['품목누계'] = df_copy.cumsum()
                 df_temp['품목누계']=df_copy['품목누계']
@@ -363,13 +358,13 @@ class MatWindow(QMainWindow, form_class):
             df_con = pd.concat([df_con, df_list])
         #df_con.columns.tolist()
         try:
-            df_con_1= df_con[['입고일', '품명', '규격', '입고수량', '품목누계', '구입금액', '단가', '구입업체', '비고' ]]
-            df_con_1.sort_values(by=['입고일', '품명','규격'], inplace=True)
+            df_con_1= df_con[['일자', '품명', '규격', '입고수량', '품목누계', '구입금액', '단가', '구입업체', '비고' ]]
+            df_con_1.sort_values(by=['일자', '품명','규격'], inplace=True)
             df_con_1[['입고수량', '구입금액','단가','품목누계']] = df_con[['입고수량', '구입금액','단가','품목누계']].astype('str')
         except:
-            df_con_1 = df_con[['사용일', '동','호','구분','품명', '규격', '사용수량', '품목누계', '비고' ]]
+            df_con_1 = df_con[['일자', '동','호','구분','품명', '규격', '사용수량', '품목누계', '비고' ]]
             
-            df_con_1.sort_values(by=['사용일', '품명','규격'])
+            df_con_1.sort_values(by=['일자', '품명','규격'])
             df_con_1[['사용수량', '동','호','품목누계']] = df_con[['사용수량', '동','호','품목누계']].astype('str')
 
         return df_con_1
@@ -433,7 +428,7 @@ class MatWindow(QMainWindow, form_class):
         date = self.dateEdit.text()
         items = self.comboBox.currentText()
         spec = self.comboBox_4.currentText()
-        d_con = df['입고일'] <=date
+        d_con = df['일자'] <=date
         i_con = df['품명'] == items
         s_con = df['규격'] == spec
         if items == 'All':
@@ -447,7 +442,7 @@ class MatWindow(QMainWindow, form_class):
         date = self.dateEdit.text()
         items = self.comboBox.currentText()
         spec = self.comboBox_4.currentText()
-        d_con = df['사용일'] <=date
+        d_con = df['일자'] <=date
         i_con = df['품명'] == items
         s_con = df['규격'] == spec
         if items == 'All':
@@ -630,6 +625,7 @@ class MatWindow(QMainWindow, form_class):
             return on_stock_qty
     
     def set_tbl_6(self,data):
+        print(data)
         rowCount = self.tableWidget_6.rowCount()
         self.tableWidget_6.setRowCount(rowCount+1)
         self.tableWidget_6.setColumnCount(len(data))
@@ -640,6 +636,7 @@ class MatWindow(QMainWindow, form_class):
         self.table_display()
 
     def out_file_to_table(self, df):
+        df[['동','사용수량']] = df[['동','사용수량']].astype('int')
         df[['동', '호','사용수량']] = df[['동', '호','사용수량']].astype('str')
         df.fillna(' ')
         list = df.values.tolist()
@@ -647,7 +644,6 @@ class MatWindow(QMainWindow, form_class):
         for d in list:
             self.set_tbl_6(d)
         self.tableWidget_5.scrollToBottom
-        self.table_display()
     
 
 
