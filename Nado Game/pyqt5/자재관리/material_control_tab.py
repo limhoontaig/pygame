@@ -78,9 +78,11 @@ class MatWindow(QMainWindow, form_class):
 
         self.pushButton.clicked.connect(self.addComboBoxItem)# 신규 품목 추가
         self.pushButton_2.clicked.connect(self.addComboBoxSpecItem) #신규 항목 추가
-        self.pushButton_7.clicked.connect(self.inTableToSaveExcelFile)
+        self.PB_InAdd.clicked.connect(self.addInMaterialToTable)
+        self.PB_InSave.clicked.connect(self.inTableToSaveExcelFile)
+        self.PB_InExit.clicked.connect(self.close)
+
         self.pushButton_9.clicked.connect(self.outTableToSaveExcelFile)
-        self.pushButton_6.clicked.connect(self.addInMaterialToTable)
         self.pushButton_12.clicked.connect(self.onstock_view)# 자재 품목/규격 별 제고 조회
         self.pushButton_13.clicked.connect(self.in_status_view) # 품목/규격 별 자대 입고 현황 조회 
         self.pushButton_14.clicked.connect(self.detailed_total_query) # 품목/규격 별 자대 입고 현황 조회 
@@ -629,7 +631,7 @@ class MatWindow(QMainWindow, form_class):
         for i in data:
             self.tableWidget_6.setItem(rowCount, c, QTableWidgetItem(i))
             c = c+1
-        self.table_display()
+        #self.table_display()
 
     def out_file_to_table(self, df):
         df[['동','사용수량']] = df[['동','사용수량']].astype('int')
@@ -707,15 +709,16 @@ class MatWindow(QMainWindow, form_class):
         self.in_combo_items_spec()
         df = self.in_df()
         headers = df.columns.values.tolist()
+        self.tableWidgetInIn.setHorizontalHeaderLabels(headers)
+        print(headers)
         df[['입고수량', '구입금액','단가']] = df[['입고수량', '구입금액','단가']].astype('str')
         df.fillna(' ')
         list = df.values.tolist()
-        self.tableWidgetInIn.setHorizontalHeaderLabels(headers)
         #self.tableWidgetInIn.horizontalHeaderItem().setSectionResizeMode(QHeaderView.Stretch)
         for d in list:
-            self.set_tbl(d)
-        self.table_display()
-        self.tableWidgetInIn.scrollToBottom
+            self.set_tbl_in(d)
+        #self.table_display_in()
+        #self.tableWidgetInIn.scrollToBottom
 
     def in_combo_items_spec(self):
         df = self.in_df()
@@ -773,7 +776,7 @@ class MatWindow(QMainWindow, form_class):
             in_qty = self.LE_InQty.text()
             in_price = self.LE_InPrice.text()
             unit_p = str(round(int(in_price)/int(in_qty)))
-            self.newInItemslineEdit_3.setText(unit_p)
+            self.LE_InUnitPrice.setText(unit_p)
         except:
             QMessageBox.about(self, "경고", "가격 및 수량 자료를 입력하세요")
             return
@@ -818,10 +821,10 @@ class MatWindow(QMainWindow, form_class):
         else:
             in_data.append(self.LE_InRemarks.text())
 
-        self.set_tbl(in_data)
+        self.set_tbl_in(in_data)
         self.inTableToSaveExcelFile()
     
-    def set_tbl(self,data):
+    def set_tbl_in(self,data):
         rowCount = self.tableWidgetInIn.rowCount()
         self.tableWidgetInIn.setRowCount(rowCount+1)
         self.tableWidgetInIn.setColumnCount(len(data))
@@ -830,9 +833,11 @@ class MatWindow(QMainWindow, form_class):
             self.tableWidgetInIn.setItem(rowCount, c, QTableWidgetItem(i))
             c = c+1
         
-        self.table_display()
+        #self.table_display_in()
 
-    def table_display(self):
+
+
+    def table_display_in(self):
         header = self.tableWidgetInIn.horizontalHeader()
         twidth = header.width()
         width = []
