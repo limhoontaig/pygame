@@ -46,8 +46,8 @@ class MatWindow(QMainWindow, form_class):
         self.dateEdit_2.setCalendarPopup(True)
         self.dateEdit_4.setDate(QDate.currentDate())
         self.dateEdit_4.setCalendarPopup(True)
-        self.dateEdit_5.setDate(QDate.currentDate())
-        self.dateEdit_5.setCalendarPopup(True)
+        self.inDate.setDate(QDate.currentDate())
+        self.inDate.setCalendarPopup(True)
         self.dateEdit_6.setDate(QDate.currentDate())
         self.dateEdit_6.setCalendarPopup(True)
         self.dateEdit_3.setDate(today)
@@ -68,11 +68,11 @@ class MatWindow(QMainWindow, form_class):
         self.comboBox_2.activated.connect(self.in_query_combo_spec)#입고품목 선택시 품목 규격 콤보박스 항목 선택
         self.comboBox_3.activated.connect(self.in_out_query_combo_spec)#입고품목 선택시 품목 규격 콤보박스 항목 선택
         #self.comboBox_14.activated.connect(self.detailed_total_query)#입고품목 선택시 품목 규격 콤보박스 항목 선택
-        self.comboBox_5.activated.connect(self.comboBox_5Activated)#입고품목 선택시 품목 규격 콤보박스 항목 선택
+        self.comboInItems.activated.connect(self.comboInItemsActivated)#입고품목 선택시 품목 규격 콤보박스 항목 선택
         self.comboBox_9.activated.connect(self.comboBox_9Activated)#사용 품목규격 선택시 품목 재고 보임
-        self.comboBox_5.activated.connect(self.in_stock_view)#입고 품목 선택시 품목 재고 보임
+        self.comboInItems.activated.connect(self.in_stock_view)#입고 품목 선택시 품목 재고 보임
         self.comboBox_7.activated.connect(self.out_stock_view)#사용 품목규격 선택시 품목 재고 보임
-        self.comboBox_6.activated.connect(self.in_stock_view)#입고 품목규격 선택시 품목 재고 보임
+        self.comboInSpecs.activated.connect(self.in_stock_view)#입고 품목규격 선택시 품목 재고 보임
         self.comboBox_9.activated.connect(self.out_stock_view)#사용 품목 선택시 품목 재고 보임
         self.comboBox_10.activated.connect(self.out_dongho)#동 선택시 호수 콤보 선택
 
@@ -85,8 +85,8 @@ class MatWindow(QMainWindow, form_class):
         self.pushButton_13.clicked.connect(self.in_status_view) # 품목/규격 별 자대 입고 현황 조회 
         self.pushButton_14.clicked.connect(self.detailed_total_query) # 품목/규격 별 자대 입고 현황 조회 
         self.pushButton_11.clicked.connect(self.addOutMaterialToTable)
-        self.lineEdit.textChanged.connect(self.lineEditChanged)
-        self.lineEdit_2.textChanged.connect(self.lineEdit_2Changed)
+        self.LE_InQty.textChanged.connect(self.lineEditChanged)
+        self.LE_InPrice.textChanged.connect(self.lineEdit_2Changed)
 
 
     def init_detailed_total_query(self):
@@ -231,7 +231,6 @@ class MatWindow(QMainWindow, form_class):
         self.tableWidget_2.setRowCount(0)
         self.tableWidget_2.setHorizontalHeaderLabels(headers)
         df_sel = self.df_in_status_selection()
-        print(df_sel)
         df_list = df_sel.values.tolist()
         for l in df_list:
             self.set_tbl_2(l)
@@ -243,16 +242,12 @@ class MatWindow(QMainWindow, form_class):
         
         df_in = dfIn[['품명','규격', '입고수량']].copy()
         df_in_sum = df_in.groupby(['품명','규격']).sum()
-        print('df_in_sum', df_in_sum)
-        
 
         dfO = self.out_df()
         dfOut = self.out_status_selection(dfO)
         
         df_out = dfOut[['품명','규격', '사용수량']].copy()
         df_out_sum = df_out.groupby(['품명','규격']).sum()
-        print('df_out_sum', df_out_sum)
-        
 
         df_on_stock = pd.merge(df_in_sum, df_out_sum, how = 'outer', on = ['품명','규격'])
         df_on_stock.fillna(0, inplace=True)
@@ -596,10 +591,10 @@ class MatWindow(QMainWindow, form_class):
             QMessageBox.about(self, "경고", "수량 자료를 입력하세요")
             return
 
-        if len(self.lineEdit_6.text())==0:
+        if len(self.LE_InRemarks.text())==0:
             data.append('**')
         else:
-            data.append(self.lineEdit_6.text())
+            data.append(self.LE_InRemarks.text())
 
         self.set_tbl_6(data)
         self. outTableToSaveExcelFile()
@@ -611,21 +606,22 @@ class MatWindow(QMainWindow, form_class):
         self.lineEdit_10.setText(on_stock_qty)
 
     def in_stock_view(self):
-        list = [self.comboBox_5.currentText(), self.comboBox_6.currentText()]
+        list = [self.comboInItems.currentText(), self.comboInSpecs.currentText()]
         on_stock_qty = self.items_spec_onstock(list[0], list[1])
-        self.lineEdit_11.setText(on_stock_qty)
+        self.LE_InOnStosckQty.setText(on_stock_qty)
 
     def items_spec_onstock(self, items, spec):
         df_on_stock = self.on_stock()
+        df_on_stock.set_index(['품명', '규격'], inplace=True)
         try:
-            on_stock_qty = df_on_stock.loc[[(items, spec)]].values.tolist()
-            return str(on_stock_qty[0][2])
+            on_stock_qty = df_on_stock.loc[[(items, spec)],'재고'].values.tolist()
+            on_stock_qty = on_stock_qty[0]
+            return on_stock_qty
         except:
             on_stock_qty = '신규항목임'
             return on_stock_qty
     
     def set_tbl_6(self,data):
-        print(data)
         rowCount = self.tableWidget_6.rowCount()
         self.tableWidget_6.setRowCount(rowCount+1)
         self.tableWidget_6.setColumnCount(len(data))
@@ -643,9 +639,7 @@ class MatWindow(QMainWindow, form_class):
 
         for d in list:
             self.set_tbl_6(d)
-        self.tableWidget_5.scrollToBottom
-    
-
+        self.tableWidgetInIn.scrollToBottom
 
     def dong_ho(self):
         file = LE[2] #r'C:\source\pygame\Nado Game\pyqt5\자재관리\동호대장.xlsx'
@@ -699,15 +693,15 @@ class MatWindow(QMainWindow, form_class):
             df = pd.read_excel(f,skiprows=0)
         return df
 
-    def comboBox_5Activated(self):
+    def comboInItemsActivated(self):
         df = self.in_df()
-        df = df[(df['품명'] == self.comboBox_5.currentText())]
+        df = df[(df['품명'] == self.comboInItems.currentText())]
         items = df['품명'].unique()
         items.sort()
         spec = df['규격'].unique()
         spec.sort()
-        self.comboBox_6.clear()
-        self.comboBox_6.addItems(spec)
+        self.comboInSpecs.clear()
+        self.comboInSpecs.addItems(spec)
 
     def init_in_data_input(self):
         self.in_combo_items_spec()
@@ -716,23 +710,23 @@ class MatWindow(QMainWindow, form_class):
         df[['입고수량', '구입금액','단가']] = df[['입고수량', '구입금액','단가']].astype('str')
         df.fillna(' ')
         list = df.values.tolist()
-        self.tableWidget_5.setHorizontalHeaderLabels(headers)
-        #self.tableWidget_5.horizontalHeaderItem().setSectionResizeMode(QHeaderView.Stretch)
+        self.tableWidgetInIn.setHorizontalHeaderLabels(headers)
+        #self.tableWidgetInIn.horizontalHeaderItem().setSectionResizeMode(QHeaderView.Stretch)
         for d in list:
             self.set_tbl(d)
         self.table_display()
-        self.tableWidget_5.scrollToBottom
+        self.tableWidgetInIn.scrollToBottom
 
     def in_combo_items_spec(self):
         df = self.in_df()
         items = df['품명'].unique()
         items.sort()
-        self.comboBox_5.clear()
-        self.comboBox_5.addItems(items)    
-        df = df[(df['품명'] == self.comboBox_5.currentText())]
+        self.comboInItems.clear()
+        self.comboInItems.addItems(items)    
+        df = df[(df['품명'] == self.comboInItems.currentText())]
         spec = df['규격'].unique()
         spec.sort()
-        self.comboBox_6.addItems(spec)
+        self.comboInSpecs.addItems(spec)
 
     def inTableToSaveExcelFile(self):
         file = LE[0]#r'C:\source\pygame\Nado Game\pyqt5\자재관리\입고대장.xlsx'
@@ -748,15 +742,15 @@ class MatWindow(QMainWindow, form_class):
         '''
         data query from tablewidget to pandas dataframe
         '''
-        rowcount = self.tableWidget_5.rowCount()
-        colcount = self.tableWidget_5.columnCount()
+        rowcount = self.tableWidgetInIn.rowCount()
+        colcount = self.tableWidgetInIn.columnCount()
         
-        headers = [self.tableWidget_5.horizontalHeaderItem(x).text() for x in range(0,colcount)]
+        headers = [self.tableWidgetInIn.horizontalHeaderItem(x).text() for x in range(0,colcount)]
         data_list = []
         for i in range(0, rowcount):
             data =[]
             for j in range(0, colcount):
-                d = self.tableWidget_5.item(i,j).text()
+                d = self.tableWidgetInIn.item(i,j).text()
                 data.append(d)
             data_list.append(data)
         df = pd.DataFrame(data_list) # list to dataframe
@@ -765,21 +759,21 @@ class MatWindow(QMainWindow, form_class):
 
     def lineEditChanged(self):
         try:
-            if len(self.lineEdit_2.text())==0:
+            if len(self.LE_InPrice.text())==0:
                 pass
         except:
-            in_qty = self.lineEdit.text()
-            in_price = self.lineEdit_2.text()
+            in_qty = self.LE_InQty.text()
+            in_price = self.LE_InPrice.text()
             unit_p = str(round(int(in_price)/int(in_qty)))
-            self.lineEdit_3.setText(unit_p)
+            self.LE_InUnitPrice.setText(unit_p)
             return
 
     def lineEdit_2Changed(self):
         try:
-            in_qty = self.lineEdit.text()
-            in_price = self.lineEdit_2.text()
+            in_qty = self.LE_InQty.text()
+            in_price = self.LE_InPrice.text()
             unit_p = str(round(int(in_price)/int(in_qty)))
-            self.lineEdit_3.setText(unit_p)
+            self.newInItemslineEdit_3.setText(unit_p)
         except:
             QMessageBox.about(self, "경고", "가격 및 수량 자료를 입력하세요")
             return
@@ -788,58 +782,58 @@ class MatWindow(QMainWindow, form_class):
         '''
         This function uses to add the new items
         '''
-        self.comboBox_5.addItem(self.lineEdit_5.text())
-        self.lineEdit_5.setText('')
+        self.comboInItems.addItem(self.LE_NewInItems.text())
+        self.LE_NewInItems.setText('')
     
     def addComboBoxSpecItem(self) :
-        self.comboBox_6.addItem(self.lineEdit_8.text())
-        self.lineEdit_8.setText('')
+        self.comboInSpecs.addItem(self.LE_NewInSpecs.text())
+        self.LE_NewInSpecs.setText('')
     
     def addInMaterialToTable(self):
         
         in_data = []
         in_data.append('입고')
-        in_data.append(self.dateEdit_5.text())
+        in_data.append(self.inDate.text())
         time = QTime.currentTime()
         in_data.append(time.toString())
-        in_data.append(self.comboBox_5.currentText())
-        in_data.append(self.comboBox_6.currentText())
-        if len(self.lineEdit.text())==0:
+        in_data.append(self.comboInItems.currentText())
+        in_data.append(self.comboInSpecs.currentText())
+        if len(self.LE_InQty.text())==0:
             QMessageBox.about(self, "경고", "수량 자료를 입력하세요")
             return
         else:
-            in_data.append(self.lineEdit.text())
-        if len(self.lineEdit_2.text())==0:
+            in_data.append(self.LE_InQty.text())
+        if len(self.LE_InPrice.text())==0:
             QMessageBox.about(self, "경고", "가격 자료를 입력하세요")
             return
         else:
-            in_data.append(self.lineEdit_2.text())
-        in_data.append(self.lineEdit_3.text())
-        if len(self.lineEdit_4.text())==0:
+            in_data.append(self.LE_InPrice.text())
+        in_data.append(self.LE_InUnitPrice.text())
+        if len(self.LE_InSupplier.text())==0:
             in_data.append('*')
         else:
-            in_data.append(self.lineEdit_4.text())
-        if len(self.lineEdit_6.text())==0:
+            in_data.append(self.LE_InSupplier.text())
+        if len(self.LE_InRemarks.text())==0:
             in_data.append('*')
         else:
-            in_data.append(self.lineEdit_6.text())
+            in_data.append(self.LE_InRemarks.text())
 
         self.set_tbl(in_data)
         self.inTableToSaveExcelFile()
     
     def set_tbl(self,data):
-        rowCount = self.tableWidget_5.rowCount()
-        self.tableWidget_5.setRowCount(rowCount+1)
-        self.tableWidget_5.setColumnCount(len(data))
+        rowCount = self.tableWidgetInIn.rowCount()
+        self.tableWidgetInIn.setRowCount(rowCount+1)
+        self.tableWidgetInIn.setColumnCount(len(data))
         c = 0
         for i in data:
-            self.tableWidget_5.setItem(rowCount, c, QTableWidgetItem(i))
+            self.tableWidgetInIn.setItem(rowCount, c, QTableWidgetItem(i))
             c = c+1
         
         self.table_display()
 
     def table_display(self):
-        header = self.tableWidget_5.horizontalHeader()
+        header = self.tableWidgetInIn.horizontalHeader()
         twidth = header.width()
         width = []
         for column in range(header.count()):
@@ -850,7 +844,7 @@ class MatWindow(QMainWindow, form_class):
         for column in range(header.count()):
             header.setSectionResizeMode(column, QHeaderView.Interactive)
             header.resizeSection(column, width[column]*wfactor)
-        self.tableWidget_5.scrollToBottom
+        self.tableWidgetInIn.scrollToBottom
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)

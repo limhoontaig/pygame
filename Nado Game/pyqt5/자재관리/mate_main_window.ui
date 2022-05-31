@@ -50,13 +50,13 @@
      <enum>QTabWidget::Triangular</enum>
     </property>
     <property name="currentIndex">
-     <number>3</number>
+     <number>4</number>
     </property>
     <widget class="QWidget" name="tab_5">
      <attribute name="title">
       <string>자재 입고 입력</string>
      </attribute>
-     <widget class="QDateEdit" name="dateEdit_5">
+     <widget class="QDateEdit" name="inDate">
       <property name="geometry">
        <rect>
         <x>120</x>
@@ -91,7 +91,7 @@
        <set>Qt::AlignCenter</set>
       </property>
      </widget>
-     <widget class="QTableWidget" name="tableWidget_5">
+     <widget class="QTableWidget" name="tableWidgetInIn">
       <property name="geometry">
        <rect>
         <x>340</x>
@@ -100,8 +100,17 @@
         <height>391</height>
        </rect>
       </property>
+      <property name="alternatingRowColors">
+       <bool>true</bool>
+      </property>
+      <property name="sortingEnabled">
+       <bool>true</bool>
+      </property>
       <attribute name="horizontalHeaderDefaultSectionSize">
        <number>90</number>
+      </attribute>
+      <attribute name="horizontalHeaderStretchLastSection">
+       <bool>true</bool>
       </attribute>
       <column>
        <property name="text">
@@ -144,7 +153,7 @@
        </property>
       </column>
      </widget>
-     <widget class="QComboBox" name="comboBox_5">
+     <widget class="QComboBox" name="comboInItems">
       <property name="geometry">
        <rect>
         <x>120</x>
@@ -329,7 +338,7 @@
        <set>Qt::AlignCenter</set>
       </property>
      </widget>
-     <widget class="QComboBox" name="comboBox_6">
+     <widget class="QComboBox" name="comboInSpecs">
       <property name="geometry">
        <rect>
         <x>120</x>
@@ -339,7 +348,7 @@
        </rect>
       </property>
      </widget>
-     <widget class="QLineEdit" name="lineEdit">
+     <widget class="QLineEdit" name="LE_InQty">
       <property name="geometry">
        <rect>
         <x>120</x>
@@ -352,7 +361,7 @@
        <set>Qt::AlignCenter</set>
       </property>
      </widget>
-     <widget class="QLineEdit" name="lineEdit_2">
+     <widget class="QLineEdit" name="LE_InPrice">
       <property name="geometry">
        <rect>
         <x>120</x>
@@ -365,7 +374,7 @@
        <set>Qt::AlignCenter</set>
       </property>
      </widget>
-     <widget class="QLineEdit" name="lineEdit_3">
+     <widget class="QLineEdit" name="LE_InUnitPrice">
       <property name="geometry">
        <rect>
         <x>120</x>
@@ -378,7 +387,7 @@
        <set>Qt::AlignCenter</set>
       </property>
      </widget>
-     <widget class="QLineEdit" name="lineEdit_4">
+     <widget class="QLineEdit" name="LE_InSupplier">
       <property name="geometry">
        <rect>
         <x>120</x>
@@ -388,7 +397,7 @@
        </rect>
       </property>
      </widget>
-     <widget class="QLineEdit" name="lineEdit_6">
+     <widget class="QLineEdit" name="LE_InRemarks">
       <property name="geometry">
        <rect>
         <x>120</x>
@@ -463,7 +472,7 @@
        <string>규격추가</string>
       </property>
      </widget>
-     <widget class="QLineEdit" name="lineEdit_5">
+     <widget class="QLineEdit" name="LE_NewInItems">
       <property name="geometry">
        <rect>
         <x>120</x>
@@ -473,7 +482,7 @@
        </rect>
       </property>
      </widget>
-     <widget class="QLineEdit" name="lineEdit_8">
+     <widget class="QLineEdit" name="LE_NewInSpecs">
       <property name="geometry">
        <rect>
         <x>120</x>
@@ -508,7 +517,7 @@
        <set>Qt::AlignCenter</set>
       </property>
      </widget>
-     <widget class="QLineEdit" name="lineEdit_11">
+     <widget class="QLineEdit" name="LE_InOnStosckQty">
       <property name="geometry">
        <rect>
         <x>120</x>
@@ -558,6 +567,12 @@
         <height>321</height>
        </rect>
       </property>
+      <property name="alternatingRowColors">
+       <bool>true</bool>
+      </property>
+      <property name="selectionMode">
+       <enum>QAbstractItemView::MultiSelection</enum>
+      </property>
       <property name="sortingEnabled">
        <bool>true</bool>
       </property>
@@ -566,6 +581,9 @@
       </attribute>
       <attribute name="horizontalHeaderMinimumSectionSize">
        <number>30</number>
+      </attribute>
+      <attribute name="horizontalHeaderStretchLastSection">
+       <bool>true</bool>
       </attribute>
       <column>
        <property name="text">
@@ -974,6 +992,15 @@
         <height>391</height>
        </rect>
       </property>
+      <property name="alternatingRowColors">
+       <bool>true</bool>
+      </property>
+      <property name="sortingEnabled">
+       <bool>true</bool>
+      </property>
+      <attribute name="horizontalHeaderStretchLastSection">
+       <bool>true</bool>
+      </attribute>
       <column>
        <property name="text">
         <string>품명</string>
@@ -1137,11 +1164,23 @@
         <height>391</height>
        </rect>
       </property>
+      <property name="alternatingRowColors">
+       <bool>true</bool>
+      </property>
+      <property name="sortingEnabled">
+       <bool>true</bool>
+      </property>
       <attribute name="horizontalHeaderDefaultSectionSize">
        <number>90</number>
       </attribute>
       <attribute name="verticalHeaderDefaultSectionSize">
        <number>36</number>
+      </attribute>
+      <attribute name="verticalHeaderShowSortIndicator" stdset="0">
+       <bool>true</bool>
+      </attribute>
+      <attribute name="verticalHeaderStretchLastSection">
+       <bool>true</bool>
       </attribute>
       <column>
        <property name="text">
@@ -1389,8 +1428,20 @@
         <height>391</height>
        </rect>
       </property>
+      <property name="alternatingRowColors">
+       <bool>true</bool>
+      </property>
+      <property name="sortingEnabled">
+       <bool>true</bool>
+      </property>
       <attribute name="horizontalHeaderDefaultSectionSize">
        <number>90</number>
+      </attribute>
+      <attribute name="horizontalHeaderStretchLastSection">
+       <bool>true</bool>
+      </attribute>
+      <attribute name="verticalHeaderShowSortIndicator" stdset="0">
+       <bool>true</bool>
       </attribute>
       <column>
        <property name="text">
@@ -1613,7 +1664,7 @@
      <x>0</x>
      <y>0</y>
      <width>1118</width>
-     <height>26</height>
+     <height>21</height>
     </rect>
    </property>
   </widget>
