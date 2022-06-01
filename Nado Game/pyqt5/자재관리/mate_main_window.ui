@@ -50,7 +50,7 @@
      <enum>QTabWidget::Triangular</enum>
     </property>
     <property name="currentIndex">
-     <number>0</number>
+     <number>1</number>
     </property>
     <widget class="QWidget" name="tab_5">
      <attribute name="title">
@@ -474,7 +474,7 @@
        <string>품목추가</string>
       </property>
      </widget>
-     <widget class="QPushButton" name="pushButton_2">
+     <widget class="QPushButton" name="PB_InAddComboBoxSpec">
       <property name="geometry">
        <rect>
         <x>270</x>
@@ -588,6 +588,9 @@
       <property name="sortingEnabled">
        <bool>true</bool>
       </property>
+      <attribute name="horizontalHeaderCascadingSectionResizes">
+       <bool>true</bool>
+      </attribute>
       <attribute name="horizontalHeaderDefaultSectionSize">
        <number>60</number>
       </attribute>
@@ -888,7 +891,7 @@
        <set>Qt::AlignCenter</set>
       </property>
      </widget>
-     <widget class="QPushButton" name="pushButton_9">
+     <widget class="QPushButton" name="PB_outTableToSaveFile">
       <property name="geometry">
        <rect>
         <x>460</x>
