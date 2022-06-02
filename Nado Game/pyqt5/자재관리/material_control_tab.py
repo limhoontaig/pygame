@@ -200,7 +200,7 @@ class MatWindow(QMainWindow, form_class):
                 df_on_stock = pd.merge(dfIn_sel, dfOut_sel, how = 'outer', on = ['입출','일자','품명','규격'])
                 df_on_stock.fillna(0, inplace=True)
                 df_on_stock.sort_values(by= '일자', inplace=True)
-                df_total = df_on_stock[['일자','품명','규격','입출','입고수량','구입금액','단가','동','호','사용수량']]
+                df_total = df_on_stock[['일자','품명','규격','입출','입고수량','구입금액','단가','동','호','사용수량']].copy()
                 df_total.reset_index(drop=True, inplace=True)
                 df_total['sum'] = df_total['입고수량'] - df_total['사용수량']
                 df_temp = df_total[['sum']].copy()
@@ -248,9 +248,10 @@ class MatWindow(QMainWindow, form_class):
 
     def in_status_view(self):
         if self.CB_inUsedInOut.currentText() == '입고':
-            colcount = self.inUsedTableWidget.columnCount()
-            headers = [self.inUsedTableWidget.horizontalHeaderItem(x).text() for x in range(0,colcount)]
+            headers = HEADERS[3]#[self.inUsedTableWidget.horizontalHeaderItem(x).text() for x in range(0,colcount)]
+            colcount = len(headers) #self.inUsedTableWidget.columnCount()
             self.inUsedTableWidget.clear()
+            self.inUsedTableWidget.setColumnCount(colcount)
             self.inUsedTableWidget.setRowCount(0)
             self.inUsedTableWidget.setHorizontalHeaderLabels(headers)
             df_sel = self.df_in_status_selection()
@@ -259,9 +260,10 @@ class MatWindow(QMainWindow, form_class):
                 self.set_inUsedTableWidge(l)
             self.table_display_status()
         else:
-            colcount = 8
-            headers = []
+            headers = HEADERS[4]
+            colcount = len(headers)
             self.inUsedTableWidget.clear()
+            self.inUsedTableWidget.setColumnCount(colcount)
             self.inUsedTableWidget.setRowCount(0)
             self.inUsedTableWidget.setHorizontalHeaderLabels(headers)
 
@@ -609,9 +611,6 @@ class MatWindow(QMainWindow, form_class):
     def init_out_data_input(self):
         df = self.out_df()
         self.out_file_to_table(df)
-
-
-
         self.out_dongho()
         self.CB_outGongSe.clear()
         self.CB_outGongSe.addItems(['공용','세대'])
