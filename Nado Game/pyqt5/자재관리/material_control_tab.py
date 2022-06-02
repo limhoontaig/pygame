@@ -103,7 +103,7 @@ class MatWindow(QMainWindow, form_class):
 
         self.PB_outTableToSaveFile.clicked.connect(self.outTableToSaveExcelFile)
         self.PB_onstockQuery.clicked.connect(self.onstock_view)# 자재 품목/규격 별 제고 조회
-        self.PB_inUsedQuery.clicked.connect(self.in_status_view) # 품목/규격 별 자대 입고 현황 조회 
+        self.PB_inUsedQuery.clicked.connect(self.in_out_status_view) # 품목/규격 별 자대 입고 현황 조회 
         self.PB_detailedQuery.clicked.connect(self.detailed_total_query) # 품목/규격 별 자대 입고 현황 조회 
         self.pushButton_11.clicked.connect(self.addOutMaterialToTable)
         self.LE_InQty.textChanged.connect(self.lineEditChanged)
@@ -246,7 +246,7 @@ class MatWindow(QMainWindow, form_class):
         #pass
     
 
-    def in_status_view(self):
+    def in_out_status_view(self):
         if self.CB_inUsedInOut.currentText() == '입고':
             headers = HEADERS[3]#[self.inUsedTableWidget.horizontalHeaderItem(x).text() for x in range(0,colcount)]
             colcount = len(headers) #self.inUsedTableWidget.columnCount()
@@ -266,6 +266,66 @@ class MatWindow(QMainWindow, form_class):
             self.inUsedTableWidget.setColumnCount(colcount)
             self.inUsedTableWidget.setRowCount(0)
             self.inUsedTableWidget.setHorizontalHeaderLabels(headers)
+
+
+
+    def detailed_in_view():
+        dfI = in_df()
+        dfI['입출'] ='입고'
+        dfI.rename(columns = {'입고일':'일자'}, inplace=True)
+        dfIn = df_status_selection(dfI)
+        #print(dfIn)
+        
+        #print(dfIn)
+        items = set(dfIn['품명'].unique())
+        specs = set(dfIn['규격'].unique())
+        temp_list = []
+        for item in items:
+            #print(item)
+            for spec in specs:
+                #print(spec)
+                #print(dfIn)
+                dfIn_sel = dfIn[((dfIn['품명'] == item) & (dfIn['규격'] == spec))]
+                print('dfIn_sel',dfIn_sel)
+                dfIn_sel['누계입고'] = dfIn_sel['입고수량'].cumsum()
+                dfIn_sel=dfIn_sel[['입출','일자','품명','규격','입고수량','누계입고','구입금액','단가','구입업체','비고']]
+                temp_list.append(dfIn_sel)
+        return temp_list 
+
+
+        
+
+
+
+        
+    def detailed_out_view():
+        dfO = out_df()
+        
+        dfO['입출'] = '사용'
+        dfO.rename(columns = {'사용일':'일자'}, inplace=True)
+        dfOut = df_status_selection(dfO)
+        print(dfOut)
+        items = set(dfOut['품명'].unique())
+        specs = set(dfOut['규격'].unique())
+        temp_list = []
+        for item in items:
+            #print(item)
+            for spec in specs:
+                #print(spec)
+                #print(dfIn)
+                dfOut_sel = dfOut[((dfOut['품명'] == item) & (dfOut['규격'] ==  spec))]
+                print(dfOut_sel)
+                
+                dfOut_sel = dfOut[((dfOut['품명'] == item) & (dfOut['규격'] == spec))]
+                print('dfOut_sel',dfOut_sel)
+                dfOut_sel['사용누계'] = dfOut_sel['사용수량'].cumsum()
+                columns = dfOut_sel.columns.tolist()
+                print(columns)
+                
+                
+                dfOut_sel = dfOut_sel[['입출','일자','공용','동','호', '품명', '규격', '사용수량', '사용누계', '비고', ]]
+                temp_list.append(dfOut_sel)
+        return temp_list     
 
     def table_display_status(self):
         header = self.inUsedTableWidget.horizontalHeader()
