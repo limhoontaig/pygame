@@ -34,8 +34,8 @@ HEADERS = [
     ['일자', '품명', '규격', '입고수량', '구입금액', '단가', '구입업체', '비고'],
     ['일자', '동', '호', '공용', '품명' ,'규격','사용수량','비고'],
     ['품명','규격','입고수량','사용수량','재고수량','비고'],
-    ['구분','일자', '품명', '규격', '입고수량','입고누계', '구입금액', '단가', '구입업체', '비고'],
-    ['구분','일자', '동', '호', '공용', '품명' ,'규격','사용수량','사용누계','비고'],
+    ['입출','일자','품명','규격','입고수량','누계입고','구입금액','단가','구입업체','비고'],
+    ['입출','일자','공용','동','호', '품명', '규격', '사용수량', '사용누계', '비고', ],
     ['구분','일자', '품명', '규격', '입고수량','입고누계','동', '호', '공용','사용수량','사용누계', '재고수량']
 ]
 
@@ -64,6 +64,7 @@ class MatWindow(QMainWindow, form_class):
         self.DE_detailedQueryToDate.setCalendarPopup(True)
         self.onstockDate.setDate(QDate.currentDate())
         self.onstockDate.setCalendarPopup(True)
+        self.checkBox.stateChanged.connect(self.setInUsedStartDate)
         self.init_in_data_input()
         self.init_out_data_input()
         self.init_onstock_query()
@@ -179,6 +180,7 @@ class MatWindow(QMainWindow, form_class):
             df_sel = df[(date_from_con & date_to_con & i_con & s_con)]
             return df_sel
 
+
     def detailed_in_out_list(self):
         dfI = self.in_df()
         dfI['입출'] ='입고'
@@ -205,8 +207,8 @@ class MatWindow(QMainWindow, form_class):
                 df_total['sum'] = df_total['입고수량'] - df_total['사용수량']
                 df_temp = df_total[['sum']].copy()
                 df_temp_1  = df_temp.cumsum()
-                df_total['sum'] = df_temp_1['sum']
-                df_total[['입고수량','구입금액','단가','동','사용수량','sum']].astype('int')
+                df_total['재고'] = df_temp_1['sum']
+                df_total[['입고수량','구입금액','단가','동','사용수량','재고']].astype('int')
                 if df_total.empty:
                     pass
                 else:
@@ -223,9 +225,6 @@ class MatWindow(QMainWindow, form_class):
         df_con[['입고수량','구입금액','단가','동','사용수량','sum']]= df_con[['입고수량','구입금액','단가','동','사용수량','sum']].astype('int')
         df_con[['입고수량','구입금액','단가','동','호','사용수량','sum']] = df_con[['입고수량','구입금액','단가','동','호','사용수량','sum']].astype('str')
         return df_con
-
-
-
 
     def init_in_query(self):
         self.in_query_combo_items_spec()
@@ -248,34 +247,85 @@ class MatWindow(QMainWindow, form_class):
 
     def in_out_status_view(self):
         if self.CB_inUsedInOut.currentText() == '입고':
+            #self.init_in_query()
+            df_sel = self.detailed_in_view()
+            if len(df_sel) ==0:
+                QMessageBox.about(self, "경고", "검색기간에 입고 자료가 없습니다")
+                return
             headers = HEADERS[3]#[self.inUsedTableWidget.horizontalHeaderItem(x).text() for x in range(0,colcount)]
             colcount = len(headers) #self.inUsedTableWidget.columnCount()
             self.inUsedTableWidget.clear()
             self.inUsedTableWidget.setColumnCount(colcount)
             self.inUsedTableWidget.setRowCount(0)
             self.inUsedTableWidget.setHorizontalHeaderLabels(headers)
-            df_sel = self.df_in_status_selection()
-            df_list = df_sel.values.tolist()
+            df_list = self.detailed_in_out_concat_df(df_sel)
+            df_list = df_list.values.tolist()
             for l in df_list:
                 self.set_inUsedTableWidge(l)
             self.table_display_status()
+            
         else:
+            #self.init_out_query()
+            
+            df_sel = self.detailed_out_view()
+            if len(df_sel) ==0:
+                QMessageBox.about(self, "경고", "검색기간에 사용 자료가 없습니다")
+                return
             headers = HEADERS[4]
             colcount = len(headers)
             self.inUsedTableWidget.clear()
             self.inUsedTableWidget.setColumnCount(colcount)
             self.inUsedTableWidget.setRowCount(0)
             self.inUsedTableWidget.setHorizontalHeaderLabels(headers)
+            df_list = self.detailed_in_out_concat_df(df_sel)
+            df_list = df_list.values.tolist()
+            for l in df_list:
+                self.set_inUsedTableWidge(l)
+            self.table_display_status()
+
+    def setInUsedStartDate(self, state):
+        print(state)
+        if state == 2:
+            to_date = self.DE_inUsedQueryToDate.date()
+            first_day = to_date.addDays(1-to_date.day())
+            self.DE_inUsedQueryFromDate.setDate(first_day)
+        else:
+            to_date = self.DE_inUsedQueryToDate.date()
+            from_day = to_date.addMonths(-1)
+            self.DE_inUsedQueryFromDate.setDate(from_day)
+
+    def df_in_out_selection(self, df):
+        from_date = self.DE_inUsedQueryFromDate.text()
+        to_date = self.DE_inUsedQueryToDate.text()
+        
+        items = self.CB_inUsedQueryItems.currentText()
+        spec = self.CB_inUsedQuerySpecs.currentText()
+        date_to_con = df['일자'] <= to_date
+        date_from_con = df['일자'] >= from_date
+        i_con = df['품명'] == items
+        s_con = df['규격'] == spec
+        if items == 'All':
+            df_sel = df[(date_from_con & date_to_con)]
+            return df_sel
+        else:
+            df_sel = df[(date_from_con & date_to_con & i_con & s_con)]
+            return df_sel
 
 
+    def detailed_in_out_concat_df(self, df_list):
+        if len(df_list) == 0:
+            return df_list
+        df_con = df_list[0]
+        for part in df_list[1:]:
+            df_con = pd.concat([df_con, part])
+            df_con.reset_index(drop=True, inplace=True)
+        return df_con
 
-    def detailed_in_view():
-        dfI = in_df()
+    def detailed_in_view(self):
+        dfI = self.in_df()
         dfI['입출'] ='입고'
         dfI.rename(columns = {'입고일':'일자'}, inplace=True)
-        dfIn = df_status_selection(dfI)
-        #print(dfIn)
-        
+        dfIn = self.df_in_out_selection(dfI)
         #print(dfIn)
         items = set(dfIn['품명'].unique())
         specs = set(dfIn['규격'].unique())
@@ -283,47 +333,31 @@ class MatWindow(QMainWindow, form_class):
         for item in items:
             #print(item)
             for spec in specs:
-                #print(spec)
-                #print(dfIn)
                 dfIn_sel = dfIn[((dfIn['품명'] == item) & (dfIn['규격'] == spec))]
-                print('dfIn_sel',dfIn_sel)
                 dfIn_sel['누계입고'] = dfIn_sel['입고수량'].cumsum()
-                dfIn_sel=dfIn_sel[['입출','일자','품명','규격','입고수량','누계입고','구입금액','단가','구입업체','비고']]
+                dfIn_sel=dfIn_sel[HEADERS[3]]
+                dfIn_sel[['입고수량','누계입고','구입금액','단가']]= dfIn_sel[['입고수량','누계입고','구입금액','단가']].astype('int')
+                dfIn_sel[['입고수량','누계입고','구입금액','단가']] = dfIn_sel[['입고수량','누계입고','구입금액','단가']].astype('str')
                 temp_list.append(dfIn_sel)
         return temp_list 
-
-
         
-
-
-
-        
-    def detailed_out_view():
-        dfO = out_df()
-        
+    def detailed_out_view(self):
+        dfO = self.out_df()
         dfO['입출'] = '사용'
         dfO.rename(columns = {'사용일':'일자'}, inplace=True)
-        dfOut = df_status_selection(dfO)
-        print(dfOut)
+        dfOut = self.df_in_out_selection(dfO)
         items = set(dfOut['품명'].unique())
         specs = set(dfOut['규격'].unique())
         temp_list = []
         for item in items:
-            #print(item)
             for spec in specs:
-                #print(spec)
-                #print(dfIn)
                 dfOut_sel = dfOut[((dfOut['품명'] == item) & (dfOut['규격'] ==  spec))]
-                print(dfOut_sel)
-                
                 dfOut_sel = dfOut[((dfOut['품명'] == item) & (dfOut['규격'] == spec))]
-                print('dfOut_sel',dfOut_sel)
                 dfOut_sel['사용누계'] = dfOut_sel['사용수량'].cumsum()
                 columns = dfOut_sel.columns.tolist()
-                print(columns)
-                
-                
-                dfOut_sel = dfOut_sel[['입출','일자','공용','동','호', '품명', '규격', '사용수량', '사용누계', '비고', ]]
+                dfOut_sel = dfOut_sel[HEADERS[4]]
+                dfOut_sel[['동','사용수량','사용누계']]= dfOut_sel[['동','사용수량','사용누계']].astype('int')
+                dfOut_sel[['동','사용수량','사용누계']] = dfOut_sel[['동','사용수량','사용누계']].astype('str')
                 temp_list.append(dfOut_sel)
         return temp_list     
 
