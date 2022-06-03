@@ -333,7 +333,7 @@ class MatWindow(QMainWindow, form_class):
         for item in items:
             #print(item)
             for spec in specs:
-                dfIn_sel = dfIn[((dfIn['품명'] == item) & (dfIn['규격'] == spec))]
+                dfIn_sel = dfIn[((dfIn['품명'] == item) & (dfIn['규격'] == spec))].copy()
                 dfIn_sel['누계입고'] = dfIn_sel['입고수량'].cumsum()
                 dfIn_sel=dfIn_sel[HEADERS[3]]
                 dfIn_sel[['입고수량','누계입고','구입금액','단가']]= dfIn_sel[['입고수량','누계입고','구입금액','단가']].astype('int')
@@ -638,6 +638,7 @@ class MatWindow(QMainWindow, form_class):
         df_on_stock.fillna(0, inplace=True)
         try:
             df_on_stock['재고'] = df_on_stock['입고수량'] - df_on_stock['사용수량']
+            df_on_stock[['입고수량', '사용수량','재고']] = df_on_stock[['입고수량', '사용수량','재고']].astype('int')
             df_on_stock[['입고수량', '사용수량','재고']] = df_on_stock[['입고수량', '사용수량','재고']].astype('str')
             df_m = df_on_stock.reset_index().copy()
             return df_m
@@ -705,6 +706,7 @@ class MatWindow(QMainWindow, form_class):
     def init_out_data_input(self):
         df = self.out_df()
         self.out_file_to_table(df)
+        self.table_display_used_in()
         self.out_dongho()
         self.CB_outGongSe.clear()
         self.CB_outGongSe.addItems(['공용','세대'])
