@@ -83,16 +83,16 @@ class MatWindow(QMainWindow, form_class):
         self.CB_detailedQuerySpecs.activated.connect(self.detailed_total_query)
         #입고품목 선택시 품목 규격 콤보박스 항목 선택
         self.comboInItems.activated.connect(self.comboInItemsActivated)
-        #사용 품목규격 선택시 품목 재고 보임
-        self.CB_outItems.activated.connect(self.CB_outItemsActivated)
         #입고 품목 선택시 품목 재고 보임
         self.comboInItems.activated.connect(self.in_stock_view)
-        #사용 품목규격 선택시 품목 재고 보임
-        self.CB_outSpecs.activated.connect(self.out_stock_view)
         #입고 품목규격 선택시 품목 재고 보임
         self.comboInSpecs.activated.connect(self.in_stock_view)
+        #사용 품목규격 선택시 품목 재고 보임
+        self.CB_outItems.activated.connect(self.CB_outItemsActivated)
         #사용 품목 선택시 품목 재고 보임
         self.CB_outItems.activated.connect(self.out_stock_view)
+        #사용 품목규격 선택시 품목 재고 보임
+        self.CB_outSpecs.activated.connect(self.out_stock_view)
         #동 선택시 호수 콤보 선택
         self.CB_outDong.activated.connect(self.out_dongho)
 
@@ -114,6 +114,8 @@ class MatWindow(QMainWindow, form_class):
     def init_detailed_total_query(self):
         self.in_out_query_combo_items_spec()
         df_list = self.detailed_in_out_list()
+        if len(df_list)==0:
+            return
         df_in_out = self.detailed_in_out_df(df_list)
         headers = df_in_out.columns.values.tolist()
         df_in_out_values_list = df_in_out.values.tolist()
@@ -230,21 +232,13 @@ class MatWindow(QMainWindow, form_class):
         self.in_query_combo_items_spec()
         df = self.in_df()
         df_in = self.in_out_status(df)
+        if df_in is None:
+            return
         df_list = df_in.values.tolist()
         for list in df_list:
             self.set_inUsedTableWidge(list)
         self.table_display_status()
     
-    def init_out_query(self):
-        self.in_out_query_combo_items_spec()
-        df = self.out_df()
-        df_in = self.in_out_status(df)
-        df_list = df_in.values.tolist()
-        for list in df_list:
-            self.set_detailedQueryTableWidget(list)
-        #pass
-    
-
     def in_out_status_view(self):
         if self.CB_inUsedInOut.currentText() == '입고':
             #self.init_in_query()
@@ -510,6 +504,9 @@ class MatWindow(QMainWindow, form_class):
                 df_copy['품목누계'] = df_copy.cumsum()
                 df_temp['품목누계']=df_copy['품목누계']
                 df_lists.append(df_temp)
+        if len(df_lists) == 0:
+            return
+        
         df_con = df_lists[0]
         for df_list in df_lists[1:]:
             df_con = pd.concat([df_con, df_list])
@@ -563,6 +560,9 @@ class MatWindow(QMainWindow, form_class):
     def init_onstock_query(self):
         self.onstock_query_combo_items_spec()
         df = self.on_stock()
+        if df is None:
+            QMessageBox.about(self, "경고", "입고출고 자료가 없습니다")
+            return
         df_list = df.values.tolist()
         for list in df_list:
             self.set_onstockTableWidget(list)
@@ -590,6 +590,9 @@ class MatWindow(QMainWindow, form_class):
         self.onstockTableWidget.setRowCount(0)
         self.onstockTableWidget.setHorizontalHeaderLabels(headers)
         df_sel = self.df_onstock_selection()
+        if df_sel is None:
+            QMessageBox.about(self, "경고", "입출고 자료가 없습니다")
+            return
         df_list = df_sel.values.tolist()
         for l in df_list:
             self.set_onstockTableWidget(l)
@@ -704,13 +707,20 @@ class MatWindow(QMainWindow, form_class):
         return df
 
     def init_out_data_input(self):
-        df = self.out_df()
-        self.out_file_to_table(df)
-        self.table_display_used_in()
         self.out_dongho()
         self.CB_outGongSe.clear()
         self.CB_outGongSe.addItems(['공용','세대'])
         self.out_combo_items_spec()
+
+        headers = HEADERS[1]
+        self.usedIntableWidget.setHorizontalHeaderLabels(headers)
+        df = self.out_df()
+        df[['사용수량', '동']] = df[['사용수량', '동']].astype('str')
+        df.fillna(' ')
+
+
+        self.out_file_to_table(df)
+        self.table_display_used_in()
         
     def outTableToSaveExcelFile(self):
         file = LE[1] #r'C:\source\pygame\Nado Game\pyqt5\자재관리\사용대장.xlsx'
@@ -833,7 +843,7 @@ class MatWindow(QMainWindow, form_class):
 
         for d in list:
             self.set_usedIntableWidget(d)
-        self.tableWidgetInIn.scrollToBottom
+        self.usedIntableWidget.scrollToBottom
 
     def dong_ho(self):
         file = LE[2] #r'C:\source\pygame\Nado Game\pyqt5\자재관리\동호대장.xlsx'
@@ -880,6 +890,8 @@ class MatWindow(QMainWindow, form_class):
         file = LE[1] 
         with pd.ExcelFile(file) as f:
             df = pd.read_excel(f,skiprows=0)
+            if df is None:
+                return
         return df
 
     def in_df(self):
@@ -911,6 +923,7 @@ class MatWindow(QMainWindow, form_class):
         #self.tableWidgetInIn.horizontalHeaderItem().setSectionResizeMode(QHeaderView.Stretch)
         for d in list:
             self.set_tableWidgetInIn(d)
+            self.table_display_in()
         self.table_display_in()
         self.tableWidgetInIn.scrollToBottom
 
@@ -1033,16 +1046,16 @@ class MatWindow(QMainWindow, form_class):
 
         self.set_tableWidgetInIn(in_data)
         self.inTableToSaveExcelFile()
+        self.table_display_in()
     
     def set_tableWidgetInIn(self,data):
         rowCount = self.tableWidgetInIn.rowCount()
         self.tableWidgetInIn.setRowCount(rowCount+1)
-        self.tableWidgetInIn.setColumnCount(len(data))
+        #self.tableWidgetInIn.setColumnCount(len(data))
         c = 0
         for i in data:
             self.tableWidgetInIn.setItem(rowCount, c, QTableWidgetItem(i))
             c = c+1
-        self.table_display_in()
 
     def table_display_in(self):
         header = self.tableWidgetInIn.horizontalHeader()
