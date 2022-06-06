@@ -42,7 +42,7 @@ class CustomTableModel(QAbstractTableModel):
         elif role == Qt.BackgroundRole:
             return QColor(Qt.white)
         elif role == Qt.TextAlignmentRole:
-            return Qt.AlignRight
+            return Qt.AlignCenter
 
         return None
 
@@ -154,9 +154,10 @@ if __name__ == "__main__":
     options = argparse.ArgumentParser()
     options.add_argument("-f", "--file", type=str, required=True)
     args = options.parse_args()
+
     data = read_data(args.file)
 
-    # Qt Application
+    #Qt Application
     app = QApplication(sys.argv)
 
     widget = Widget(data)
