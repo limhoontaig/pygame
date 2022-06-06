@@ -33,10 +33,10 @@ else:
 HEADERS = [
     ['일자', '품명', '규격', '입고수량', '구입금액', '단가', '구입업체', '비고'],
     ['일자', '동', '호', '공용', '품명' ,'규격','사용수량','비고'],
-    ['품명','규격','입고수량','사용수량','재고수량','비고'],
+    ['품명','규격','입고수량','사용수량','재고','비고'],
     ['입출','일자','품명','규격','입고수량','누계입고','구입금액','단가','구입업체','비고'],
     ['입출','일자','공용','동','호', '품명', '규격', '사용수량', '사용누계', '비고', ],
-    ['구분','일자', '품명', '규격', '입고수량','입고누계','동', '호', '공용','사용수량','사용누계', '재고수량']
+    ['일자', '품명', '규격','입출', '입고수량','구입금액','단가','동', '호', '공용','사용수량', '재고']
 ]
 
 
@@ -44,6 +44,7 @@ class MatWindow(QMainWindow, form_class):
     def __init__(self):
         super().__init__()
         self.LE = LE
+        self.HEADERS = HEADERS
         self.setupUi(self)
 
         # 자재입고 입력 init setup
@@ -65,6 +66,8 @@ class MatWindow(QMainWindow, form_class):
         self.onstockDate.setDate(QDate.currentDate())
         self.onstockDate.setCalendarPopup(True)
         self.checkBox.stateChanged.connect(self.setInUsedStartDate)
+        self.checkBox_2.stateChanged.connect(self.setDetailedStartDate)
+
         self.init_in_data_input()
         self.init_out_data_input()
         self.init_onstock_query()
@@ -96,6 +99,7 @@ class MatWindow(QMainWindow, form_class):
         #동 선택시 호수 콤보 선택
         self.CB_outDong.activated.connect(self.out_dongho)
 
+        self.PB_inToday.clicked.connect(self.setInToday)# 오늘날자 설정
         self.PB_inAddNewItem.clicked.connect(self.addComboBoxItem)# 신규 품목 추가
         self.PB_InAddComboBoxSpec.clicked.connect(self.addComboBoxSpecItem) #신규 항목 추가
         self.PB_InAdd.clicked.connect(self.addInMaterialToTable)
@@ -111,41 +115,73 @@ class MatWindow(QMainWindow, form_class):
         self.LE_InPrice.textChanged.connect(self.lineEdit_2Changed)
 
 
+    def setInToday(self):
+        self.inDate.setDate(QDate.currentDate())
+
+
     def init_detailed_total_query(self):
         self.in_out_query_combo_items_spec()
+        self.detailedQueryTableWidget.setColumnCount(len(HEADERS[5]))
+        headers = HEADERS[5]#df_in_out.columns.values.tolist()
+        self.detailedQueryTableWidget.setHorizontalHeaderLabels(headers)
         df_list = self.detailed_in_out_list()
         if len(df_list)==0:
             return
         df_in_out = self.detailed_in_out_df(df_list)
-        headers = df_in_out.columns.values.tolist()
         df_in_out_values_list = df_in_out.values.tolist()
-
-        self.detailedQueryTableWidget.setHorizontalHeaderLabels(headers)
         for i in df_in_out_values_list:
             self.set_detailedQueryTableWidget(i)
         self.table_display_detailedQueryTableWidget()
 
     def detailed_total_query(self):
-        #self.in_out_query_combo_items_spec()
         df_list = self.detailed_in_out_list()
         df_in_out = self.detailed_in_out_df(df_list)
         if len(df_in_out) == 0:
-            QMessageBox.about(self, "경고", "검색 기간 동안에 해당 품목에 대한 입출고 기록이 없습니다")
+            QMessageBox.about(self, "경고", "검색 기간 동안 해당 품목에 대한 입출고 기록이 없습니다")
             return
-        headers = df_in_out.columns.values.tolist()
-        df_in_out_values_list = df_in_out.values.tolist()
+        df_in_out[['입고수량','구입금액','단가','동','사용수량']]=df_in_out[['입고수량','구입금액','단가','동','사용수량']].astype('int')
+
+        df_in_out = df_in_out.fillna(0)
+
+        df_in_out[['입고수량','구입금액','단가','동','사용수량','재고']]=df_in_out[['입고수량','구입금액','단가','동','사용수량','재고']].astype('float')
+        df_in_out[['입고수량','구입금액','단가','동','사용수량','재고']]=df_in_out[['입고수량','구입금액','단가','동','사용수량','재고']].astype('int')
+        df_in_out[['입고수량','구입금액','단가','동','사용수량','재고']]=df_in_out[['입고수량','구입금액','단가','동','사용수량','재고']].astype('str')
+
         self.detailedQueryTableWidget.clear()
         self.detailedQueryTableWidget.setRowCount(0)
-        self.detailedQueryTableWidget.setHorizontalHeaderLabels(headers)
+        self.detailedQueryTableWidget.setColumnCount(len(HEADERS[5]))
+        self.detailedQueryTableWidget.setHorizontalHeaderLabels(HEADERS[5])
+        df_in_out_values_list = df_in_out.values.tolist()
         for i in df_in_out_values_list:
             self.set_detailedQueryTableWidget(i)
         self.table_display_detailedQueryTableWidget()
-        
+
+
+    def on_stock_total(self, dfIn, dfOut):
+        df_in = dfIn[['품명','규격', '입고수량']].copy()
+        df_in_sum = df_in.groupby(['품명','규격']).sum()
+
+        df_out = dfOut[['품명','규격', '사용수량']].copy()
+        df_out_sum = df_out.groupby(['품명','규격']).sum()
+
+        df_on_stock = pd.merge(df_in_sum, df_out_sum, how = 'outer', on = ['품명','규격'])
+        df_on_stock.fillna(0, inplace=True)
+        date = self.DE_detailedQueryFromDate.date()
+        fromQdate = date.addDays(-1)
+        from_date =fromQdate.toString(Qt.ISODate) 
+        df_on_stock['일자'] = from_date
+        try:
+            df_on_stock['입출'] = '재고'
+            df_on_stock['재고'] = df_on_stock['입고수량'] - df_on_stock['사용수량']
+            df_on_stock[['입고수량', '사용수량','재고']] = df_on_stock[['입고수량', '사용수량','재고']].astype('str')
+            df_m = df_on_stock.reset_index().copy()
+            return df_m
+        except:
+            pass
 
     def set_detailedQueryTableWidget(self, df_list):
         rowCount = self.detailedQueryTableWidget.rowCount()
         self.detailedQueryTableWidget.setRowCount(rowCount+1)
-        self.detailedQueryTableWidget.setColumnCount(len(df_list))
         c = 0
         for i in df_list:
             self.detailedQueryTableWidget.setItem(rowCount, c, QTableWidgetItem(i))
@@ -165,7 +201,18 @@ class MatWindow(QMainWindow, form_class):
             header.resizeSection(column, width[column]*wfactor)
         self.detailedQueryTableWidget.scrollToBottom
 
+    def setDetailedStartDate(self, state):
+        if state == 2:
+            to_date = self.DE_detailedQueryToDate.date()
+            first_day = to_date.addDays(1-to_date.day())
+            self.DE_detailedQueryFromDate.setDate(first_day)
+        else:
+            to_date = self.DE_detailedQueryToDate.date()
+            from_day = to_date.addMonths(-1)
+            self.DE_detailedQueryFromDate.setDate(from_day)
+
     def df_status_selection(self, df):
+        caller_name = sys._getframe(1).f_code.co_name
         from_date = self.DE_detailedQueryFromDate.text()
         to_date = self.DE_detailedQueryToDate.text()
         
@@ -175,47 +222,80 @@ class MatWindow(QMainWindow, form_class):
         date_from_con = df['일자'] >= from_date
         i_con = df['품명'] == items
         s_con = df['규격'] == spec
+        if caller_name == 'on_stock_total':
+            date = self.DE_detailedQueryFromDate.date()
+            fromQdate = date.addDays(-1)
+            from_date = fromQdate.toString(Qt.ISODate)
+            df_sel = df[((df['일자'] <= from_date) & i_con & s_con)]
+            return df_sel
+        #else:
         if items == 'All':
             df_sel = df[(date_from_con & date_to_con)]
-            return df_sel
+            df_onstock = df[(df['일자'] <= from_date)]
+            return df_sel, df_onstock
         else:
             df_sel = df[(date_from_con & date_to_con & i_con & s_con)]
-            return df_sel
-
+            df_onstock = df[((df['일자'] <= from_date) & i_con & s_con)]
+            return df_sel, df_onstock
 
     def detailed_in_out_list(self):
         dfI = self.in_df()
         dfI['입출'] ='입고'
-        dfIn = self.df_status_selection(dfI)
+        dfIn_on = self.df_status_selection(dfI)
+        dfIn = dfIn_on[0]
+        dfInOn = dfIn_on[1]
         dfO = self.out_df()
         dfO['입출'] = '사용'
-        dfOut = self.df_status_selection(dfO)
+        dfOut_on = self.df_status_selection(dfO)
+        dfOut = dfOut_on[0]
+        dfOutOn = dfOut_on[1]
         items_in = set(dfIn['품명'].unique())
-        specs_in = set(dfIn['규격'].unique())
         items_out = set(dfOut['품명'].unique())
-        specs_out = set(dfOut['규격'].unique())
         items = list(items_in.union(items_out))
-        specs = list(specs_in.union(specs_out))
-        temp_list = []
+        df_list = []
         for item in items:
+            dfInSpec = dfIn[(dfIn['품명'] == item)]
+            dfOutSpec = dfOut[(dfOut['품명'] == item)]
+            specs_in = set(dfInSpec['규격'].unique())
+            specs_out = set(dfOutSpec['규격'].unique())
+            specs = list(specs_in.union(specs_out))
             for spec in specs:
                 dfIn_sel = dfIn[((dfIn['품명'] == item) & (dfIn['규격'] == spec))]
                 dfOut_sel = dfOut[((dfOut['품명'] == item) & (dfOut['규격'] ==  spec))]
                 df_on_stock = pd.merge(dfIn_sel, dfOut_sel, how = 'outer', on = ['입출','일자','품명','규격'])
                 df_on_stock.fillna(0, inplace=True)
                 df_on_stock.sort_values(by= '일자', inplace=True)
-                df_total = df_on_stock[['일자','품명','규격','입출','입고수량','구입금액','단가','동','호','사용수량']].copy()
+                df_total = df_on_stock[['일자','품명','규격','입출','입고수량','구입금액','단가','동','호','공용','사용수량']].copy()
                 df_total.reset_index(drop=True, inplace=True)
-                df_total['sum'] = df_total['입고수량'] - df_total['사용수량']
-                df_temp = df_total[['sum']].copy()
+
+                df_total[['입고수량','구입금액','단가','동','사용수량']] = df_total[['입고수량','구입금액','단가','동','사용수량']].astype('int')
+                df_total[['입고수량','구입금액','단가','동','사용수량']] = df_total[['입고수량','구입금액','단가','동','사용수량']].astype('str')
+
+                dfInOnSel = dfInOn[((dfInOn['품명'] == item) & (dfInOn['규격'] == spec))]
+                dfOutOnSel = dfOutOn[((dfOutOn['품명'] == item) & (dfOutOn['규격'] == spec))]
+
+
+                df_onstock = self.on_stock_total(dfInOnSel,dfOutOnSel)
+
+                df_total = pd.merge(df_total, df_onstock, how = 'outer', on= ['입출','일자','품명','규격','입고수량','사용수량'])
+                df_total.sort_values(by='일자', inplace=True)
+
+                df_total.fillna(0, inplace=True)
+                df_total[['입고수량','구입금액','단가','동','사용수량']] = df_total[['입고수량','구입금액','단가','동','사용수량']].astype('float')
+                df_total[['입고수량','구입금액','단가','동','사용수량']] = df_total[['입고수량','구입금액','단가','동','사용수량']].astype('int')
+                df_total['재고'] = df_total['입고수량'] - df_total['사용수량']
+                df_temp = df_total[['재고']].copy()
                 df_temp_1  = df_temp.cumsum()
-                df_total['재고'] = df_temp_1['sum']
-                df_total[['입고수량','구입금액','단가','동','사용수량','재고']].astype('int')
+                df_total['재고'] = df_temp_1['재고']
+                df_total[['입고수량','구입금액','단가','동','사용수량','재고']] = df_total[['입고수량','구입금액','단가','동','사용수량','재고']].astype('float')
+                df_total[['입고수량','구입금액','단가','동','사용수량','재고']] = df_total[['입고수량','구입금액','단가','동','사용수량','재고']].astype('int')
+                df_total[['입고수량','구입금액','단가','동','사용수량','재고']] = df_total[['입고수량','구입금액','단가','동','사용수량','재고']].astype('str')
+                df_total = df_total[HEADERS[5]]
                 if df_total.empty:
                     pass
                 else:
-                    temp_list.append(df_total)
-        return temp_list
+                    df_list.append(df_total)
+        return df_list
 
     def detailed_in_out_df(self, df_list):
         if len(df_list) == 0:
@@ -224,8 +304,9 @@ class MatWindow(QMainWindow, form_class):
         for part in df_list[1:]:
             df_con = pd.concat([df_con, part])
             df_con.reset_index(drop=True, inplace=True)
-        df_con[['입고수량','구입금액','단가','동','사용수량','sum']]= df_con[['입고수량','구입금액','단가','동','사용수량','sum']].astype('int')
-        df_con[['입고수량','구입금액','단가','동','호','사용수량','sum']] = df_con[['입고수량','구입금액','단가','동','호','사용수량','sum']].astype('str')
+        df_con[['입고수량','구입금액','단가','동','사용수량']]= df_con[['입고수량','구입금액','단가','동','사용수량']].astype('int')
+        df_con[['입고수량','구입금액','단가','동','호','사용수량']] = df_con[['입고수량','구입금액','단가','동','호','사용수량']].astype('str')
+
         return df_con
 
     def init_in_query(self):
@@ -234,6 +315,10 @@ class MatWindow(QMainWindow, form_class):
         df_in = self.in_out_status(df)
         if df_in is None:
             return
+        self.inUsedTableWidget.clear()
+        self.inUsedTableWidget.setColumnCount(len(HEADERS[3]))
+        self.inUsedTableWidget.setRowCount(0)
+        self.inUsedTableWidget.setHorizontalHeaderLabels(HEADERS[3])
         df_list = df_in.values.tolist()
         for list in df_list:
             self.set_inUsedTableWidge(list)
@@ -246,12 +331,10 @@ class MatWindow(QMainWindow, form_class):
             if len(df_sel) ==0:
                 QMessageBox.about(self, "경고", "검색기간에 입고 자료가 없습니다")
                 return
-            headers = HEADERS[3]#[self.inUsedTableWidget.horizontalHeaderItem(x).text() for x in range(0,colcount)]
-            colcount = len(headers) #self.inUsedTableWidget.columnCount()
             self.inUsedTableWidget.clear()
-            self.inUsedTableWidget.setColumnCount(colcount)
+            self.inUsedTableWidget.setColumnCount(len(HEADERS[3]))
             self.inUsedTableWidget.setRowCount(0)
-            self.inUsedTableWidget.setHorizontalHeaderLabels(headers)
+            self.inUsedTableWidget.setHorizontalHeaderLabels(HEADERS[3])
             df_list = self.detailed_in_out_concat_df(df_sel)
             df_list = df_list.values.tolist()
             for l in df_list:
@@ -259,8 +342,6 @@ class MatWindow(QMainWindow, form_class):
             self.table_display_status()
             
         else:
-            #self.init_out_query()
-            
             df_sel = self.detailed_out_view()
             if len(df_sel) ==0:
                 QMessageBox.about(self, "경고", "검색기간에 사용 자료가 없습니다")
@@ -278,7 +359,6 @@ class MatWindow(QMainWindow, form_class):
             self.table_display_status()
 
     def setInUsedStartDate(self, state):
-        print(state)
         if state == 2:
             to_date = self.DE_inUsedQueryToDate.date()
             first_day = to_date.addDays(1-to_date.day())
@@ -287,6 +367,7 @@ class MatWindow(QMainWindow, form_class):
             to_date = self.DE_inUsedQueryToDate.date()
             from_day = to_date.addMonths(-1)
             self.DE_inUsedQueryFromDate.setDate(from_day)
+
 
     def df_in_out_selection(self, df):
         from_date = self.DE_inUsedQueryFromDate.text()
@@ -320,12 +401,10 @@ class MatWindow(QMainWindow, form_class):
         dfI['입출'] ='입고'
         dfI.rename(columns = {'입고일':'일자'}, inplace=True)
         dfIn = self.df_in_out_selection(dfI)
-        #print(dfIn)
         items = set(dfIn['품명'].unique())
         specs = set(dfIn['규격'].unique())
         temp_list = []
         for item in items:
-            #print(item)
             for spec in specs:
                 dfIn_sel = dfIn[((dfIn['품명'] == item) & (dfIn['규격'] == spec))].copy()
                 dfIn_sel['누계입고'] = dfIn_sel['입고수량'].cumsum()
@@ -368,8 +447,6 @@ class MatWindow(QMainWindow, form_class):
             header.setSectionResizeMode(column, QHeaderView.Interactive)
             header.resizeSection(column, width[column]*wfactor)
         self.inUsedTableWidget.scrollToBottom
-
-
 
     def df_in_status_selection(self):
         dfI = self.in_df()
@@ -510,7 +587,6 @@ class MatWindow(QMainWindow, form_class):
         df_con = df_lists[0]
         for df_list in df_lists[1:]:
             df_con = pd.concat([df_con, df_list])
-        #df_con.columns.tolist()
         try:
             df_con_1= df_con[['일자', '품명', '규격', '입고수량', '품목누계', '구입금액', '단가', '구입업체', '비고' ]]
             df_con_1.sort_values(by=['일자', '품명','규격'], inplace=True)
@@ -552,11 +628,6 @@ class MatWindow(QMainWindow, form_class):
             self.CB_inUsedQuerySpecs.clear()
             self.CB_inUsedQuerySpecs.addItems(spec)
 
-    def set_calendar_today_color(self):
-        #today = QDate.currentDate()
-        self.onstockDate.showToday()
-        #pass
-
     def init_onstock_query(self):
         self.onstock_query_combo_items_spec()
         df = self.on_stock()
@@ -584,8 +655,8 @@ class MatWindow(QMainWindow, form_class):
 
 
     def onstock_view(self):
-        colcount = self.onstockTableWidget.columnCount()
-        headers = [self.onstockTableWidget.horizontalHeaderItem(x).text() for x in range(0,colcount)]
+        self.onstockTableWidget.setColumnCount(len(HEADERS[2]))
+        headers = HEADERS[2]#[self.onstockTableWidget.horizontalHeaderItem(x).text() for x in range(0,colcount)]
         self.onstockTableWidget.clear()
         self.onstockTableWidget.setRowCount(0)
         self.onstockTableWidget.setHorizontalHeaderLabels(headers)
@@ -651,7 +722,6 @@ class MatWindow(QMainWindow, form_class):
     def set_onstockTableWidget(self,df_list):
         rowCount = self.onstockTableWidget.rowCount()
         self.onstockTableWidget.setRowCount(rowCount+1)
-        self.onstockTableWidget.setColumnCount(len(df_list)+1)
         c = 0
         for i in df_list:
             self.onstockTableWidget.setItem(rowCount, c, QTableWidgetItem(i))
@@ -693,7 +763,6 @@ class MatWindow(QMainWindow, form_class):
         items = df['품명'].unique()
         items.sort()
         items = np.insert(items, 0,'All')
-        #items = items.insert(0,'All')
         self.CB_onstockItems.clear()
         self.CB_onstockItems.addItems(items)    
         if self.CB_onstockItems.currentText() == 'All':
@@ -789,7 +858,6 @@ class MatWindow(QMainWindow, form_class):
         self. outTableToSaveExcelFile()
 
     def out_stock_view(self):
-        #self.CB_outItemsActivated()
         list = [self.CB_outItems.currentText(), self.CB_outSpecs.currentText()]
         on_stock_qty = self.items_spec_onstock(list[0], list[1])
         self.LE_outOnstock.setText(on_stock_qty)
@@ -813,7 +881,7 @@ class MatWindow(QMainWindow, form_class):
     def set_usedIntableWidget(self,data):
         rowCount = self.usedIntableWidget.rowCount()
         self.usedIntableWidget.setRowCount(rowCount+1)
-        self.usedIntableWidget.setColumnCount(len(data))
+        self.usedIntableWidget.setColumnCount(len(HEADERS[1]))
         c = 0
         for i in data:
             self.usedIntableWidget.setItem(rowCount, c, QTableWidgetItem(i))
@@ -886,7 +954,6 @@ class MatWindow(QMainWindow, form_class):
         self.CB_outSpecs.addItems(spec)
 
     def out_df(self):
-        #r'C:\source\pygame\Nado Game\pyqt5\자재관리\사용대장.xlsx'
         file = LE[1] 
         with pd.ExcelFile(file) as f:
             df = pd.read_excel(f,skiprows=0)
@@ -895,7 +962,6 @@ class MatWindow(QMainWindow, form_class):
         return df
 
     def in_df(self):
-        #r'C:\source\pygame\Nado Game\pyqt5\자재관리\입고대장.xlsx'
         file = LE[0] 
         with pd.ExcelFile(file) as f:
             df = pd.read_excel(f,skiprows=0)
@@ -914,13 +980,11 @@ class MatWindow(QMainWindow, form_class):
     def init_in_data_input(self):
         self.in_combo_items_spec()
         df = self.in_df()
-        #df.columns.values.tolist()
         headers = HEADERS[0]
         self.tableWidgetInIn.setHorizontalHeaderLabels(headers)
         df[['입고수량', '구입금액','단가']] = df[['입고수량', '구입금액','단가']].astype('str')
         df.fillna(' ')
         list = df.values.tolist()
-        #self.tableWidgetInIn.horizontalHeaderItem().setSectionResizeMode(QHeaderView.Stretch)
         for d in list:
             self.set_tableWidgetInIn(d)
             self.table_display_in()
@@ -939,7 +1003,6 @@ class MatWindow(QMainWindow, form_class):
         self.comboInSpecs.addItems(spec)
 
     def inTableToSaveExcelFile(self):
-        #r'C:\source\pygame\Nado Game\pyqt5\자재관리\입고대장.xlsx'
         file = LE[0]
         df = self.data_query()
         if os.path.isfile(file):
@@ -956,8 +1019,6 @@ class MatWindow(QMainWindow, form_class):
         rowcount = self.tableWidgetInIn.rowCount()
         colcount = self.tableWidgetInIn.columnCount()
         headers = HEADERS[0]
-        print(headers)
-        #headers = [self.tableWidgetInIn.horizontalHeaderItem(x).text() for x in range(0,colcount)]
         data_list = []
         for i in range(0, rowcount):
             data =[]
@@ -967,11 +1028,8 @@ class MatWindow(QMainWindow, form_class):
                 except:
                     d=''
                 data.append(d)
-            print(data)
             data_list.append(data)
-        # list to dataframe
         df = pd.DataFrame(data_list) 
-        # set the headers on dataframe
         df.columns = headers 
         return df
 
@@ -1018,10 +1076,7 @@ class MatWindow(QMainWindow, form_class):
     def addInMaterialToTable(self):
         
         in_data = []
-        #in_data.append('입고')
         in_data.append(self.inDate.text())
-        #time = QTime.currentTime()
-        #in_data.append(time.toString())
         in_data.append(self.comboInItems.currentText())
         in_data.append(self.comboInSpecs.currentText())
         if len(self.LE_InQty.text())==0:
@@ -1051,7 +1106,6 @@ class MatWindow(QMainWindow, form_class):
     def set_tableWidgetInIn(self,data):
         rowCount = self.tableWidgetInIn.rowCount()
         self.tableWidgetInIn.setRowCount(rowCount+1)
-        #self.tableWidgetInIn.setColumnCount(len(data))
         c = 0
         for i in data:
             self.tableWidgetInIn.setItem(rowCount, c, QTableWidgetItem(i))
