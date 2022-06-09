@@ -103,6 +103,8 @@ class MatWindow(QMainWindow, form_class):
         self.PB_inAddNewItem.clicked.connect(self.addComboBoxItem)# 신규 품목 추가
         self.PB_InAddComboBoxSpec.clicked.connect(self.addComboBoxSpecItem) #신규 항목 추가
         self.PB_InAdd.clicked.connect(self.addInMaterialToTable)
+        self.PB_Used_delete_row.clicked.connect(self.delete_selected_row_usedIntableWidget)
+        self.PB_In_delete_row.clicked.connect(self.delete_selected_row_tableWidgetInIn)
         self.PB_InSave.clicked.connect(self.inTableToSaveExcelFile)
         self.PB_InExit.clicked.connect(self.close)
 
@@ -857,6 +859,10 @@ class MatWindow(QMainWindow, form_class):
 
         self. outTableToSaveExcelFile()
 
+    def delete_selected_row_usedIntableWidget(self):
+        row = self.usedIntableWidget.currentRow()
+        self.usedIntableWidget.removeRow(row)
+
     def out_stock_view(self):
         list = [self.CB_outItems.currentText(), self.CB_outSpecs.currentText()]
         on_stock_qty = self.items_spec_onstock(list[0], list[1])
@@ -879,12 +885,13 @@ class MatWindow(QMainWindow, form_class):
             return on_stock_qty
     
     def set_usedIntableWidget(self,data):
-        rowCount = self.usedIntableWidget.rowCount()
-        self.usedIntableWidget.setRowCount(rowCount+1)
+        self.usedIntableWidget.insertRow(0)
+        #rowCount = self.usedIntableWidget.rowCount()
+        #self.usedIntableWidget.setRowCount(rowCount+1)
         self.usedIntableWidget.setColumnCount(len(HEADERS[1]))
         c = 0
         for i in data:
-            self.usedIntableWidget.setItem(rowCount, c, QTableWidgetItem(i))
+            self.usedIntableWidget.setItem(0, c, QTableWidgetItem(i))
             c = c+1
         
         self.table_display_used_in()
@@ -1100,15 +1107,22 @@ class MatWindow(QMainWindow, form_class):
             in_data.append(self.LE_InRemarks.text())
 
         self.set_tableWidgetInIn(in_data)
+        self.tableWidgetInIn.setSizeAdjustPolicy(QAbstractScrollArea.AdjustToContents)
+        self.tableWidgetInIn.resizeColumnsToContents()
         self.inTableToSaveExcelFile()
-        self.table_display_in()
+        #self.table_display_in()
+
+    def delete_selected_row_tableWidgetInIn(self):
+        row = self.tableWidgetInIn.currentRow()
+        self.tableWidgetInIn.removeRow(row)
     
     def set_tableWidgetInIn(self,data):
-        rowCount = self.tableWidgetInIn.rowCount()
-        self.tableWidgetInIn.setRowCount(rowCount+1)
+        self.tableWidgetInIn.insertRow(0)
+        #rowCount = self.tableWidgetInIn.rowCount()
+        #self.tableWidgetInIn.setRowCount(rowCount+1)
         c = 0
         for i in data:
-            self.tableWidgetInIn.setItem(rowCount, c, QTableWidgetItem(i))
+            self.tableWidgetInIn.setItem(0, c, QTableWidgetItem(i))
             c = c+1
 
     def table_display_in(self):
