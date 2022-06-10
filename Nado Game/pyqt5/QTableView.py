@@ -1,6 +1,8 @@
 import sys
 from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtCore import Qt
+import pandas as pd
+
 
 
 class TableModel(QtCore.QAbstractTableModel):
@@ -30,7 +32,12 @@ class MainWindow(QtWidgets.QMainWindow):
         super().__init__()
 
         self.table = QtWidgets.QTableView()
+        file = r'C:\source\pygame\Nado Game\pyqt5\자재관리\입고대장.xlsx'
+        with pd.ExcelFile(file) as f:
+            df = pd.read_excel(f,skiprows=0)
+        data = df.values.tolist()
 
+        '''
         data = [
           [4, 9, 2],
           [1, 0, 0],
@@ -38,6 +45,7 @@ class MainWindow(QtWidgets.QMainWindow):
           [3, 3, 2],
           [7, 8, 9],
         ]
+        '''
 
         self.model = TableModel(data)
         self.table.setModel(self.model)
