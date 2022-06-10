@@ -360,7 +360,7 @@ class ElWindow(QMainWindow, form_class):
         except:
             QMessageBox.about(self, "경고", "파일을 사용하고 있습니다. 파일을 닫아주세요.")
             
-        
+        '''
         dttemp = file_name.split('.')
         dt2 = dttemp[0] + '.xls'
 
@@ -369,7 +369,7 @@ class ElWindow(QMainWindow, form_class):
             os.rename(file_name, dt2)   
         else:
             os.rename(file_name, dt2)
-        
+        '''
         return
 
 
