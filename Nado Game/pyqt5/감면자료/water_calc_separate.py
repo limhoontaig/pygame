@@ -486,7 +486,7 @@ class MyWindow(QMainWindow, form_class):
             discount.to_excel(file_name,index=False,header=False)
         else:
             discount.to_excel(file_name,index=False,header=False)
-        
+        '''
         dttemp = file_name.split('.')
         dt2 = dttemp[0] + '.xls'
 
@@ -495,7 +495,7 @@ class MyWindow(QMainWindow, form_class):
             os.rename(file_name, dt2)   
         else:
             os.rename(file_name, dt2)
-        
+        '''
         return
 
 if __name__ == "__main__":
