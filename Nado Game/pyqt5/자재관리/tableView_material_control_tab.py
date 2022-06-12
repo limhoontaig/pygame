@@ -99,8 +99,9 @@ class MatWindow(QMainWindow, form_class):
         #동 선택시 호수 콤보 선택
         self.CB_outDong.activated.connect(self.out_dongho)
 
-        self.PB_inToday.clicked.connect(self.setInToday)# 오늘날자 설정
         self.PB_inAddNewItem.clicked.connect(self.addComboBoxItem)# 신규 품목 추가
+        self.PB_inToday.clicked.connect(self.setInToday)# 오늘날자 설정
+        self.PB_outToday.clicked.connect(self.setOutToday)# 오늘날자 설정
         self.PB_InAddComboBoxSpec.clicked.connect(self.addComboBoxSpecItem) #신규 항목 추가
         self.PB_InAdd.clicked.connect(self.addInMaterialToTable)
         self.PB_InSave.clicked.connect(self.inTableToSaveExcelFile)
@@ -118,6 +119,8 @@ class MatWindow(QMainWindow, form_class):
     def setInToday(self):
         self.inDate.setDate(QDate.currentDate())
 
+    def setOutToday(self):
+        self.outDate.setDate(QDate.currentDate())
 
     def init_detailed_total_query(self):
         self.in_out_query_combo_items_spec()
@@ -987,7 +990,7 @@ class MatWindow(QMainWindow, form_class):
         list = df.values.tolist()
         for d in list:
             self.set_tableWidgetInIn(d)
-            self.table_display_in()
+            #self.table_display_in()
         self.table_display_in()
         self.tableWidgetInIn.scrollToBottom
 

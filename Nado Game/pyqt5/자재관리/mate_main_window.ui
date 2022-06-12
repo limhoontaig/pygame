@@ -50,7 +50,7 @@
      <enum>QTabWidget::Triangular</enum>
     </property>
     <property name="currentIndex">
-     <number>1</number>
+     <number>0</number>
     </property>
     <widget class="QWidget" name="tab_5">
      <attribute name="title">
@@ -109,6 +109,9 @@
       <property name="horizontalScrollBarPolicy">
        <enum>Qt::ScrollBarAlwaysOn</enum>
       </property>
+      <property name="editTriggers">
+       <set>QAbstractItemView::NoEditTriggers</set>
+      </property>
       <property name="alternatingRowColors">
        <bool>true</bool>
       </property>
@@ -116,7 +119,7 @@
        <enum>QAbstractItemView::SingleSelection</enum>
       </property>
       <property name="selectionBehavior">
-       <enum>QAbstractItemView::SelectRows</enum>
+       <enum>QAbstractItemView::SelectItems</enum>
       </property>
       <property name="sortingEnabled">
        <bool>true</bool>
@@ -140,7 +143,7 @@
        <number>50</number>
       </attribute>
       <attribute name="horizontalHeaderStretchLastSection">
-       <bool>false</bool>
+       <bool>true</bool>
       </attribute>
       <attribute name="verticalHeaderHighlightSections">
        <bool>false</bool>
@@ -1776,7 +1779,7 @@
      <x>0</x>
      <y>0</y>
      <width>984</width>
-     <height>21</height>
+     <height>26</height>
     </rect>
    </property>
   </widget>
