@@ -31,7 +31,7 @@ class ElWidget(QDialog, form_class_1):
     def __init__(self):
         super().__init__()
         self.setupUi(self)
-        elWindow = ElWindow()
+        #elWindow = ElWindow()
 
         self.tableWidget.setRowCount(28)
         self.tableWidget.setColumnCount(2)

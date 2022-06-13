@@ -334,7 +334,7 @@ class MyWindow(QMainWindow, form_class):
         files = [f1,f2]
         sheet_names = self.sheet_list(files)
         df, df_c, df_f, df_f_c, df3, df3_c, df4, df4_c = self.seperate_dongho(sheet_names)
-        df, df_c, df_f, df_f_c, df3, df3_c, df4, df4_c 
+        #df, df_c, df_f, df_f_c, df3, df3_c, df4, df4_c 
         total_복지 = len(df)
         self.lineEdit_5.setText(str(f'{total_복지:>7,}'))
 
