@@ -333,25 +333,17 @@ class MyWindow(QMainWindow, form_class):
 
         files = [f1,f2]
         sheet_names = self.sheet_list(files)
-        total_df = self.seperate_dongho(sheet_names)
-
-        df = total_df[0]
-        df_c = total_df[1]
+        df, df_c, df_f, df_f_c, df3, df3_c, df4, df4_c = self.seperate_dongho(sheet_names)
+        df, df_c, df_f, df_f_c, df3, df3_c, df4, df4_c 
         total_복지 = len(df)
         self.lineEdit_5.setText(str(f'{total_복지:>7,}'))
 
-        df_f = total_df[2]
-        df_f_c = total_df[3]
         total_대가족 = len(df_f)
         self.lineEdit_6.setText(str(f'{total_대가족:>7,}'))
 
-        df3 = total_df[4]
-        df3_c = total_df[5]
         total_중증 = len(df3)
         self.lineEdit_7.setText(str(f'{total_중증:>7,}'))
 
-        df4 = total_df[6]
-        df4_c = total_df[7]
         total_유공자 = len(df4)
         self.lineEdit_8.setText(str(f'{total_유공자:>7,}'))
 

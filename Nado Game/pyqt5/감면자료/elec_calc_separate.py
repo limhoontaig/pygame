@@ -233,11 +233,11 @@ class ElWindow(QMainWindow, form_class):
             return
 
         df2 = self.welfare_calc(f1)
-        subset_df = self.kind_calc(f2)
-        subset_df_w = subset_df[0]
-        subset_df_f = subset_df[1]
+        subset_df_w, subset_df_f = self.kind_calc(f2)
+        # subset_df_w = subset_df[0]
+        # subset_df_f = subset_df[1]
         discount = self.discount_file(f3,df2,subset_df_w,subset_df_f)
-        self.pd_save(discount[0],f4)
+        self.pd_save(discount,f4)
         return
 
     def welfare_calc(self, f1):
@@ -340,7 +340,7 @@ class ElWindow(QMainWindow, form_class):
         self.lineEdit_10.setText(str(f'{sub_total:>20,}'))
         self.lineEdit_11.setText(str(f'{grand_total:>20,}'))
 
-        return discount, total_사용량보장공제, total_대가족할인액, total_복지할인액
+        return discount
 
     def pd_save(self, discount,f4):
 
