@@ -354,9 +354,9 @@ class ElWindow(QMainWindow, form_class):
         try:
             if os.path.isfile(file_name):
                 os.remove(file_name)
-                discount.to_excel(file_name,index=False,header=True)
+                discount.to_excel(file_name,index=False,header=False)
             else:
-                discount.to_excel(file_name,index=False,header=True)
+                discount.to_excel(file_name,index=False,header=False)
         except:
             QMessageBox.about(self, "경고", "파일을 사용하고 있습니다. 파일을 닫아주세요.")
             
