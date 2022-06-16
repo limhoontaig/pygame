@@ -13,9 +13,6 @@ def gen_class():
         REVISION = 4
 
         def version(self):
-            MAJOR = 3
-            MINOR = 7
-            REVISION = 4
             return '{}.{}.{}'.format(MAJOR, MINOR, REVISION)
     
     return Language()
