@@ -111,14 +111,14 @@ class ElWidget(QDialog, form_class_1):
         df_col = df_w.columns.to_list()
         try:
             kind_of_welfare = list(df_w['할인종류'].unique())
+            print(kind_of_welfare)
         except:
             QMessageBox.about(self, "경고", "'할인종류' 키값이 없습니다. 파일을 확인하세요")
             return
         new = ['파일 항목','']+df_col +['','할인 종류','']+kind_of_welfare
 
         new_col_names = ['동', '호', '대상자명','할인종류','장애종류','장애등급','할인요금']
-        used_kind_of_welfare = ['장애인 할인', '다자녀 할인', '대가족 할인', '의료기기 할인', '기초수급 할인', '출산가구 할인', '복지추가감액',
-                                '기초수급 할인 (주거, 교육)', '차상위계층 할인', '사회복지 할인', '독립유공 할인']
+        used_kind_of_welfare = ['장애인할인요금', '다자녀할인금액', '200kWh이하감액', '대가족요금', '의료기기할인금액', '기초수급할인금액', '출산가구할인금액', '기초주거교육할인', '차상위계층할인금액', '사회복지할인금액', '독립유공자할인금액']
         old = ['파일 항목','']+new_col_names +['','할인 종류','']+ used_kind_of_welfare
         data = []
         data.append(old)
