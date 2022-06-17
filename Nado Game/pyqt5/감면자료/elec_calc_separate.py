@@ -110,9 +110,9 @@ class ElWidget(QDialog, form_class_1):
         
         df_col = df_w.columns.to_list()
         try:
-            kind_of_welfare = list(df_w['장애종류'].unique())
+            kind_of_welfare = list(df_w['할인종류'].unique())
         except:
-            QMessageBox.about(self, "경고", "'장애종류' 키값이 없습니다. 파일을 확인하세요")
+            QMessageBox.about(self, "경고", "'할인종류' 키값이 없습니다. 파일을 확인하세요")
             return
         new = ['파일 항목','']+df_col +['','할인 종류','']+kind_of_welfare
 
