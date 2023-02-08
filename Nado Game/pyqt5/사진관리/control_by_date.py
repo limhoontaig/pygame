@@ -16,9 +16,9 @@ from datetime import datetime
 from PIL import Image
 from PIL.ExifTags import TAGS
 
-target_folder = 'C:\\source\\pygame\\Nado Game\\pyqt5\\사진관리\\data\\'
-img_folder = 'C:\\source\\pygame\\Nado Game\\pyqt5\\사진관리\\img_result\\'
-video_folder = 'C:\\source\\pygame\\Nado Game\\pyqt5\\사진관리\\video_result\\'
+target_folder = 'E:\\source\\pygame\\Nado Game\\pyqt5\\사진관리\\data\\'
+img_folder = 'E:\\source\\pygame\\Nado Game\\pyqt5\\사진관리\\img_result\\'
+video_folder = 'E:\\source\\pygame\\Nado Game\\pyqt5\\사진관리\\video_result\\'
 
 folder_list = os.listdir(target_folder)
 
