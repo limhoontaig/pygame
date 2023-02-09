@@ -1,10 +1,13 @@
 import sys
 import os
+import pathlib
 import pandas as pd
 from PyQt5.QtWidgets import *
 from PyQt5.QtCore import pyqtSlot, QObject, pyqtSignal
 from PyQt5 import uic
 from datetime import datetime
+import re
+import time
 
 def resource_path(relative_path):
     base_path = getattr(sys, "_MAIPASS", os.path.dirname(os.path.abspath(__file__)))
@@ -41,51 +44,69 @@ class ElWindow(QMainWindow, form_class):
         self.pushButton_2.clicked.connect(self.add_file)
         self.pushButton_3.clicked.connect(self.copy_start)
         self.pushButton_4.clicked.connect(self.move_start)
+        self.lineedit = QLineEdit(self)
+        self.lineedit.textChanged.connect(self.list_files)
+        self.listwidget = QListWidget(self)
+        self.listwidget.setAlternatingRowColors(True)
 
     @pyqtSlot()
+
+    def list_files(self):
+        root_dir = self.lineedit.text()
+        allow_exts = ['.jpg', '.jpeg', '.png', '.mov', '.mp4']
+        i = 0
+        # files = os.walk(root_dir)
+        # print (files)
+        temp_item = QListWidgetItem()
+        for path, subdirs, files in os.walk(root_dir):
+            for name in files:
+                f = pathlib.Path(path, name)
+                file = f
+                i += 1
+                
+                checker = re.compile(r'(19|20\d\d)[-_ ]?(0[1-9]|1[012])[-_ ]?(0[1-9]|[12][0-9]|3[01])')  
+                m = checker.search(name)
+                
+                if m :
+                    # print (m.groups())
+                    print (m.group(1)+"_"+m.group(2)+"_"+m.group(3))
+                    temp_item.setText(file)
+                    self.listwidget.addItem(temp_item)
+                else:
+                
+                    c_time = os.path.getctime(file)
+                    c_date = datetime.datetime.fromtimestamp(c_time)
+
+                    m_time = os.path.getmtime(file)
+                    m_date = datetime.datetime.fromtimestamp(m_time)
+
+                    a_time = os.path.getatime(file)
+                    a_date = datetime.datetime.fromtimestamp(a_time)
+
+                    min_time = min(c_time, m_time, a_time)
+                    min_date = datetime.datetime.fromtimestamp(min_time)
+
     def add_file(self):
 
         sname = self.sender().text()
 
         if sname == '원본 폴더':
             init_dir = self.LE[0]
-            fname = QFileDialog.getExistingDirectory(self, '엑셀 데이타 파일을 선택하세요', init_dir)
+            fname = QFileDialog.getExistingDirectory(self, '원본 사진 파일이 있는 디렉토리를 선택하세요', init_dir)
             if len(fname) != 0:
                 self.lineEdit.setText(fname)
             else:
                 self.lineEdit.setText(LE[0])
 
-        elif sname == '할인종류':
+        else :
+            # sname == '정리할 폴더':
             init_dir = self.LE[1]
-            fname = QFileDialog.getOpenFileName(self, '엑셀 데이타 파일을 선택하세요', init_dir, 'All Files (*) :: Excel (*.xls *.xlsx)')
+            fname = QFileDialog.getExistingDirectory(self, '사진 파일을 정리해 놓을 디렉토리를 선택하세요', init_dir)
             if len(fname[0]) != 0:
-                self.lineEdit_2.setText(fname[0])
+                self.lineEdit_2.setText(fname)
             else:
                 self.lineEdit_2.setText(LE[1])
         
-        elif sname == 'Code Table':
-            init_dir = self.LE[4]
-            fname = QFileDialog.getOpenFileName(self, '엑셀 데이타 파일을 선택하세요', init_dir, 'All Files (*) :: Excel (*.xls *.xlsx)')
-            if len(fname[0]) != 0:
-                self.lineEdit_2.setText(fname[0])
-            else:
-                self.lineEdit_2.setText(LE[1])
-
-        elif sname == 'Template':
-            init_dir = self.LE[2]
-            fname = QFileDialog.getOpenFileName(self, '엑셀 데이타 파일을 선택하세요', init_dir, 'All Files (*) :: Excel (*.xls *.xlsx)')
-            if len(fname[0]) != 0:
-                self.lineEdit_3.setText(fname[0]) 
-            else: 
-                self.lineEdit_3.setText(LE[2])
-        
-        else:
-            init_dir = self.LE[3]
-            fname = QFileDialog.getExistingDirectory(self, '저장 Direttory를 선택하새요', init_dir)
-            if len(fname) != 0:
-                self.lineEdit_4.setText(fname)
-            else:
-                self.lineEdit_4.setText(LE[3])
 
     # 계산 시작
     def copy_start(self):

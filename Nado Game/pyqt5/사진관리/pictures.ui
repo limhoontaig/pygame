@@ -116,6 +116,21 @@
      <property name="insertPolicy">
       <enum>QComboBox::InsertAlphabetically</enum>
      </property>
+     <item>
+      <property name="text">
+       <string>일별로 정리</string>
+      </property>
+     </item>
+     <item>
+      <property name="text">
+       <string>년/월/일별로 정리</string>
+      </property>
+     </item>
+     <item>
+      <property name="text">
+       <string>년/월별로 정리</string>
+      </property>
+     </item>
     </widget>
     <widget class="QComboBox" name="comboBox_2">
      <property name="geometry">
@@ -126,6 +141,36 @@
        <height>31</height>
       </rect>
      </property>
+     <item>
+      <property name="text">
+       <string>2023년 02월 08일</string>
+      </property>
+     </item>
+     <item>
+      <property name="text">
+       <string>2023_02_08</string>
+      </property>
+     </item>
+     <item>
+      <property name="text">
+       <string>2023-02-08</string>
+      </property>
+     </item>
+     <item>
+      <property name="text">
+       <string>2023.02.08</string>
+      </property>
+     </item>
+     <item>
+      <property name="text">
+       <string>20230208</string>
+      </property>
+     </item>
+     <item>
+      <property name="text">
+       <string>2023 02 08</string>
+      </property>
+     </item>
     </widget>
     <widget class="QLineEdit" name="lineEdit_2">
      <property name="geometry">
