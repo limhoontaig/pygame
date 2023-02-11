@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>682</width>
+    <width>670</width>
     <height>482</height>
    </rect>
   </property>
@@ -32,16 +32,6 @@
     <attribute name="title">
      <string>날짜별 정리</string>
     </attribute>
-    <widget class="QListView" name="listView">
-     <property name="geometry">
-      <rect>
-       <x>10</x>
-       <y>170</y>
-       <width>641</width>
-       <height>81</height>
-      </rect>
-     </property>
-    </widget>
     <widget class="QLineEdit" name="lineEdit">
      <property name="geometry">
       <rect>
@@ -75,7 +65,7 @@
       </rect>
      </property>
      <property name="text">
-      <string>정리할 폴더</string>
+      <string>목적 폴더</string>
      </property>
     </widget>
     <widget class="QPushButton" name="pushButton_3">
@@ -118,17 +108,17 @@
      </property>
      <item>
       <property name="text">
-       <string>일별로 정리</string>
-      </property>
-     </item>
-     <item>
-      <property name="text">
        <string>년/월/일별로 정리</string>
       </property>
      </item>
      <item>
       <property name="text">
        <string>년/월별로 정리</string>
+      </property>
+     </item>
+     <item>
+      <property name="text">
+       <string>년별로 정리</string>
       </property>
      </item>
     </widget>
@@ -143,7 +133,7 @@
      </property>
      <item>
       <property name="text">
-       <string>2023년 02월 08일</string>
+       <string>2023-02-08</string>
       </property>
      </item>
      <item>
@@ -153,17 +143,17 @@
      </item>
      <item>
       <property name="text">
-       <string>2023-02-08</string>
+       <string>20230208</string>
+      </property>
+     </item>
+     <item>
+      <property name="text">
+       <string>2023년02월08일</string>
       </property>
      </item>
      <item>
       <property name="text">
        <string>2023.02.08</string>
-      </property>
-     </item>
-     <item>
-      <property name="text">
-       <string>20230208</string>
       </property>
      </item>
      <item>
@@ -192,7 +182,7 @@
       </rect>
      </property>
      <property name="text">
-      <string>하위폴더 포함</string>
+      <string>하위폴더 불포함</string>
      </property>
     </widget>
     <widget class="QCheckBox" name="checkBox_2">
@@ -222,9 +212,9 @@
      <property name="geometry">
       <rect>
        <x>10</x>
-       <y>260</y>
-       <width>641</width>
-       <height>151</height>
+       <y>170</y>
+       <width>631</width>
+       <height>231</height>
       </rect>
      </property>
     </widget>

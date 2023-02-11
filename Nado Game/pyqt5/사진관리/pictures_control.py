@@ -6,8 +6,11 @@ from PyQt5.QtWidgets import *
 from PyQt5.QtCore import pyqtSlot, QObject, pyqtSignal
 from PyQt5 import uic
 from datetime import datetime
+from datetime import date
 import re
 import time
+import shutil
+
 
 def resource_path(relative_path):
     base_path = getattr(sys, "_MAIPASS", os.path.dirname(os.path.abspath(__file__)))
@@ -24,8 +27,8 @@ yyyymmdd = now.strftime("%Y")+now.strftime("%m")+'월'+ now.strftime("%D")+'일'
 yyyy = now.strftime("%Y")
 
 LE =  [
-    'E:/사진',
-    'E:/사진정리'
+    'c:/사진',
+    'c:/사진정리'
     ]
 
 
@@ -44,52 +47,146 @@ class ElWindow(QMainWindow, form_class):
         self.pushButton_2.clicked.connect(self.add_file)
         self.pushButton_3.clicked.connect(self.copy_start)
         self.pushButton_4.clicked.connect(self.move_start)
-        self.lineedit = QLineEdit(self)
-        self.lineedit.textChanged.connect(self.list_files)
-        self.listwidget = QListWidget(self)
-        self.listwidget.setAlternatingRowColors(True)
+        # self.lineEdit = QLineEdit(self)
+        self.lineEdit.textChanged.connect(self.list_files)
+        # self.listwidget = QListWidget(self)
+        # self.listwidget.setAlternatingRowColors(True)
 
     @pyqtSlot()
 
-    def list_files(self):
-        root_dir = self.lineedit.text()
-        allow_exts = ['.jpg', '.jpeg', '.png', '.mov', '.mp4']
-        i = 0
-        # files = os.walk(root_dir)
-        # print (files)
-        temp_item = QListWidgetItem()
-        for path, subdirs, files in os.walk(root_dir):
-            for name in files:
-                f = pathlib.Path(path, name)
-                file = f
-                i += 1
-                
-                checker = re.compile(r'(19|20\d\d)[-_ ]?(0[1-9]|1[012])[-_ ]?(0[1-9]|[12][0-9]|3[01])')  
-                m = checker.search(name)
-                
-                if m :
-                    # print (m.groups())
-                    print (m.group(1)+"_"+m.group(2)+"_"+m.group(3))
-                    temp_item.setText(file)
-                    self.listwidget.addItem(temp_item)
+    def filesList(self):
+        root_dir = self.lineEdit.text()
+        return os.walk(root_dir)
+
+    def delimiter_select(self):
+        format = self.comboBox_2.currentText()
+
+        if format.find('-') > 0:
+            delimiter = '-'
+            return delimiter
+        elif format.find('_') > 0:
+            delimiter = '_'
+            return delimiter
+        elif format.find('.') > 0:
+            delimiter = '.'
+            return delimiter
+        elif format.find('년') > 0:
+            delimiter = ['년','월','일']
+            return delimiter
+        elif format.find(' ') > 0:
+            delimiter = ' '
+            return delimiter
+        else :
+            delimiter = ''
+            return delimiter
+
+    def suffixVerify(self, path, f):
+        allow_exts = ['.jpg', '.jpeg', '.png', '.gif', '.avi','.mov', '.mp4']
+        # f = pathlib.Path(path, name)  # 원본 파일
+        src = pathlib.Path(path, f)
+        if src.suffix.lower() in allow_exts:
+            return f
+        else:
+            return ""
+
+    def estimateDateFromFileName(self, fname):
+        folderName = []
+        l = self.delimiter_select() # delimiter
+        for path, subdirs, files in fname:
+            for file in files:
+                f = self.suffixVerify(path, file)
+                if f == "":
+                    pass
                 else:
-                
-                    c_time = os.path.getctime(file)
-                    c_date = datetime.datetime.fromtimestamp(c_time)
+                    # 파일 이름에 날짜 형식이 들어가 있는지 검사하여 디렉토리 생성
+                    checker = re.compile(r'(19|20\d\d)[-_ ]?(0[1-9]|1[012])[-_ ]?(0[1-9]|[12][0-9]|3[01])')  
+                    m = checker.search(f)
 
-                    m_time = os.path.getmtime(file)
-                    m_date = datetime.datetime.fromtimestamp(m_time)
+                    if m : # delimiter 종류에 따른 디렉토리 생성 
+                        if l[0] == '년':
+                            folderName.append([path, m.group(1)+l[0], m.group(1)+l[0]+m.group(2)+l[1], m.group(1)+l[0]+m.group(2)+l[1]+m.group(3)+l[2], f])
+                        else :
+                            folderName.append([path, m.group(1), m.group(1)+l+m.group(2), m.group(1)+l+m.group(2)+l+m.group(3), f])
+                    else: # 파일 이름에 날짜가 없을 경우 파일 생성 날짜를 유추하여 파일 디렉토리 생성
+                        filename = os.path.join(path, f)
+                        # print (filename)
+                        c_time = os.path.getctime(filename)
+                        m_time = os.path.getmtime(filename)
+                        a_time = os.path.getatime(filename)
+                        min_time = min(c_time, m_time, a_time)
+                        dt = datetime.fromtimestamp(min_time)
+                        if l[0] == '년':
+                            y = dt.strftime("%Y"+l[0])
+                            ym = dt.strftime("%Y"+l[0]+"%m"+l[1])
+                            ymd = dt.strftime("%Y"+l[0]+"%m"+l[1]+"%d"+l[2])
+                        else:
+                            y = dt.strftime("%Y")
+                            ym = dt.strftime("%Y"+l+"%m")
+                            ymd = dt.strftime("%Y"+l+"%m"+l+"%d")
+                        folderName.append([path, y, ym, ymd, f])
+        return folderName
 
-                    a_time = os.path.getatime(file)
-                    a_date = datetime.datetime.fromtimestamp(a_time)
+    def copyFile(self, folderName):
+        for folder in folderName:
+            target_folder = self.lineEdit_2.text()
+            f = pathlib.Path(folder[0], folder[4])
+            folder_tree = self.folder_tree()
+            if folder_tree == 'ymd':
+                t = pathlib.Path(target_folder,folder[1],folder[2], folder[3])
+            elif folder_tree == 'ym':
+                t = pathlib.Path(target_folder,folder[1],folder[2])
+            else:
+                t = pathlib.Path(target_folder,folder[1])
 
-                    min_time = min(c_time, m_time, a_time)
-                    min_date = datetime.datetime.fromtimestamp(min_time)
+            # 분류될 경로 생성
+            t.mkdir(parents=True, exist_ok=True) # 파일 경로에 있는 모든 폴더를 생성함. 있으면 놔둠
+            shutil.copy2(f, t) # 파일 복사 (파일 개정 시간 등 포함하여 복사를 위해 copy2 사용)
+
+    def moveFile(self, folderName):
+        for folder in folderName:
+            target_folder = self.lineEdit_2.text()
+            f = pathlib.Path(folder[0], folder[4]) # source file 경로 및 이름
+            folder_tree = self.folder_tree()
+            if folder_tree == 'ymd':
+                t = pathlib.Path(target_folder,folder[1],folder[2], folder[3])
+            elif folder_tree == 'ym':
+                t = pathlib.Path(target_folder,folder[1],folder[2])
+            else:
+                t = pathlib.Path(target_folder,folder[1])
+            t_file = pathlib.Path(t, folder[4]) # target file 경로 및 이름 
+            # 분류될 경로 생성
+            t.mkdir(parents=True, exist_ok=True) # 파일 경로에 있는 모든 폴더를 생성함. 있으면 놔둠
+            shutil.move(f, t_file) # 파일 이동 후 원본 삭제
+
+    def folder_tree(self):
+        folder_tree = self.comboBox.currentText()
+        # print(folder_tree)
+
+        if folder_tree.find('년/월/일별로 정리') >= 0:
+            folder_tree_type = 'ymd'
+            return folder_tree_type
+        elif folder_tree.find('년/월별로 정리') >= 0:
+            folder_tree_type = 'ym'
+            return folder_tree_type
+        else:
+            folder_tree_type = 'y'
+            return folder_tree_type
+
+    def copy_start(self):
+        fl = self.filesList()
+        folderName = self.estimateDateFromFileName(fl)
+        self.copyFile(folderName)
+
+    def move_start(self):
+        fl = self.filesList()
+        #fl = self.suffixVerify(flist)
+        folderName = self.estimateDateFromFileName(fl)
+        self.moveFile(folderName)
+
+
 
     def add_file(self):
-
         sname = self.sender().text()
-
         if sname == '원본 폴더':
             init_dir = self.LE[0]
             fname = QFileDialog.getExistingDirectory(self, '원본 사진 파일이 있는 디렉토리를 선택하세요', init_dir)
@@ -97,7 +194,6 @@ class ElWindow(QMainWindow, form_class):
                 self.lineEdit.setText(fname)
             else:
                 self.lineEdit.setText(LE[0])
-
         else :
             # sname == '정리할 폴더':
             init_dir = self.LE[1]
@@ -106,31 +202,21 @@ class ElWindow(QMainWindow, form_class):
                 self.lineEdit_2.setText(fname)
             else:
                 self.lineEdit_2.setText(LE[1])
-        
 
-    # 계산 시작
-    def copy_start(self):
-        # 각 옵션들 값을 확인
-        f1 = self.lineEdit.text()
-        f2 = self.lineEdit_2.text()
-        
-        # 파일 목록 확인
-        if '.xls' not in f1 or f1 == 0:
-            QMessageBox.about(self, "경고", "한전 복지감면 파일을 추가하세요")
-            return
-        
-        if '.xls' not in f2 or f2 == 0:
-            QMessageBox.about(self, "경고", "한전 감면 종류 파일을 추가하세요")
-            return
+    def list_files(self):
+        fl = self.filesList()
+        self.listWidget.clear()
+        for path, subdir, file in fl:
+            for f in file:
+                self.addListWidget(path, f)
 
-    def move_start(self):
-        pass
+    def addListWidget(self, path, f):
+        #print(path, f)
+        self.addItemText = path + " " + f
+        #print (self.addItemText)
+        self.listWidget.addItem(self.addItemText)
 
-        
-        return
-
-
-
+            
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
