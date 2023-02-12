@@ -56,6 +56,8 @@ class ElWindow(QMainWindow, form_class):
 
     def filesList(self):
         root_dir = self.lineEdit.text()
+        if self.checkBox.isChecked() == True:
+            os.
         return os.walk(root_dir)
 
     def delimiter_select(self):
@@ -89,6 +91,26 @@ class ElWindow(QMainWindow, form_class):
         else:
             return ""
 
+    def get_remark(self, path):
+        sub_dir = path.split('/')
+        sub = sub_dir[-1]
+        length = len(sub)
+        checker1 = re.compile(r'^(19|20\d\d)[-_ ]?(0[1-9]|1[012])[-_ ]?(0[1-9]|[12][0-9]|3[01])([\s])') 
+        # checker1 = re.compile(r'^(\d){8}([\s])')
+        checker = re.compile(r'^(\d\d)[-_ ]?(0[1-9]|1[012])[-_ ]?(0[1-9]|[12][0-9]|3[01])([\s])')
+        # checker1 = re.compile(r'^(\d){6}([\s])') 
+        m = checker1.search(sub)
+        n = checker.search(sub)
+        if n and length > 7:
+            remark = ' ' + sub[7:]
+        elif m and length > 9:
+            remark = ' ' + sub[9:]
+        else:
+            remark = ''
+        
+
+        return remark
+
     def estimateDateFromFileName(self, fname):
         folderName = []
         l = self.delimiter_select() # delimiter
@@ -98,15 +120,21 @@ class ElWindow(QMainWindow, form_class):
                 if f == "":
                     pass
                 else:
+                    # 기존 폴더에 설명이 있을 경우 가져옴
+                    remark = self.get_remark(path)
+                    r_len = len(remark)
+                    if r_len == 0 and self.checkBox_2.isChecked() == True:
+                        remark = ' ' + self.lineEdit_3.text()
+                        print (remark)
                     # 파일 이름에 날짜 형식이 들어가 있는지 검사하여 디렉토리 생성
                     checker = re.compile(r'(19|20\d\d)[-_ ]?(0[1-9]|1[012])[-_ ]?(0[1-9]|[12][0-9]|3[01])')  
                     m = checker.search(f)
 
                     if m : # delimiter 종류에 따른 디렉토리 생성 
                         if l[0] == '년':
-                            folderName.append([path, m.group(1)+l[0], m.group(1)+l[0]+m.group(2)+l[1], m.group(1)+l[0]+m.group(2)+l[1]+m.group(3)+l[2], f])
+                            folderName.append([path, m.group(1)+l[0], m.group(1)+l[0]+m.group(2)+l[1], m.group(1)+l[0]+m.group(2)+l[1]+m.group(3)+l[2]+remark, f])
                         else :
-                            folderName.append([path, m.group(1), m.group(1)+l+m.group(2), m.group(1)+l+m.group(2)+l+m.group(3), f])
+                            folderName.append([path, m.group(1), m.group(1)+l+m.group(2), m.group(1)+l+m.group(2)+l+m.group(3)+remark, f])
                     else: # 파일 이름에 날짜가 없을 경우 파일 생성 날짜를 유추하여 파일 디렉토리 생성
                         filename = os.path.join(path, f)
                         # print (filename)
@@ -118,11 +146,11 @@ class ElWindow(QMainWindow, form_class):
                         if l[0] == '년':
                             y = dt.strftime("%Y"+l[0])
                             ym = dt.strftime("%Y"+l[0]+"%m"+l[1])
-                            ymd = dt.strftime("%Y"+l[0]+"%m"+l[1]+"%d"+l[2])
+                            ymd = dt.strftime("%Y"+l[0]+"%m"+l[1]+"%d"+l[2]+remark)
                         else:
                             y = dt.strftime("%Y")
                             ym = dt.strftime("%Y"+l+"%m")
-                            ymd = dt.strftime("%Y"+l+"%m"+l+"%d")
+                            ymd = dt.strftime("%Y"+l+"%m"+l+"%d"+remark)
                         folderName.append([path, y, ym, ymd, f])
         return folderName
 
@@ -140,7 +168,7 @@ class ElWindow(QMainWindow, form_class):
 
             # 분류될 경로 생성
             t.mkdir(parents=True, exist_ok=True) # 파일 경로에 있는 모든 폴더를 생성함. 있으면 놔둠
-            shutil.copy2(f, t) # 파일 복사 (파일 개정 시간 등 포함하여 복사를 위해 copy2 사용)
+            #shutil.copy2(f, t) # 파일 복사 (파일 개정 시간 등 포함하여 복사를 위해 copy2 사용)
 
     def moveFile(self, folderName):
         for folder in folderName:
@@ -156,7 +184,7 @@ class ElWindow(QMainWindow, form_class):
             t_file = pathlib.Path(t, folder[4]) # target file 경로 및 이름 
             # 분류될 경로 생성
             t.mkdir(parents=True, exist_ok=True) # 파일 경로에 있는 모든 폴더를 생성함. 있으면 놔둠
-            shutil.move(f, t_file) # 파일 이동 후 원본 삭제
+            #shutil.move(f, t_file) # 파일 이동 후 원본 삭제
 
     def folder_tree(self):
         folder_tree = self.comboBox.currentText()
@@ -176,12 +204,19 @@ class ElWindow(QMainWindow, form_class):
         fl = self.filesList()
         folderName = self.estimateDateFromFileName(fl)
         self.copyFile(folderName)
+        QMessageBox.about(self, "복사 완료", "파일 복사가 완료 되었습니다")
+        self.listWidget.clear()
+        return
+
 
     def move_start(self):
         fl = self.filesList()
         #fl = self.suffixVerify(flist)
         folderName = self.estimateDateFromFileName(fl)
         self.moveFile(folderName)
+        QMessageBox.about(self, "이동 완료", "파일 이동이 완료 되었습니다")
+        self.listWidget.clear()
+        return
 
 
 
@@ -206,6 +241,7 @@ class ElWindow(QMainWindow, form_class):
     def list_files(self):
         fl = self.filesList()
         self.listWidget.clear()
+        self.listWidget.setAlternatingRowColors(True)
         for path, subdir, file in fl:
             for f in file:
                 self.addListWidget(path, f)
