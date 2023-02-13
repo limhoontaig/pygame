@@ -8,8 +8,12 @@ from PyQt5 import uic
 from datetime import datetime
 from datetime import date
 import re
+from time import time
 import time
 import shutil
+from PIL import Image
+from PIL.ExifTags import TAGS
+
 
 
 def resource_path(relative_path):
@@ -27,8 +31,8 @@ yyyymmdd = now.strftime("%Y")+now.strftime("%m")+'월'+ now.strftime("%D")+'일'
 yyyy = now.strftime("%Y")
 
 LE =  [
-    'c:/사진',
-    'c:/사진정리'
+    'e:/사진',
+    'e:/사진정리'
     ]
 
 
@@ -56,8 +60,8 @@ class ElWindow(QMainWindow, form_class):
 
     def filesList(self):
         root_dir = self.lineEdit.text()
-        if self.checkBox.isChecked() == True:
-            os.
+        #if self.checkBox.isChecked() == True:
+        #    os.
         return os.walk(root_dir)
 
     def delimiter_select(self):
@@ -92,7 +96,12 @@ class ElWindow(QMainWindow, form_class):
             return ""
 
     def get_remark(self, path):
-        sub_dir = path.split('/')
+        if path.find('/') > 0:
+            separator = '/'
+        if path.find('\\') > 0:
+            separator = '\\'
+
+        sub_dir = path.split(separator)
         sub = sub_dir[-1]
         length = len(sub)
         checker1 = re.compile(r'^(19|20\d\d)[-_ ]?(0[1-9]|1[012])[-_ ]?(0[1-9]|[12][0-9]|3[01])([\s])') 
@@ -107,9 +116,29 @@ class ElWindow(QMainWindow, form_class):
             remark = ' ' + sub[9:]
         else:
             remark = ''
+        print(remark)
         
 
         return remark
+
+    def takePictureTime(self, path, f):
+        filename = pathlib.Path(path, f)
+        image = Image.open(filename)
+        info = image._getexif()
+        image.close()
+
+        
+        # 새로운 딕셔너리 생성
+
+        taglabel = {}
+        for tag, value in info.items():
+            decoded = TAGS.get(tag, tag)
+            taglabel[decoded] = value
+        s = taglabel['DateTimeOriginal']
+        timestamp = time.mktime(datetime.strptime(s, '%Y-%m-%d %H:%M:%S').timetuple())
+            
+        return timestamp
+
 
     def estimateDateFromFileName(self, fname):
         folderName = []
@@ -122,10 +151,10 @@ class ElWindow(QMainWindow, form_class):
                 else:
                     # 기존 폴더에 설명이 있을 경우 가져옴
                     remark = self.get_remark(path)
-                    r_len = len(remark)
-                    if r_len == 0 and self.checkBox_2.isChecked() == True:
+                    # r_len = len(remark)
+                    '''if r_len == 0 and self.checkBox_2.isChecked() == True:
                         remark = ' ' + self.lineEdit_3.text()
-                        print (remark)
+                        print (remark)'''
                     # 파일 이름에 날짜 형식이 들어가 있는지 검사하여 디렉토리 생성
                     checker = re.compile(r'(19|20\d\d)[-_ ]?(0[1-9]|1[012])[-_ ]?(0[1-9]|[12][0-9]|3[01])')  
                     m = checker.search(f)
@@ -137,11 +166,13 @@ class ElWindow(QMainWindow, form_class):
                             folderName.append([path, m.group(1), m.group(1)+l+m.group(2), m.group(1)+l+m.group(2)+l+m.group(3)+remark, f])
                     else: # 파일 이름에 날짜가 없을 경우 파일 생성 날짜를 유추하여 파일 디렉토리 생성
                         filename = os.path.join(path, f)
+                        # 사진찍은 날짜 가져오기
+                        t_time = self.takePictureTime(path, f)
                         # print (filename)
                         c_time = os.path.getctime(filename)
                         m_time = os.path.getmtime(filename)
                         a_time = os.path.getatime(filename)
-                        min_time = min(c_time, m_time, a_time)
+                        min_time = min(t_time, c_time, m_time, a_time)
                         dt = datetime.fromtimestamp(min_time)
                         if l[0] == '년':
                             y = dt.strftime("%Y"+l[0])
@@ -168,7 +199,7 @@ class ElWindow(QMainWindow, form_class):
 
             # 분류될 경로 생성
             t.mkdir(parents=True, exist_ok=True) # 파일 경로에 있는 모든 폴더를 생성함. 있으면 놔둠
-            #shutil.copy2(f, t) # 파일 복사 (파일 개정 시간 등 포함하여 복사를 위해 copy2 사용)
+            shutil.copy2(f, t) # 파일 복사 (파일 개정 시간 등 포함하여 복사를 위해 copy2 사용)
 
     def moveFile(self, folderName):
         for folder in folderName:

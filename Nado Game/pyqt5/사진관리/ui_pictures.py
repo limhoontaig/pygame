@@ -16,23 +16,20 @@ from PySide6.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
     QImage, QKeySequence, QLinearGradient, QPainter,
     QPalette, QPixmap, QRadialGradient, QTransform)
 from PySide6.QtWidgets import (QApplication, QCheckBox, QComboBox, QLabel,
-    QLineEdit, QListView, QPushButton, QSizePolicy,
-    QTabWidget, QTextEdit, QWidget)
+    QLineEdit, QListWidget, QListWidgetItem, QPushButton,
+    QSizePolicy, QTabWidget, QTextEdit, QWidget)
 
 class Ui_Form(object):
     def setupUi(self, Form):
         if not Form.objectName():
             Form.setObjectName(u"Form")
-        Form.resize(682, 482)
+        Form.resize(670, 482)
         self.tabWidget = QTabWidget(Form)
         self.tabWidget.setObjectName(u"tabWidget")
         self.tabWidget.setGeometry(QRect(0, 10, 671, 431))
         self.tabWidget.setTabShape(QTabWidget.Triangular)
         self.tab = QWidget()
         self.tab.setObjectName(u"tab")
-        self.listView = QListView(self.tab)
-        self.listView.setObjectName(u"listView")
-        self.listView.setGeometry(QRect(10, 170, 641, 241))
         self.lineEdit = QLineEdit(self.tab)
         self.lineEdit.setObjectName(u"lineEdit")
         self.lineEdit.setGeometry(QRect(10, 10, 541, 31))
@@ -76,6 +73,9 @@ class Ui_Form(object):
         self.lineEdit_3 = QLineEdit(self.tab)
         self.lineEdit_3.setObjectName(u"lineEdit_3")
         self.lineEdit_3.setGeometry(QRect(270, 130, 381, 31))
+        self.listWidget = QListWidget(self.tab)
+        self.listWidget.setObjectName(u"listWidget")
+        self.listWidget.setGeometry(QRect(10, 170, 631, 231))
         self.tabWidget.addTab(self.tab, "")
         self.tab_2 = QWidget()
         self.tab_2.setObjectName(u"tab_2")
@@ -98,21 +98,21 @@ class Ui_Form(object):
     def retranslateUi(self, Form):
         Form.setWindowTitle(QCoreApplication.translate("Form", u"Form", None))
         self.pushButton.setText(QCoreApplication.translate("Form", u"\uc6d0\ubcf8 \ud3f4\ub354", None))
-        self.pushButton_2.setText(QCoreApplication.translate("Form", u"\uc815\ub9ac\ud560 \ud3f4\ub354", None))
+        self.pushButton_2.setText(QCoreApplication.translate("Form", u"\ubaa9\uc801 \ud3f4\ub354", None))
         self.pushButton_3.setText(QCoreApplication.translate("Form", u"\ubcf5    \uc0ac", None))
         self.pushButton_4.setText(QCoreApplication.translate("Form", u"\uc774   \ub3d9", None))
-        self.comboBox.setItemText(0, QCoreApplication.translate("Form", u"\uc77c\ubcc4\ub85c \uc815\ub9ac", None))
-        self.comboBox.setItemText(1, QCoreApplication.translate("Form", u"\ub144/\uc6d4/\uc77c\ubcc4\ub85c \uc815\ub9ac", None))
-        self.comboBox.setItemText(2, QCoreApplication.translate("Form", u"\ub144/\uc6d4\ubcc4\ub85c \uc815\ub9ac", None))
+        self.comboBox.setItemText(0, QCoreApplication.translate("Form", u"\ub144/\uc6d4/\uc77c\ubcc4\ub85c \uc815\ub9ac", None))
+        self.comboBox.setItemText(1, QCoreApplication.translate("Form", u"\ub144/\uc6d4\ubcc4\ub85c \uc815\ub9ac", None))
+        self.comboBox.setItemText(2, QCoreApplication.translate("Form", u"\ub144\ubcc4\ub85c \uc815\ub9ac", None))
 
-        self.comboBox_2.setItemText(0, QCoreApplication.translate("Form", u"2023\ub144 02\uc6d4 08\uc77c", None))
+        self.comboBox_2.setItemText(0, QCoreApplication.translate("Form", u"2023-02-08", None))
         self.comboBox_2.setItemText(1, QCoreApplication.translate("Form", u"2023_02_08", None))
-        self.comboBox_2.setItemText(2, QCoreApplication.translate("Form", u"2023-02-08", None))
-        self.comboBox_2.setItemText(3, QCoreApplication.translate("Form", u"2023.02.08", None))
-        self.comboBox_2.setItemText(4, QCoreApplication.translate("Form", u"20230208", None))
+        self.comboBox_2.setItemText(2, QCoreApplication.translate("Form", u"20230208", None))
+        self.comboBox_2.setItemText(3, QCoreApplication.translate("Form", u"2023\ub14402\uc6d408\uc77c", None))
+        self.comboBox_2.setItemText(4, QCoreApplication.translate("Form", u"2023.02.08", None))
         self.comboBox_2.setItemText(5, QCoreApplication.translate("Form", u"2023 02 08", None))
 
-        self.checkBox.setText(QCoreApplication.translate("Form", u"\ud558\uc704\ud3f4\ub354 \ud3ec\ud568", None))
+        self.checkBox.setText(QCoreApplication.translate("Form", u"\ud558\uc704\ud3f4\ub354 \ubd88\ud3ec\ud568", None))
         self.checkBox_2.setText(QCoreApplication.translate("Form", u"\ud3f4\ub354 \uc124\uba85 \ucd94\uac00", None))
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab), QCoreApplication.translate("Form", u"\ub0a0\uc9dc\ubcc4 \uc815\ub9ac", None))
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab_2), QCoreApplication.translate("Form", u"About .....", None))
