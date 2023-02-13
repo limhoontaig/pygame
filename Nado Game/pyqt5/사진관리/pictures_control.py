@@ -31,8 +31,8 @@ yyyymmdd = now.strftime("%Y")+now.strftime("%m")+'월'+ now.strftime("%D")+'일'
 yyyy = now.strftime("%Y")
 
 LE =  [
-    'e:/사진',
-    'e:/사진정리'
+    'c:/사진',
+    'c:/사진정리'
     ]
 
 
@@ -123,19 +123,22 @@ class ElWindow(QMainWindow, form_class):
 
     def takePictureTime(self, path, f):
         filename = pathlib.Path(path, f)
-        image = Image.open(filename)
-        info = image._getexif()
-        image.close()
-
+        try :
+            image = Image.open(filename)
+            info = image._getexif()
+            image.close()
+            # 새로운 딕셔너리 생성
+            taglabel = {}
+            for tag, value in info.items():
+                decoded = TAGS.get(tag, tag)
+                taglabel[decoded] = value
+            s = taglabel['DateTimeOriginal']
+            print(s)
+            timestamp = time.mktime(datetime.strptime(s, '%Y:%m:%d %H:%M:%S').timetuple())
+        except:
+            now = datetime.now()
+            timestamp = datetime.timestamp(now)
         
-        # 새로운 딕셔너리 생성
-
-        taglabel = {}
-        for tag, value in info.items():
-            decoded = TAGS.get(tag, tag)
-            taglabel[decoded] = value
-        s = taglabel['DateTimeOriginal']
-        timestamp = time.mktime(datetime.strptime(s, '%Y-%m-%d %H:%M:%S').timetuple())
             
         return timestamp
 
@@ -172,6 +175,7 @@ class ElWindow(QMainWindow, form_class):
                         c_time = os.path.getctime(filename)
                         m_time = os.path.getmtime(filename)
                         a_time = os.path.getatime(filename)
+                        print(t_time, c_time, m_time, a_time)
                         min_time = min(t_time, c_time, m_time, a_time)
                         dt = datetime.fromtimestamp(min_time)
                         if l[0] == '년':
