@@ -203,7 +203,10 @@ class ElWindow(QMainWindow, form_class):
 
             # 분류될 경로 생성
             t.mkdir(parents=True, exist_ok=True) # 파일 경로에 있는 모든 폴더를 생성함. 있으면 놔둠
-            shutil.copy2(f, t) # 파일 복사 (파일 개정 시간 등 포함하여 복사를 위해 copy2 사용)
+            if os.isfile(pathlib.Path(t, folder[4])):
+                pass
+            else:
+                shutil.copy2(f, t) # 파일 복사 (파일 개정 시간 등 포함하여 복사를 위해 copy2 사용)
 
     def moveFile(self, folderName):
         for folder in folderName:
