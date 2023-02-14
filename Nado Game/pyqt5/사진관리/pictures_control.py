@@ -146,12 +146,18 @@ class ElWindow(QMainWindow, form_class):
     def estimateDateFromFileName(self, fname):
         folderName = []
         l = self.delimiter_select() # delimiter
+        G_files = 0
+        O_files = 0
         for path, subdirs, files in fname:
             for file in files:
                 f = self.suffixVerify(path, file)
                 if f == "":
+                    O_files += 1
+                    self.lineEdit_6.setText(str(O_files))
                     pass
                 else:
+                    G_files += 1
+                    self.lineEdit_5.setText(str(G_files))
                     # 기존 폴더에 설명이 있을 경우 가져옴
                     remark = self.get_remark(path)
                     # r_len = len(remark)
@@ -190,6 +196,10 @@ class ElWindow(QMainWindow, form_class):
         return folderName
 
     def copyFile(self, folderName):
+        C_files = 0
+        E_files = 0
+        self.lineEdit_7.setText(str(C_files))
+        self.lineEdit_9.setText(str(E_files))
         for folder in folderName:
             target_folder = self.lineEdit_2.text()
             f = pathlib.Path(folder[0], folder[4])
@@ -203,10 +213,14 @@ class ElWindow(QMainWindow, form_class):
 
             # 분류될 경로 생성
             t.mkdir(parents=True, exist_ok=True) # 파일 경로에 있는 모든 폴더를 생성함. 있으면 놔둠
-            if os.isfile(pathlib.Path(t, folder[4])):
+            if os.path.isfile(pathlib.Path(t, folder[4])):
+                E_files += 1
+                self.lineEdit_9.setText(str(E_files))
                 pass
             else:
-                shutil.copy2(f, t) # 파일 복사 (파일 개정 시간 등 포함하여 복사를 위해 copy2 사용)
+                C_files += 1
+                self.lineEdit_7.setText(str(C_files))
+                shutil.copy2(f, t) # 파일 복사 (파일 개정 시간 등 포함하여 복사를 위해 copy2 사용)pass
 
     def moveFile(self, folderName):
         for folder in folderName:
@@ -243,7 +257,7 @@ class ElWindow(QMainWindow, form_class):
         folderName = self.estimateDateFromFileName(fl)
         self.copyFile(folderName)
         QMessageBox.about(self, "복사 완료", "파일 복사가 완료 되었습니다")
-        self.listWidget.clear()
+        #self.listWidget.clear()
         return
 
 
@@ -253,7 +267,7 @@ class ElWindow(QMainWindow, form_class):
         folderName = self.estimateDateFromFileName(fl)
         self.moveFile(folderName)
         QMessageBox.about(self, "이동 완료", "파일 이동이 완료 되었습니다")
-        self.listWidget.clear()
+        #self.listWidget.clear()
         return
 
 
@@ -278,11 +292,24 @@ class ElWindow(QMainWindow, form_class):
 
     def list_files(self):
         fl = self.filesList()
-        self.listWidget.clear()
-        self.listWidget.setAlternatingRowColors(True)
+        self.lineEdit_clear()
+        i = 0
         for path, subdir, file in fl:
             for f in file:
                 self.addListWidget(path, f)
+                i += 1
+        self.lineEdit_4.setText(str(i))
+    
+    def lineEdit_clear(self):
+        self.listWidget.clear()
+        self.lineEdit_4.clear()
+        self.lineEdit_5.clear()
+        self.lineEdit_6.clear()
+        self.lineEdit_7.clear()
+        self.lineEdit_8.clear()
+        self.lineEdit_9.clear()
+        self.listWidget.setAlternatingRowColors(True)
+
 
     def addListWidget(self, path, f):
         #print(path, f)
