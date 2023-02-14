@@ -116,7 +116,7 @@ class ElWindow(QMainWindow, form_class):
             remark = ' ' + sub[9:]
         else:
             remark = ''
-        print(remark)
+        # print(remark)
         
 
         return remark
@@ -133,7 +133,7 @@ class ElWindow(QMainWindow, form_class):
                 decoded = TAGS.get(tag, tag)
                 taglabel[decoded] = value
             s = taglabel['DateTimeOriginal']
-            print(s)
+            # print(s)
             timestamp = time.mktime(datetime.strptime(s, '%Y:%m:%d %H:%M:%S').timetuple())
         except:
             now = datetime.now()
@@ -175,7 +175,7 @@ class ElWindow(QMainWindow, form_class):
                         c_time = os.path.getctime(filename)
                         m_time = os.path.getmtime(filename)
                         a_time = os.path.getatime(filename)
-                        print(t_time, c_time, m_time, a_time)
+                        # (t_time, c_time, m_time, a_time)
                         min_time = min(t_time, c_time, m_time, a_time)
                         dt = datetime.fromtimestamp(min_time)
                         if l[0] == '년':

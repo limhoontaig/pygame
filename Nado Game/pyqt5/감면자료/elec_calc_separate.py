@@ -275,9 +275,14 @@ class ElWindow(QMainWindow, form_class):
     def df_create(self, f1):
         df = pd.read_excel(f1,skiprows=2)
         df.dropna(subset=['동', '호'],inplace=True)
-        con = df[df['할인종류'].str.contains('추가복지감액')].index
+        con = df[df['할인종류'].str.contains('200kWh이하감액')].index
         df.drop(con, inplace=True)
-        df_w = df[['동', '호','할인종류','할인요금']].copy()
+        con = df[df['할인종류'].str.contains('취약계층경감')].index
+        df.drop(con, inplace=True)
+        df_1 = df[['동', '호','할인종류','할인요금']].copy()
+        # 동일한 종류의 할인이 중복 되었을 때 하나로 묶어 주는 기능 추가 함
+        df_final = df_1.groupby(['동','호', '할인종류']).sum()
+        df_w = df_final.reset_index()
         return df_w
 
     def kind_calc(self, f1):
