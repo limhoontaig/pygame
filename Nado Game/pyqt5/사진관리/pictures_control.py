@@ -87,7 +87,7 @@ class ElWindow(QMainWindow, form_class):
             return delimiter
 
     def suffixVerify(self, path, f):
-        allow_exts = ['.jpg', '.jpeg', '.png', '.gif', '.avi','.mov', '.mp4']
+        allow_exts = ['.jpg', '.jpeg', '.png', '.gif', '.avi','.mov', '.mp4', '.bmp']
         # f = pathlib.Path(path, name)  # 원본 파일
         src = pathlib.Path(path, f)
         if src.suffix.lower() in allow_exts:
@@ -223,6 +223,10 @@ class ElWindow(QMainWindow, form_class):
                 shutil.copy2(f, t) # 파일 복사 (파일 개정 시간 등 포함하여 복사를 위해 copy2 사용)pass
 
     def moveFile(self, folderName):
+        E_files = 0
+        M_files = 0
+        self.lineEdit_8.setText(str(M_files))
+        self.lineEdit_9.setText(str(E_files))
         for folder in folderName:
             target_folder = self.lineEdit_2.text()
             f = pathlib.Path(folder[0], folder[4]) # source file 경로 및 이름
@@ -236,7 +240,14 @@ class ElWindow(QMainWindow, form_class):
             t_file = pathlib.Path(t, folder[4]) # target file 경로 및 이름 
             # 분류될 경로 생성
             t.mkdir(parents=True, exist_ok=True) # 파일 경로에 있는 모든 폴더를 생성함. 있으면 놔둠
-            #shutil.move(f, t_file) # 파일 이동 후 원본 삭제
+            if os.path.isfile(pathlib.Path(t_file)):
+                E_files += 1
+                self.lineEdit_9.setText(str(E_files))
+                pass
+            else:
+                M_files += 1
+                self.lineEdit_8.setText(str(M_files))
+                shutil.move(f, t_file) # 파일 이동 후 원본 삭제
 
     def folder_tree(self):
         folder_tree = self.comboBox.currentText()
@@ -252,7 +263,13 @@ class ElWindow(QMainWindow, form_class):
             folder_tree_type = 'y'
             return folder_tree_type
 
+    def count_clear(self):
+        self.lineEdit_7.clear()
+        self.lineEdit_8.clear()
+        self.lineEdit_9.clear()
+
     def copy_start(self):
+        self.count_clear()
         fl = self.filesList()
         folderName = self.estimateDateFromFileName(fl)
         self.copyFile(folderName)
@@ -262,6 +279,7 @@ class ElWindow(QMainWindow, form_class):
 
 
     def move_start(self):
+        self.count_clear()
         fl = self.filesList()
         #fl = self.suffixVerify(flist)
         folderName = self.estimateDateFromFileName(fl)
