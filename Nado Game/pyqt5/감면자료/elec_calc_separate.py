@@ -87,10 +87,12 @@ class ElWidget(QDialog, form_class_1):
             return
         df = pd.read_excel(f1,skiprows=2)#, dtype={'동':int, '호':int}) #,thousands=',')
         df_col_names = df.columns.tolist()
-        used_col_names = ['동', '호', '동호명', '가구수', '계약\n종별', '요금적용\n전력', '사용량', '기본요금', '전력량\n요금', 
-            '연료비조정\n요금', '필수사용\n공제', '복지추가\n감액', '할인\n구분', '복지할인', '요금개편\n차액', 
-            '절전할인', '자동이체\n/인터넷', '단수', '전기요금', '부가세', '전력\n기금', '전기\n바우처', '정산', '출산가구소급', 
-            '당월소계', 'TV수신료', '청구금액']
+        print(df_col_names)
+        used_col_names = ['동', '호', '동호명', '가구수', '계약\n종별', '요금적용\n전력', '사용량', '기본요금', 
+            '전력량\n요금', '기후환경\n요금', '연료비조정\n요금','필수사용\n공제', '복지추가\n감액', 
+            '할인\n구분', '복지할인', '취약계층경감', '취약계층소급', '요금개편\n차액', '절전할인', 
+            '자동이체\n/인터넷', '단수', '전기요금', '부가세', '전력\n기금', '전기\n바우처', 
+            '정산', '출산가구소급', '당월소계', 'TV수신료', '청구금액', '비 고']
 
         sub_list = list(set(df_col_names) ^ set(used_col_names))
         data = [used_col_names]
@@ -117,8 +119,10 @@ class ElWidget(QDialog, form_class_1):
             return
         new = ['파일 항목','']+df_col +['','할인 종류','']+kind_of_welfare
 
-        new_col_names = ['동', '호', '대상자명','할인종류','장애종류','장애등급','할인요금']
-        used_kind_of_welfare = ['장애인할인요금', '다자녀할인금액', '200kWh이하감액', '대가족요금', '의료기기할인금액', '기초수급할인금액', '출산가구할인금액', '기초주거교육할인', '차상위계층할인금액', '사회복지할인금액', '독립유공자할인금액']
+        new_col_names = ['동', '호', '대상자명','할인종류','장애종류','장애등급','할인요금', '비고']
+        used_kind_of_welfare = ['장애인할인요금', '취약계층경감액', '다자녀할인금액', '출산가구할인금액', 
+            '대가족요금', '의료기기할인금액', '기초수급할인금액', '200kWh이하감액', '차상위계층할인금액', 
+            '기초주거교육할인', '사회복지할인금액']
         old = ['파일 항목','']+new_col_names +['','할인 종류','']+ used_kind_of_welfare
         data = []
         data.append(old)
@@ -243,15 +247,23 @@ class ElWindow(QMainWindow, form_class):
     def welfare_calc(self, f1):
         df = pd.read_excel(f1,skiprows=2)#, dtype={'동':int, '호':int}) #,thousands=',')
         df.dropna(subset=['동', '호'],inplace=True)
-        col_sel =['동','호', '필수사용\n공제','복지추가\n감액']
+        col_sel =['동','호', '필수사용\n공제','복지추가\n감액', '취약계층경감', '취약계층소급']
+        col_sel1 =['동','호', '필수사용\n공제', '취약계층경감'] # 취약계층경감 합계
         필수사용공제 = df[col_sel[2]].sum()
         복지추가감액 = df[col_sel[3]].sum()
+        취약계층경감 = df[col_sel[4]].sum() + df[col_sel[5]].sum()
         df1= df[col_sel].copy()
+        # print(df1)
         df1['sum'] = df1[col_sel[2]] + df1[col_sel[3]]
+        df1['취약'] = df1['취약계층경감'] + df1['취약계층소급']
         df1[col_sel[2]] = df1['sum']
-        df1[col_sel[:3]] = df1[col_sel[:3]].astype('int')
-        df2 = df1[col_sel[:3]].copy()
-        return df2, 필수사용공제, 복지추가감액
+        df1[col_sel[4]] = df1['취약']
+        df1t = df1[col_sel1].copy()
+        #print(df1t)
+        df1t[col_sel1[:4]] = df1t[col_sel1[:4]].astype('int')
+        df2 = df1t[col_sel1[:4]].copy()
+        #print(df2)
+        return df2, 필수사용공제, 복지추가감액, 취약계층경감
 
     def code_dict_make(self, kind_code):
         file = self.lineEdit_15.text()
@@ -290,6 +302,7 @@ class ElWindow(QMainWindow, form_class):
         code = ['가족','복지']
         code_dict = self.code_dict_make(code)
         kind_list = [code_dict[0],code_dict[3]]
+        print(kind_list)
         kind_dict = [code_dict[2],code_dict[5]]
         df_list = []
         for i in range(len(kind_list)):
@@ -297,6 +310,7 @@ class ElWindow(QMainWindow, form_class):
             for kind, code in kind_dict[i].items():
                 df_1.loc[df_1.할인종류 == kind, '복지코드'] = code
             df_1.set_index(['동','호'],inplace=True)
+            print(df_1)
             df_list.append(df_1)
         return df_list
 
@@ -312,12 +326,22 @@ class ElWindow(QMainWindow, form_class):
         
         discount = pd.merge(df_x, df2[0], how = 'outer', on = ['동','호'])
         # discount = pd.merge(discount, subset_df_a, how = 'outer', on = ['동','호'])
+        # print(df2[0])
+        # print(discount)
 
         # 사용량 보장공제를 한전금액(필수사용공제) Data로 Update
         discount['사용량보장공제'] = discount['필수사용\n공제']
         
         # 사용량 보장공제 임시데이터 columns를 drop
         discount = discount.drop(['필수사용\n공제'],axis=1)
+
+        # 취약계층경감액를 한전금액(취약계층경감) Data로 Update
+        discount['취약계층경감금액'] = discount['취약계층경감']
+        
+        # 취약계층경감액 임시데이터 columns를 drop
+        discount = discount.drop(['취약계층경감'],axis=1)
+
+
         
         # Template df에 필수사용공제 merge
         discount = pd.merge(discount, subset_df_f, how = 'outer', on = ['동','호'])
@@ -333,8 +357,9 @@ class ElWindow(QMainWindow, form_class):
         
         total_사용량보장공제 = int(discount['사용량보장공제'].sum())
         total_대가족할인액 = int(discount['대가족할인액'].sum())
-        total_복지할인액 = int(discount['복지할인액'].sum())
-        sub_total = int(total_대가족할인액 + total_복지할인액)
+        total_복지할인액 = int(discount['복지할인액'].sum())# + discount['취약계층경감금액'].sum())
+        total_취약계층경감 = discount['취약계층경감금액'].sum()
+        sub_total = int(total_대가족할인액 + total_복지할인액 + total_취약계층경감)
         grand_total = int(sub_total + total_사용량보장공제)
         # display the result of computation
         self.lineEdit_5.setText(str(f'{total_사용량보장공제:>20,}'))
@@ -344,6 +369,7 @@ class ElWindow(QMainWindow, form_class):
         self.lineEdit_9.setText(str(f'{df2[2]:>20,}'))
         self.lineEdit_10.setText(str(f'{sub_total:>20,}'))
         self.lineEdit_11.setText(str(f'{grand_total:>20,}'))
+        self.lineEdit_12.setText(str(f'{total_취약계층경감:>20,}'))
 
         return discount
 
