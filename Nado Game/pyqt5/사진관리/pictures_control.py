@@ -31,8 +31,8 @@ yyyymmdd = now.strftime("%Y")+now.strftime("%m")+'월'+ now.strftime("%D")+'일'
 yyyy = now.strftime("%Y")
 
 LE =  [
-    'c:/사진',
-    'c:/사진정리'
+    'e:/개인 사진',
+    'd:/사진정리'
     ]
 
 
@@ -195,12 +195,24 @@ class ElWindow(QMainWindow, form_class):
                         folderName.append([path, y, ym, ymd, f])
         return folderName
 
+    def progressbarInit(self, length):
+        self.progressBar.setMinimum(0)
+        self.progressBar.setValue(0)
+        self.progressBar.setMaximum(length)
+
+    def progressbarUpdate(self, N_files):
+        self.progressBar.setValue(N_files)
+
     def copyFile(self, folderName):
         C_files = 0
         E_files = 0
+        P_files = 0
         self.lineEdit_7.setText(str(C_files))
         self.lineEdit_9.setText(str(E_files))
+        self.progressbarInit(len(folderName))
         for folder in folderName:
+            P_files += 1
+            self.progressbarUpdate(P_files)
             target_folder = self.lineEdit_2.text()
             f = pathlib.Path(folder[0], folder[4])
             folder_tree = self.folder_tree()
@@ -216,11 +228,12 @@ class ElWindow(QMainWindow, form_class):
             if os.path.isfile(pathlib.Path(t, folder[4])):
                 E_files += 1
                 self.lineEdit_9.setText(str(E_files))
-                pass
+                print(f,t, E_files)
             else:
                 C_files += 1
                 self.lineEdit_7.setText(str(C_files))
                 shutil.copy2(f, t) # 파일 복사 (파일 개정 시간 등 포함하여 복사를 위해 copy2 사용)pass
+                print(f, t, C_files)
 
     def moveFile(self, folderName):
         E_files = 0
@@ -311,6 +324,7 @@ class ElWindow(QMainWindow, form_class):
     def list_files(self):
         fl = self.filesList()
         self.lineEdit_clear()
+        self.progressbarInit(0)
         i = 0
         for path, subdir, file in fl:
             for f in file:
