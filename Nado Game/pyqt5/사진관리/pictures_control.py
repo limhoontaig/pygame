@@ -158,16 +158,12 @@ class ElWindow(QMainWindow, form_class):
                     O_files += 1
                     self.lineEdit_6.setText(str(O_files))
                     Other_files.append([path, "", file])
-                    pass
                 else:
                     G_files += 1
                     self.lineEdit_5.setText(str(G_files))
                     # 기존 폴더에 설명이 있을 경우 가져옴
                     remark = self.get_remark(path)
-                    # r_len = len(remark)
-                    '''if r_len == 0 and self.checkBox_2.isChecked() == True:
-                        remark = ' ' + self.lineEdit_3.text()
-                        print (remark)'''
+                    
                     # 파일 이름에 날짜 형식이 들어가 있는지 검사하여 디렉토리 생성
                     checker = re.compile(r'(19|20\d\d)[-_ ]?(0[1-9]|1[012])[-_ ]?(0[1-9]|[12][0-9]|3[01])')  
                     m = checker.search(f)
@@ -277,9 +273,9 @@ class ElWindow(QMainWindow, form_class):
             # 분류될 경로 생성
             t.mkdir(parents=True, exist_ok=True) # 파일 경로에 있는 모든 폴더를 생성함. 있으면 놔둠
             if os.path.isfile(pathlib.Path(t_file)):
+                os.remove(f)
                 E_files += 1
                 self.lineEdit_9.setText(str(E_files))
-                pass
             else:
                 M_files += 1
                 self.lineEdit_8.setText(str(M_files))
