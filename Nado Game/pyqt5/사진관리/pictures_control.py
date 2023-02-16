@@ -13,6 +13,7 @@ import time
 import shutil
 from PIL import Image
 from PIL.ExifTags import TAGS
+import pandas as pd
 
 
 
@@ -87,7 +88,7 @@ class ElWindow(QMainWindow, form_class):
             return delimiter
 
     def suffixVerify(self, path, f):
-        allow_exts = ['.jpg', '.jpeg', '.png', '.gif', '.avi','.mov', '.mp4', '.bmp']
+        allow_exts = ['.jpg', '.jpeg', '.png', '.gif', '.avi','.mov', '.mp4', '.bmp', '.tif', 'tiff']
         # f = pathlib.Path(path, name)  # 원본 파일
         src = pathlib.Path(path, f)
         if src.suffix.lower() in allow_exts:
@@ -148,12 +149,15 @@ class ElWindow(QMainWindow, form_class):
         l = self.delimiter_select() # delimiter
         G_files = 0
         O_files = 0
+        Other_files = []
+
         for path, subdirs, files in fname:
             for file in files:
                 f = self.suffixVerify(path, file)
                 if f == "":
                     O_files += 1
                     self.lineEdit_6.setText(str(O_files))
+                    Other_files.append([path, "", file])
                     pass
                 else:
                     G_files += 1
@@ -193,7 +197,22 @@ class ElWindow(QMainWindow, form_class):
                             ym = dt.strftime("%Y"+l+"%m")
                             ymd = dt.strftime("%Y"+l+"%m"+l+"%d"+remark)
                         folderName.append([path, y, ym, ymd, f])
+        self.saveExcel(Other_files, 'OtherFiles.xlsx')
         return folderName
+    
+    def saveExcel(self, f_list, fname):
+        target_folder = self.lineEdit_2.text()
+        df = pd.DataFrame (f_list, columns = ['Source Path', 'Destination Path', 'Filename'])
+        FileName = pathlib.Path(target_folder, fname)
+        try:
+            if os.path.isfile(FileName):
+                os.remove(FileName)
+                df.to_excel(FileName,index=False,header=True)
+            else:
+                df.to_excel(FileName,index=False,header=True)
+        except:
+            QMessageBox.about(self, "경고", "파일을 사용하고 있습니다. 파일을 닫아주세요.")
+        pass
 
     def progressbarInit(self, length):
         self.progressBar.setMinimum(0)
@@ -207,6 +226,8 @@ class ElWindow(QMainWindow, form_class):
         C_files = 0
         E_files = 0
         P_files = 0
+        EFile = []
+        CFile = []
         self.lineEdit_7.setText(str(C_files))
         self.lineEdit_9.setText(str(E_files))
         self.progressbarInit(len(folderName))
@@ -228,12 +249,14 @@ class ElWindow(QMainWindow, form_class):
             if os.path.isfile(pathlib.Path(t, folder[4])):
                 E_files += 1
                 self.lineEdit_9.setText(str(E_files))
-                print(f,t, E_files)
+                EFile.append([folder[0],t, folder[4]])
             else:
                 C_files += 1
                 self.lineEdit_7.setText(str(C_files))
                 shutil.copy2(f, t) # 파일 복사 (파일 개정 시간 등 포함하여 복사를 위해 copy2 사용)pass
-                print(f, t, C_files)
+                CFile.append([folder[0],t, folder[4]])
+        self.saveExcel(EFile, 'ExistingFiles.xlsx')
+        self.saveExcel(CFile, 'CopyedFiles.xlsx')
 
     def moveFile(self, folderName):
         E_files = 0
