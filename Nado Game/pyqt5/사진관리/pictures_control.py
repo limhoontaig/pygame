@@ -15,8 +15,6 @@ from PIL import Image
 from PIL.ExifTags import TAGS
 import pandas as pd
 
-
-
 def resource_path(relative_path):
     base_path = getattr(sys, "_MAIPASS", os.path.dirname(os.path.abspath(__file__)))
     return os.path.join(base_path, relative_path)
@@ -35,7 +33,6 @@ LE =  [
     'e:/개인 사진',
     'd:/사진정리'
     ]
-
 
 class ElWindow(QMainWindow, form_class):
     def __init__(self):
@@ -233,14 +230,8 @@ class ElWindow(QMainWindow, form_class):
             target_folder = self.lineEdit_2.text()
             f = pathlib.Path(folder[0], folder[4])
             folder_tree = self.folder_tree()
-            if folder_tree == 'ymd':
-                t = pathlib.Path(target_folder,folder[1],folder[2], folder[3])
-            elif folder_tree == 'ym':
-                t = pathlib.Path(target_folder,folder[1],folder[2])
-            else:
-                t = pathlib.Path(target_folder,folder[1])
-
             # 분류될 경로 생성
+            t = self.makeFolder(folder_tree, target_folder, folder)
             t.mkdir(parents=True, exist_ok=True) # 파일 경로에 있는 모든 폴더를 생성함. 있으면 놔둠
             if os.path.isfile(pathlib.Path(t, folder[4])):
                 E_files += 1
@@ -251,35 +242,45 @@ class ElWindow(QMainWindow, form_class):
                 self.lineEdit_7.setText(str(C_files))
                 shutil.copy2(f, t) # 파일 복사 (파일 개정 시간 등 포함하여 복사를 위해 copy2 사용)pass
                 CFile.append([folder[0],t, folder[4]])
-        self.saveExcel(EFile, 'ExistingFiles.xlsx')
-        self.saveExcel(CFile, 'CopyedFiles.xlsx')
+        self.saveExcel(EFile, 'fileCopyExistingFiles.xlsx')
+        self.saveExcel(CFile, 'fileCopyCopyedFiles.xlsx')
 
     def moveFile(self, folderName):
-        E_files = 0
+        R_files = 0
         M_files = 0
         self.lineEdit_8.setText(str(M_files))
-        self.lineEdit_9.setText(str(E_files))
+        self.lineEdit_9.setText(str(R_files))
+        Rfile = []
+        Mfile = []
         for folder in folderName:
             target_folder = self.lineEdit_2.text()
             f = pathlib.Path(folder[0], folder[4]) # source file 경로 및 이름
             folder_tree = self.folder_tree()
-            if folder_tree == 'ymd':
-                t = pathlib.Path(target_folder,folder[1],folder[2], folder[3])
-            elif folder_tree == 'ym':
-                t = pathlib.Path(target_folder,folder[1],folder[2])
-            else:
-                t = pathlib.Path(target_folder,folder[1])
-            t_file = pathlib.Path(t, folder[4]) # target file 경로 및 이름 
             # 분류될 경로 생성
+            t = self.makeFolder(folder_tree, target_folder, folder)
+            t_file = pathlib.Path(t, folder[4]) # target file 경로 및 이름 
             t.mkdir(parents=True, exist_ok=True) # 파일 경로에 있는 모든 폴더를 생성함. 있으면 놔둠
             if os.path.isfile(pathlib.Path(t_file)):
                 os.remove(f)
-                E_files += 1
-                self.lineEdit_9.setText(str(E_files))
+                R_files += 1
+                self.lineEdit_9.setText(str(R_files))
+                Rfile.append(folder[0], t, folder[4])
             else:
                 M_files += 1
-                self.lineEdit_8.setText(str(M_files))
                 shutil.move(f, t_file) # 파일 이동 후 원본 삭제
+                self.lineEdit_8.setText(str(M_files))
+                Mfile.append(folder[0], t, folder[4])
+        self.saveExcel(Rfile, 'moveFileExistingFiles.xlsx')
+        self.saveExcel(Mfile, 'moveFileMovedFiles.xlsx')
+
+    def makeFolder(self, folder_tree, target_folder, folder):
+        if folder_tree == 'ymd':
+            t = pathlib.Path(target_folder,folder[1],folder[2], folder[3])
+        elif folder_tree == 'ym':
+            t = pathlib.Path(target_folder,folder[1],folder[2])
+        else:
+            t = pathlib.Path(target_folder,folder[1])
+        return t
 
     def folder_tree(self):
         folder_tree = self.comboBox.currentText()
@@ -309,7 +310,6 @@ class ElWindow(QMainWindow, form_class):
         #self.listWidget.clear()
         return
 
-
     def move_start(self):
         self.count_clear()
         fl = self.filesList()
@@ -319,8 +319,6 @@ class ElWindow(QMainWindow, form_class):
         QMessageBox.about(self, "이동 완료", "파일 이동이 완료 되었습니다")
         #self.listWidget.clear()
         return
-
-
 
     def add_file(self):
         sname = self.sender().text()
@@ -361,14 +359,11 @@ class ElWindow(QMainWindow, form_class):
         self.lineEdit_9.clear()
         self.listWidget.setAlternatingRowColors(True)
 
-
     def addListWidget(self, path, f):
         #print(path, f)
         self.addItemText = path + " " + f
         #print (self.addItemText)
         self.listWidget.addItem(self.addItemText)
-
-            
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
