@@ -115,8 +115,6 @@ class ElWindow(QMainWindow, form_class):
         else:
             remark = ''
         # print(remark)
-        
-
         return remark
 
     def takePictureTime(self, path, f):
@@ -136,10 +134,7 @@ class ElWindow(QMainWindow, form_class):
         except:
             now = datetime.now()
             timestamp = datetime.timestamp(now)
-        
-            
         return timestamp
-
 
     def estimateDateFromFileName(self, fname):
         folderName = []
