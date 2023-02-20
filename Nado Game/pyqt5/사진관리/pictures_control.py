@@ -422,7 +422,8 @@ class ElWindow(QMainWindow, form_class):
         return
 
     def openExcelFileList(self,fl):
-        df = pd.read_excel(fl,skiprows=0)
+        df = pd.read_excel(fl, header=None , skiprows=0)
+        print (df)
         return df.values.tolist()
 
 
