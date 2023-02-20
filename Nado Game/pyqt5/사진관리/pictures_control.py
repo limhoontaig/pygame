@@ -2,13 +2,12 @@ import sys
 import os
 import pathlib
 import pandas as pd
-from PyQt5.QtWidgets import *
 from PyQt5.QtCore import Qt, pyqtSlot, QObject, pyqtSignal
 from PyQt5 import uic
 from PyQt5.QtGui import QImage, QPixmap, QPalette, QPainter
 from PyQt5.QtPrintSupport import QPrintDialog, QPrinter
 from PyQt5.QtWidgets import QLabel, QSizePolicy, QScrollArea, QMessageBox, QMainWindow, QMenu, QAction, \
-    qApp, QFileDialog
+    qApp, QFileDialog, QApplication
 
 from datetime import datetime
 from datetime import date
