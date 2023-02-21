@@ -112,6 +112,7 @@ class Ui_Form(object):
         self.label_8.setObjectName(u"label_8")
         self.label_8.setGeometry(QRect(680, 30, 521, 461))
         self.label_8.setFrameShape(QFrame.Box)
+        self.label_8.setAlignment(Qt.AlignCenter)
         self.frame = QFrame(Form)
         self.frame.setObjectName(u"frame")
         self.frame.setGeometry(QRect(680, 510, 521, 261))

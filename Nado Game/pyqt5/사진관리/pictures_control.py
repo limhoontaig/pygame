@@ -34,7 +34,8 @@ yyyymmdd = now.strftime("%Y")+now.strftime("%m")+'월'+ now.strftime("%D")+'일'
 yyyy = now.strftime("%Y")
 
 LE =  [
-    'c:/사진',
+    #'c:/사진',
+    'E:\\source\\pygame\\Nado Game\\pyqt5\\사진관리',
     'c:/사진정리'
     ]
 TEMPFILE = 'TEMP_EXCEL_FileList.xlsx'
@@ -63,17 +64,30 @@ class ElWindow(QMainWindow, form_class):
     @pyqtSlot()
 
     def qImageViewer(self):
-        self.label_8.resize(500,400)
+        self.label_8.resize(660,460)
         file = self.listWidget.currentItem().text()
         pixmap = QPixmap(file)
-        pixmap = pixmap.scaledToWidth(500)
+        scale = self.selectScale(pixmap)
+        self.label_8.scrollAreaLeft.setVisible(True)
+        if scale == 'height':
+            pixmap = pixmap.scaledToHeight(460)
+        else:
+            pixmap = pixmap.scaledToWidth(660)
         self.label_8.setPixmap(QPixmap(pixmap))
-        #self.label_8.resize(450, 400)
+        #self.label_8.resize(pixmap.width(), pixmap.height())
         self.show()
-
-
         #QViewer = QImageViewer()
         #QViewer.exec_()
+
+    def selectScale(self, pixmap):
+        width = pixmap.width() / 660
+        height = pixmap.height() / 460
+        if width > height :
+            return 'width'
+        else:
+            return 'height'
+
+    
 
 
     def list_files(self):
