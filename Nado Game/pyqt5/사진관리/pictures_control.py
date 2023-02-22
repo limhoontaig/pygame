@@ -1,12 +1,13 @@
 import sys
 import os
+import stat
 import pathlib
 import pandas as pd
 from PyQt5.QtCore import Qt, pyqtSlot, QObject, pyqtSignal
 from PyQt5 import uic
 from PyQt5.QtGui import QImage, QPixmap, QPalette, QPainter
 from PyQt5.QtPrintSupport import QPrintDialog, QPrinter
-from PyQt5.QtWidgets import QWidget, QLabel, QSizePolicy, QScrollArea, QMessageBox, QMainWindow, QMenu, QAction, \
+from PyQt5.QtWidgets import QLabel, QSizePolicy, QScrollArea, QMessageBox, QMainWindow, QMenu, QAction, \
     qApp, QFileDialog, QApplication
 
 from datetime import datetime
@@ -34,67 +35,16 @@ yyyymmdd = now.strftime("%Y")+now.strftime("%m")+'월'+ now.strftime("%D")+'일'
 yyyy = now.strftime("%Y")
 
 LE =  [
-    #'c:/사진',
-    'E:\\source\\pygame\\Nado Game\\pyqt5\\사진관리',
+    'c:/사진',
     'c:/사진정리'
     ]
 TEMPFILE = 'TEMP_EXCEL_FileList.xlsx'
-class QImageView(QWidget):
-    def __init__(self, window=None):
-        super().__init__()
-
-        self.window = window
-        self.scaleFactor = 0.0
-        self.imageLabel = self.label_8
-        self.listWidget = self.listWidget
-        self.imageLabel.setBackgroundRole(QPalette.Base)
-        self.imageLabel.setSizePolicy(QSizePolicy.Ignored, QSizePolicy.Ignored)
-        self.imageLabel.setScaledContents(True)
-
-        self.scrollArea = QScrollArea()
-        self.scrollArea.setBackgroundRole(QPalette.Dark)
-        self.scrollArea.setWidget(self.imageLabel)
-        self.scrollArea.setVisible(False)
-
-    def qImageViewer(self):
-        #self.imageLabel.resize(660,460)
-        file = self.listWidget.currentItem().text()
-        pixmap = QPixmap(file)
-        scale = self.selectScale(pixmap)
-        self.imageLabel.scrollArea.setVisible(True)
-        if scale == 'height':
-            pixmap = pixmap.scaledToHeight(460)
-        else:
-            pixmap = pixmap.scaledToWidth(660)
-        self.imageLabel.setPixmap(QPixmap(pixmap))
-        #self.label_8.resize(pixmap.width(), pixmap.height())
-        self.show()
-        #QViewer = QImageViewer()
-        #QViewer.exec_()
-
-    def selectScale(self, pixmap):
-        width = pixmap.width() / 660
-        height = pixmap.height() / 460
-        if width > height :
-            return 'width'
-        else:
-            return 'height'
-
-
-
-
 
 class ElWindow(QMainWindow, form_class):
     def __init__(self):
         super().__init__()
         self.LE = LE
         self.setupUi(self)
-
-        self.imageView = QImageView(window=self)
-        self.setCentralWidget(self.imageView.centralWidget)
-
-        self.setWindowTitle('Image Control and View')
-        self.resize(1200,600)
 
         self.lineEdit.setText(LE[0])
         self.lineEdit_2.setText(LE[1])
@@ -108,47 +58,23 @@ class ElWindow(QMainWindow, form_class):
         self.pushButton_5.clicked.connect(self.list_files)
         self.listWidget.itemClicked.connect(self.qImageViewer)
         self.lineEdit.textChanged.connect(self.list_files)
-
-        self.label_8.setBackgroundRole(QPalette.Base)
-        self.label_8.setSizePolicy(QSizePolicy.Ignored, QSizePolicy.Ignored)
-        self.label_8.setScaledContents(True)
-
-
-        self.scrollArea = QScrollArea()
-        self.scrollArea.setBackgroundRole(QPalette.Dark)
-        self.scrollArea.setWidget(self.label_8)
-        self.scrollArea.setVisible(False)
         # self.listwidget = QListWidget(self)
         # self.listwidget.setAlternatingRowColors(True)
 
-    
     @pyqtSlot()
 
     def qImageViewer(self):
-        self.label_8.resize(660,460)
+        self.label_8.resize(500,400)
         file = self.listWidget.currentItem().text()
         pixmap = QPixmap(file)
-        scale = self.selectScale(pixmap)
-        self.label_8.scrollArea.setVisible(True)
-        if scale == 'height':
-            pixmap = pixmap.scaledToHeight(460)
-        else:
-            pixmap = pixmap.scaledToWidth(660)
+        pixmap = pixmap.scaledToWidth(500)
         self.label_8.setPixmap(QPixmap(pixmap))
-        #self.label_8.resize(pixmap.width(), pixmap.height())
+        #self.label_8.resize(450, 400)
         self.show()
+
+
         #QViewer = QImageViewer()
         #QViewer.exec_()
-
-    def selectScale(self, pixmap):
-        width = pixmap.width() / 660
-        height = pixmap.height() / 460
-        if width > height :
-            return 'width'
-        else:
-            return 'height'
-
-    
 
 
     def list_files(self):
@@ -325,9 +251,15 @@ class ElWindow(QMainWindow, form_class):
         # 사진찍은 날짜 가져오기
         t_time = self.takePictureTime(path, f)
         filename = os.path.join(path, f)
+        T = os.stat(filename)
+        print('T.st_ctime, T.st_mtime, T.st_atime', T.st_ctime, T.st_mtime, T.st_atime)
+        [c_time, m_time, a_time] = [T.st_ctime, T.st_mtime, T.st_atime]
+        print(c_time, m_time, a_time)
         c_time = os.path.getctime(filename)
         m_time = os.path.getmtime(filename)
         a_time = os.path.getatime(filename)
+        
+        print(c_time, m_time, a_time)
         min_time = min(t_time, c_time, m_time, a_time)
         dt = datetime.fromtimestamp(min_time)
         y = dt.strftime("%Y"+l[0])
@@ -382,7 +314,7 @@ class ElWindow(QMainWindow, form_class):
                 C_files += 1
                 shutil.copy2(f, t) # 파일 복사 (파일 개정 시간 등 포함하여 복사를 위해 copy2 사용)pass
                 self.disp_C_files(C_files)
-                print(C_files)
+                #print(C_files)
                 self.listWidget_2.addItem(str(folder[0]) +' ' + str(t) +' ' + folder[4])
                 CFile.append([folder[0], t, folder[4]])
         self.removeTempFile()
@@ -416,7 +348,12 @@ class ElWindow(QMainWindow, form_class):
             t_file = pathlib.Path(t, folder[4]) # target file 경로 및 이름 
             t.mkdir(parents=True, exist_ok=True) # 파일 경로에 있는 모든 폴더를 생성함. 있으면 놔둠
             if os.path.isfile(pathlib.Path(t_file)):
-                os.remove(f)
+                if os.stat(f).st_mode == 33060: # 33060 readonly, 33206 writable
+                    try:
+                        os.chmod(f, stat.S_IWRITE)
+                        os.remove(f)
+                    except:
+                        os.remove(f)
                 R_files += 1
                 self.lineEdit_9.setText(str(R_files))
                 self.listWidget_4.addItem(str(folder[0]) + '/' + folder[4])
