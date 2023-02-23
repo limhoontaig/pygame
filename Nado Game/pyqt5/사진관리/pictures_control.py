@@ -192,7 +192,6 @@ class ElWindow(QMainWindow, form_class):
             delimiter = ['', '', '']
             return delimiter
 
-
     def get_remark(self, path):
         if path.find('/') > 0:
             separator = '/'
@@ -201,21 +200,13 @@ class ElWindow(QMainWindow, form_class):
 
         sub_dir = path.split(separator)
         sub = sub_dir[-1]
-        length = len(sub)
-        checker1 = re.compile(r'^(19|20\d\d)[-_ ]?(0[1-9]|1[012])[-_ ]?(0[1-9]|[12][0-9]|3[01])([\s])') 
-        # checker1 = re.compile(r'^(\d){8}([\s])')
-        checker = re.compile(r'^(\d\d)[-_ ]?(0[1-9]|1[012])[-_ ]?(0[1-9]|[12][0-9]|3[01])([\s])')
-        # checker1 = re.compile(r'^(\d){6}([\s])') 
-        m = checker1.search(sub)
-        n = checker.search(sub)
-        if n and length > 7:
-            remark = ' ' + sub[7:]
-        elif m and length > 9:
-            remark = ' ' + sub[9:]
+        checker = re.compile(r'(19\d\d|20\d\d|\d\d)[년\-_. ]?(0[1-9]|1[012])[월\-_. ]?(0[1-9]|[12][0-9]|3[01])[일]?')
+        m = checker.match(sub)
+        if m and len(sub) > m.end():
+            #print(sub[m.end():])
+            return sub[m.end():]
         else:
-            remark = ''
-        # print(remark)
-        return remark
+            return ""        
 
     def takePictureTime(self, path, f):
         filename = pathlib.Path(path, f)
@@ -239,8 +230,6 @@ class ElWindow(QMainWindow, form_class):
         folderName = []
         l = self.delimiter_select() # delimiter
         G_files = 0
-        #O_files = 0
-        #Other_files = []
 
         for pathfile in fname:
             path = pathfile[0]
@@ -251,11 +240,13 @@ class ElWindow(QMainWindow, form_class):
             remark = self.get_remark(path)
             
             # 파일 이름에 날짜 형식이 들어가 있는지 검사하여 디렉토리 생성
-            checker = re.compile(r'(19|20\d\d)[-_ ]?(0[1-9]|1[012])[-_ ]?(0[1-9]|[12][0-9]|3[01])')  
+            checker = re.compile(r'(19\d\d|20\d\d|\d\d)[년\-_. ]?(0[1-9]|1[012])[월\-_. ]?(0[1-9]|[12][0-9]|3[01])[일]?')  
             m = checker.search(file)
-
             if m : # delimiter 종류에 따른 디렉토리 생성 
-                folderName.append([path, m.group(1)+l[0], m.group(1)+l[0]+m.group(2)+l[1], m.group(1)+l[0]+m.group(2)+l[1]+m.group(3)+l[2]+remark, file])
+                Y = m.group(1)
+                M = m.group(2)
+                D = m.group(3)
+                folderName.append([path, Y+l[0], Y+l[0]+M+l[1], Y+l[0]+M+l[1]+D+l[2]+remark, file])
                 
             else: # 파일 이름에 날짜가 없을 경우 파일 생성 날짜를 유추하여 파일 디렉토리 생성
                 [y, ym, ymd] = self.folderNameFromTakeMinTime(path, file, l, remark)
@@ -267,14 +258,19 @@ class ElWindow(QMainWindow, form_class):
         t_time = self.takePictureTime(path, f)
         filename = os.path.join(path, f)
         T = os.stat(filename)
-        print('T.st_ctime, T.st_mtime, T.st_atime', T.st_ctime, T.st_mtime, T.st_atime)
+        #print('T.st_ctime, T.st_mtime, T.st_atime', 
+        c_time = T.st_ctime
+        m_time = T.st_mtime
+        a_time = T.st_atime
+        ''')
         [c_time, m_time, a_time] = [T.st_ctime, T.st_mtime, T.st_atime]
         print(c_time, m_time, a_time)
+        
         c_time = os.path.getctime(filename)
         m_time = os.path.getmtime(filename)
         a_time = os.path.getatime(filename)
-        
-        print(c_time, m_time, a_time)
+        '''
+        #print(c_time, m_time, a_time)
         min_time = min(t_time, c_time, m_time, a_time)
         dt = datetime.fromtimestamp(min_time)
         y = dt.strftime("%Y"+l[0])
