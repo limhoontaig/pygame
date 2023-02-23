@@ -64,13 +64,28 @@ class ElWindow(QMainWindow, form_class):
     @pyqtSlot()
 
     def qImageViewer(self):
-        self.label_8.resize(500,400)
+        width = 660
+        height = 460
+        self.label_8.resize(width,height)
         file = self.listWidget.currentItem().text()
         pixmap = QPixmap(file)
-        pixmap = pixmap.scaledToWidth(500)
+        if self.scaleDirection(width, height, pixmap) == 'width':
+            pixmap = pixmap.scaledToWidth(width)
+        else:
+            pixmap = pixmap.scaledToHeight(height)
         self.label_8.setPixmap(QPixmap(pixmap))
         #self.label_8.resize(450, 400)
         self.show()
+    
+    def scaleDirection(self, width, height, pixmap):
+        W = pixmap.width() / width
+        H = pixmap.height() / height
+        print('W: ', W, 'H: ', H)
+        if W > H:
+            return 'width'
+        else:
+            return 'height'
+
 
 
         #QViewer = QImageViewer()
