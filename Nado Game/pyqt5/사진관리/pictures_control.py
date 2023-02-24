@@ -240,43 +240,51 @@ class ElWindow(QMainWindow, form_class):
             remark = self.get_remark(path)
             
             # 파일 이름에 날짜 형식이 들어가 있는지 검사하여 디렉토리 생성
-            checker = re.compile(r'(19\d\d|20\d\d|\d\d)[년\-_. ]?(0[1-9]|1[012])[월\-_. ]?(0[1-9]|[12][0-9]|3[01])[일]?')  
+            checker = re.compile(r'^(19\d\d|20\d\d)[년\-_. ]?(0[1-9]|1[012])[월\-_. ]?(0[1-9]|[12][0-9]|3[01])[일]?')  
+            checker1 = re.compile(r'^(\d\d)[년\-_. ]?(0[1-9]|1[012])[월\-_. ]?(0[1-9]|[12][0-9]|3[01])[일]?')
             m = checker.search(file)
-            if m : # delimiter 종류에 따른 디렉토리 생성 
+            if checker.search(file): # delimiter 종류에 따른 디렉토리 생성 
                 Y = m.group(1)
                 M = m.group(2)
                 D = m.group(3)
-                folderName.append([path, Y+l[0], Y+l[0]+M+l[1], Y+l[0]+M+l[1]+D+l[2]+remark, file])
-                
+                folderName.append([path, Y+l[0], Y+l[0]+M+l[1], Y+l[0]+M+l[1]+D+l[2]+remark, file, ''])
+            else:# checker1.search(file):
+                [y, ym, ymd, newFileName] = self.folderNameFromTakeMinTime(path, file, l, remark)
+                folderName.append([path, y, ym, ymd, file, newFileName])
+
+            '''    
             else: # 파일 이름에 날짜가 없을 경우 파일 생성 날짜를 유추하여 파일 디렉토리 생성
-                [y, ym, ymd] = self.folderNameFromTakeMinTime(path, file, l, remark)
-                folderName.append([path, y, ym, ymd, file])
+                [y, ym, ymd, newFileName] = self.folderNameFromTakeMinTime(path, file, l, remark)
+                folderName.append([path, y, ym, ymd, file, newFileName])
+            '''
         return folderName
+
+    def makeNewFileName(self, f, min_time):
+        dt = datetime.fromtimestamp(min_time)
+        y = dt.strftime("%Y%m%d_%H%M%S")
+        new_f = y+'_'+f
+        return new_f
     
     def folderNameFromTakeMinTime(self, path, f, l, remark):
         # 사진찍은 날짜 가져오기
-        t_time = self.takePictureTime(path, f)
-        filename = os.path.join(path, f)
-        T = os.stat(filename)
-        #print('T.st_ctime, T.st_mtime, T.st_atime', 
-        c_time = T.st_ctime
-        m_time = T.st_mtime
-        a_time = T.st_atime
-        ''')
-        [c_time, m_time, a_time] = [T.st_ctime, T.st_mtime, T.st_atime]
-        print(c_time, m_time, a_time)
-        
-        c_time = os.path.getctime(filename)
-        m_time = os.path.getmtime(filename)
-        a_time = os.path.getatime(filename)
-        '''
-        #print(c_time, m_time, a_time)
-        min_time = min(t_time, c_time, m_time, a_time)
+        if self.takePictureTime(path, f):
+            min_time = self.takePictureTime(path, f)
+        else:
+            filename = os.path.join(path, f)
+            T = os.stat(filename)
+            #print('T.st_ctime, T.st_mtime, T.st_atime', 
+            c_time = T.st_ctime
+            m_time = T.st_mtime
+            a_time = T.st_atime
+            #c_time = os.path.getctime(filename)
+            min_time = min(c_time, m_time, a_time)
+        newFileName = self.makeNewFileName(f, min_time)
+        print(newFileName)
         dt = datetime.fromtimestamp(min_time)
         y = dt.strftime("%Y"+l[0])
         ym = dt.strftime("%Y"+l[0]+"%m"+l[1])
         ymd = dt.strftime("%Y"+l[0]+"%m"+l[1]+"%d"+l[2]+remark)
-        return y, ym, ymd
+        return y, ym, ymd, newFileName
 
     def saveExcel(self, f_list, fname):
         target_folder = self.lineEdit_2.text()
@@ -300,6 +308,16 @@ class ElWindow(QMainWindow, form_class):
     def progressbarUpdate(self, N_files):
         self.progressBar.setValue(N_files)
 
+    def reNameSourceFile(self, folder):
+        source = pathlib.Path(folder[0], folder[4])
+        newFile = pathlib.Path(folder[0], folder[5])
+        if os.stat(source).st_mode == 33060: # 33060 readonly, 33206 writable
+            os.chmod(source, stat.S_IWRITE)
+            os.rename(source, newFile)
+        else:
+            os.rename(source, newFile)
+        return
+
     def copyFile(self, folderName):
         C_files = 0
         E_files = 0
@@ -310,6 +328,9 @@ class ElWindow(QMainWindow, form_class):
         folder_tree = self.folder_tree()
         self.progressbarInit(len(folderName))
         for folder in folderName:
+            if len(folder[5]) > 0:
+                self.reNameSourceFile(folder)
+                folder[4] = folder[5]
             P_files += 1
             self.progressbarUpdate(P_files)
             f = pathlib.Path(folder[0], folder[4])
@@ -356,7 +377,7 @@ class ElWindow(QMainWindow, form_class):
             folder_tree = self.folder_tree()
             # 분류될 경로 생성
             t = self.makeFolder(folder_tree, target_folder, folder)
-            t_file = pathlib.Path(t, folder[4]) # target file 경로 및 이름 
+            t_file = pathlib.Path(t, folder[5]) # target file 경로 및 이름 
             t.mkdir(parents=True, exist_ok=True) # 파일 경로에 있는 모든 폴더를 생성함. 있으면 놔둠
             if os.path.isfile(pathlib.Path(t_file)):
                 if os.stat(f).st_mode == 33060: # 33060 readonly, 33206 writable
