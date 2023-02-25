@@ -44,31 +44,88 @@ class ElWindow(QMainWindow, form_class):
     def __init__(self):
         super().__init__()
         self.LE = LE
+        self.TEMPFILE = TEMPFILE
         self.setupUi(self)
 
         self.lineEdit.setText(LE[0])
         self.lineEdit_2.setText(LE[1])
         issued = '프로그램 작성 : 임훈택 Rev 0 '+ yyyymmdd + ' Issued'
         self.label.setText(issued)
+        self.scaleFactor = 1.0
+        
+        #self.imageLabel = QLabel()
+        self.label_8.setBackgroundRole(QPalette.Base)
+        self.label_8.setSizePolicy(QSizePolicy.Ignored, QSizePolicy.Ignored)
+        self.label_8.setScaledContents(True)
+
+        '''
+        self.scrollArea = QScrollArea()
+        self.scrollArea.setBackgroundRole(QPalette.Dark)
+        self.scrollArea.setWidget(self.label_8)
+        self.setCentralWidget(self.scrollArea)
+        '''
 
         self.pushButton.clicked.connect(self.add_file)
         self.pushButton_2.clicked.connect(self.add_file)
         self.pushButton_3.clicked.connect(self.copy_start)
         self.pushButton_4.clicked.connect(self.move_start)
-        self.pushButton_5.clicked.connect(self.list_files)
+        self.pushButton_5.clicked.connect(self.list_files) 
+        self.pushButton_6.clicked.connect(self.zoomIn) # Zoom in
+        self.pushButton_7.clicked.connect(self.zoomOut) # Zoom out
+        self.pushButton_8.clicked.connect(self.list_files) # Fit to Label
+        self.pushButton_9.clicked.connect(self.fitToWidth) # Fit to width
+        self.pushButton_10.clicked.connect(self.list_files) # Fit to Height 
+        self.pushButton_11.clicked.connect(self.normalSize) # Fit to Normal size 
         self.listWidget.itemClicked.connect(self.qImageViewer)
-        self.lineEdit.textChanged.connect(self.list_files)
+        # self.lineEdit.textChanged.connect(self.list_files)
         # self.listwidget = QListWidget(self)
         # self.listwidget.setAlternatingRowColors(True)
 
     @pyqtSlot()
 
-    def qImageViewer(self):
+    def fitToWidth(self):
+        pixmap = self.makePixmap()
+        self.label_8.resize(pixmap.scaledToWidth(self.label_8.pixmap.size()))
+
+    def fitToHeight(self):
+        pixmap = self.makePixmap()
+        self.label_8.resize(pixmap.scaledToHeight(self.label_8.pixmap.size()))
+
+    def normalSize(self):
+        self.label_8.adjustSize()
+
+    def fitToWindow(self):
+        fitToWindow = True
+        self.label_8.setWidgetResizable(fitToWindow)
+        if not fitToWindow:
+            self.normalSize()
+        self.updateActions()
+
+    def zoomIn(self):
+        self.scaleImage(1.25)
+
+    def zoomOut(self):
+        self.scaleImage(0.8)
+
+    def scaleImage(self, factor):
+        self.scaleFactor *= factor
+        self.label_8.resize(self.scaleFactor * self.label_8.pixmap().size())
+
+        self.pushButton_6.setEnabled(self.scaleFactor < 1.0)
+        self.pushButton_7.setEnabled(self.scaleFactor > 0.6)
+
+    def makePixmap(self):    
+        file = self.listWidget.currentItem().text()
+        pixmap = QPixmap(file)
+        return pixmap
+    
+
+
+    def qImageViewer(self):    
         width = 660
         height = 460
         self.label_8.resize(width,height)
-        file = self.listWidget.currentItem().text()
-        pixmap = QPixmap(file)
+        pixmap = self.makePixmap()
         if self.scaleDirection(width, height, pixmap) == 'width':
             pixmap = pixmap.scaledToWidth(width)
         else:
