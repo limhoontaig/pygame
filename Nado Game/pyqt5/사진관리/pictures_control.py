@@ -55,8 +55,12 @@ class ElWindow(QMainWindow, form_class):
         
         #self.imageLabel = QLabel()
         self.label_8.setBackgroundRole(QPalette.Base)
-        self.label_8.setSizePolicy(QSizePolicy.Ignored, QSizePolicy.Ignored)
-        self.label_8.setScaledContents(True)
+        #self.label_8.setSizePolicy(QSizePolicy.Ignored, QSizePolicy.Ignored)
+        #self.label_8.setScaledContents(True)
+
+        #pixmap = QPixmap()
+        #if pixmap == None:
+        self.disablePushButton()
 
         '''
         self.scrollArea = QScrollArea()
@@ -76,6 +80,7 @@ class ElWindow(QMainWindow, form_class):
         self.pushButton_9.clicked.connect(self.fitToWidth) # Fit to width
         self.pushButton_10.clicked.connect(self.list_files) # Fit to Height 
         self.pushButton_11.clicked.connect(self.normalSize) # Fit to Normal size 
+        self.pushButton_12.clicked.connect(self.delSelectedFile) # Fit to Normal size 
         self.listWidget.itemClicked.connect(self.qImageViewer)
         # self.lineEdit.textChanged.connect(self.list_files)
         # self.listwidget = QListWidget(self)
@@ -83,13 +88,36 @@ class ElWindow(QMainWindow, form_class):
 
     @pyqtSlot()
 
+    def disablePushButton(self):
+        self.pushButton_6.setDisabled(True) # Zoom in
+        self.pushButton_7.setDisabled(True) # Zoom out
+        self.pushButton_8.setDisabled(True) # Fit to Label
+        self.pushButton_9.setDisabled(True) # Fit to width
+        self.pushButton_10.setDisabled(True) # Fit to Height 
+        self.pushButton_11.setDisabled(True) # Fit to Normal size 
+
+    def enablePushButton(self):
+        self.pushButton_6.setEnabled(True) # Zoom in
+        self.pushButton_7.setEnabled(True) # Zoom out
+        self.pushButton_8.setEnabled(True) # Fit to Label
+        self.pushButton_9.setEnabled(True) # Fit to width
+        self.pushButton_10.setEnabled(True) # Fit to Height 
+        self.pushButton_11.setEnabled(True) # Fit to Normal size 
+
     def fitToWidth(self):
-        pixmap = self.makePixmap()
-        self.label_8.resize(pixmap.scaledToWidth(self.label_8.pixmap.size()))
+        #pixmap = self.makePixmap()
+        #self.label_8.resize(pixmap.scaledToWidth(self.label_8.pixmap.size()))
+        #self.label_8.resize(pixmap.scaledToWidth(self.label_8.pixmap.size()))
+        #pixmap = pixmap.scaledToWidth(660)
+        #self.label_8.pixmap.setToWidth()
+        pass
+
 
     def fitToHeight(self):
+        return
         pixmap = self.makePixmap()
-        self.label_8.resize(pixmap.scaledToHeight(self.label_8.pixmap.size()))
+        #self.label_8.resize(pixmap.scaledToHeight(self.label_8.pixmap.size()))
+        pixmap = pixmap.scaledToHeight(460)
 
     def normalSize(self):
         self.label_8.adjustSize()
@@ -131,6 +159,7 @@ class ElWindow(QMainWindow, form_class):
         else:
             pixmap = pixmap.scaledToHeight(height)
         self.label_8.setPixmap(QPixmap(pixmap))
+        #self.enablePushButton()
         #self.label_8.resize(450, 400)
         self.show()
     
@@ -138,7 +167,7 @@ class ElWindow(QMainWindow, form_class):
         W = pixmap.width() / width
         H = pixmap.height() / height
         print('W: ', W, 'H: ', H)
-        if W > H:
+        if W < H:
             return 'width'
         else:
             return 'height'
@@ -226,6 +255,11 @@ class ElWindow(QMainWindow, form_class):
         o += 1
         OFile = []
 
+    def delSelectedFile(self):
+        file = self.listWidget_3.currentItem().text()
+        os.remove(file)
+        self.list_files()
+        pass
 
     def getRootdir(self):
         return self.lineEdit.text()
@@ -336,7 +370,7 @@ class ElWindow(QMainWindow, form_class):
             #c_time = os.path.getctime(filename)
             min_time = min(c_time, m_time, a_time)
         newFileName = self.makeNewFileName(f, min_time)
-        print(newFileName)
+        # print(newFileName)
         dt = datetime.fromtimestamp(min_time)
         y = dt.strftime("%Y"+l[0])
         ym = dt.strftime("%Y"+l[0]+"%m"+l[1])
@@ -385,27 +419,27 @@ class ElWindow(QMainWindow, form_class):
         folder_tree = self.folder_tree()
         self.progressbarInit(len(folderName))
         for folder in folderName:
-            if len(folder[5]) > 0:
+            source, y, ym, ymd, originalFileName, newFileName = folder
+            if len(newFileName) > 0:
                 self.reNameSourceFile(folder)
-                folder[4] = folder[5]
+                originalFileName = newFileName
             P_files += 1
             self.progressbarUpdate(P_files)
-            f = pathlib.Path(folder[0], folder[4])
+            f = pathlib.Path(source, originalFileName)
             # 분류될 경로 생성
             t = self.makeFolder(folder_tree, target_folder, folder)
             t.mkdir(parents=True, exist_ok=True) # 파일 경로에 있는 모든 폴더를 생성함. 있으면 놔둠
-            if os.path.isfile(pathlib.Path(t, folder[4])):
+            if os.path.isfile(pathlib.Path(t, originalFileName)):
                 E_files += 1
                 self.disp_E_files(E_files)
-                self.listWidget_4.addItem(str(folder[0]) +' ' + str(t) +' ' + folder[4])
-                EFile.append([folder[0],t, folder[4]])
+                self.listWidget_4.addItem(str(source) +' ' + str(t) +' ' + originalFileName)
+                EFile.append([source,t, originalFileName])
             else:
                 C_files += 1
                 shutil.copy2(f, t) # 파일 복사 (파일 개정 시간 등 포함하여 복사를 위해 copy2 사용)pass
                 self.disp_C_files(C_files)
-                #print(C_files)
-                self.listWidget_2.addItem(str(folder[0]) +' ' + str(t) +' ' + folder[4])
-                CFile.append([folder[0], t, folder[4]])
+                self.listWidget_2.addItem(str(source) +' ' + str(t) +' ' + originalFileName)
+                CFile.append([source, t, originalFileName])
         self.removeTempFile()
         self.saveExcel(EFile, 'fileCopyExistingFiles.xlsx')
         self.saveExcel(CFile, 'fileCopyCopyedFiles.xlsx')
@@ -430,36 +464,36 @@ class ElWindow(QMainWindow, form_class):
         Mfile = []
         target_folder = self.getDestdir()
         for folder in folderName:
-            f = pathlib.Path(folder[0], folder[4]) # source file 경로 및 이름
+            source, y, ym, ymd, oriFileName, newFileName = folder
+            f = pathlib.Path(source, oriFileName) # source file 경로 및 이름
             folder_tree = self.folder_tree()
             # 분류될 경로 생성
             t = self.makeFolder(folder_tree, target_folder, folder)
-            t_file = pathlib.Path(t, folder[5]) # target file 경로 및 이름 
+            if len(newFileName) == 0:
+                newFileName = oriFileName # New file name이 없을 경우 원본 파일 이름 사용
+            t_file = pathlib.Path(t, newFileName) # target file 경로 및 이름 
             t.mkdir(parents=True, exist_ok=True) # 파일 경로에 있는 모든 폴더를 생성함. 있으면 놔둠
-            if os.path.isfile(pathlib.Path(t_file)):
+            if os.path.isfile(t_file):
                 if os.stat(f).st_mode == 33060: # 33060 readonly, 33206 writable
-                    try:
-                        os.chmod(f, stat.S_IWRITE)
-                        os.remove(f)
-                    except:
-                        os.remove(f)
+                    os.chmod(f, stat.S_IWRITE)
+                    os.remove(f)
+                else:
+                    os.remove(f)
                 R_files += 1
                 self.lineEdit_9.setText(str(R_files))
-                self.listWidget_4.addItem(str(folder[0]) + '/' + folder[4])
-                Rfile.append([folder[0], t, folder[4]])
+                self.listWidget_4.addItem(str(pathlib.Path(source, oriFileName)))
+                Rfile.append([source, t, oriFileName])
             else:
                 M_files += 1
                 shutil.move(f, t_file) # 파일 이동 후 원본 삭제
                 self.lineEdit_8.setText(str(M_files))
-                self.listWidget_2.addItem(str(folder[0]) + ' ' + str(t) +'/' + folder[4])
-                Mfile.append([folder[0], t, folder[4]])
+                self.listWidget_2.addItem(str(source) + ' ' + str(t) +'/' + oriFileName)
+                Mfile.append([source, t, oriFileName])
             try:
-                os.rmdir(folder[0])
+                os.rmdir(source)
             except:
                 pass
         self.removeTempFile()
-        #self.lineEdit_9.setText(str(R_files))
-        #self.lineEdit_8.setText(str(M_files))
         self.saveExcel(Rfile, 'moveFileExistingFiles.xlsx')
         self.saveExcel(Mfile, 'moveFileMovedFiles.xlsx')
     
