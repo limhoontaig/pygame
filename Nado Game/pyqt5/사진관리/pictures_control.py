@@ -81,6 +81,7 @@ class ElWindow(QMainWindow, form_class):
         self.pushButton_10.clicked.connect(self.list_files) # Fit to Height 
         self.pushButton_11.clicked.connect(self.normalSize) # Fit to Normal size 
         self.pushButton_12.clicked.connect(self.delSelectedFile) # Fit to Normal size 
+        self.pushButton_13.clicked.connect(self.delAllOtherFiles) # Fit to Normal size 
         self.listWidget.itemClicked.connect(self.qImageViewer)
         # self.lineEdit.textChanged.connect(self.list_files)
         # self.listwidget = QListWidget(self)
@@ -144,10 +145,10 @@ class ElWindow(QMainWindow, form_class):
 
     def makePixmap(self):    
         file = self.listWidget.currentItem().text()
+        path, f = os.path.split(file)
+        self.lineEdit_3.setText(self.get_remark(path))
         pixmap = QPixmap(file)
         return pixmap
-    
-
 
     def qImageViewer(self):    
         width = 660
@@ -159,8 +160,6 @@ class ElWindow(QMainWindow, form_class):
         else:
             pixmap = pixmap.scaledToHeight(height)
         self.label_8.setPixmap(QPixmap(pixmap))
-        #self.enablePushButton()
-        #self.label_8.resize(450, 400)
         self.show()
     
     def scaleDirection(self, width, height, pixmap):
@@ -171,12 +170,6 @@ class ElWindow(QMainWindow, form_class):
             return 'width'
         else:
             return 'height'
-
-
-
-        #QViewer = QImageViewer()
-        #QViewer.exec_()
-
 
     def list_files(self):
         self.lineEdit_clear()
@@ -213,7 +206,12 @@ class ElWindow(QMainWindow, form_class):
         self.dispListWidget(srcGFile)
         self.dispListWidget_3(srcOFile)
         self.saveGraphicFileListToExcel(srcGFile)
-        return srcGFile
+        if sys._getframe(1).f_code.co_name == 'delAllOtherFiles':
+            return srcOFile
+        else:
+            return srcGFile
+    
+    
     
     def saveGraphicFileListToExcel(self, srcGFile):
         FileName = pathlib.Path(self.getRootdir(),TEMPFILE)
@@ -251,15 +249,19 @@ class ElWindow(QMainWindow, form_class):
         else:
             pass
 
-    def otherFileList(self, src):
-        o += 1
-        OFile = []
-
     def delSelectedFile(self):
-        file = self.listWidget_3.currentItem().text()
-        os.remove(file)
+        if self.listWidget_3.currentItem():
+            file = self.listWidget_3.currentItem().text()
+            os.remove(file)
+            self.list_files()
+
+    
+    def delAllOtherFiles(self):
+        otherFiles = self.selectListGraphicFiles()
+        for path, fileName in otherFiles:
+            f = pathlib.Path(path, fileName)
+            os.remove(f)
         self.list_files()
-        pass
 
     def getRootdir(self):
         return self.lineEdit.text()
@@ -322,9 +324,9 @@ class ElWindow(QMainWindow, form_class):
         l = self.delimiter_select() # delimiter
         G_files = 0
 
-        for pathfile in fname:
-            path = pathfile[0]
-            file = pathfile[1]
+        for path, file in fname:
+            #path = pathfile[0]
+            #file = pathfile[1]
             G_files += 1
             self.lineEdit_5.setText(str(G_files))
             # 기존 폴더에 설명이 있을 경우 가져옴
@@ -332,7 +334,7 @@ class ElWindow(QMainWindow, form_class):
             
             # 파일 이름에 날짜 형식이 들어가 있는지 검사하여 디렉토리 생성
             checker = re.compile(r'^(19\d\d|20\d\d)[년\-_. ]?(0[1-9]|1[012])[월\-_. ]?(0[1-9]|[12][0-9]|3[01])[일]?')  
-            checker1 = re.compile(r'^(\d\d)[년\-_. ]?(0[1-9]|1[012])[월\-_. ]?(0[1-9]|[12][0-9]|3[01])[일]?')
+            #checker1 = re.compile(r'^(\d\d)[년\-_. ]?(0[1-9]|1[012])[월\-_. ]?(0[1-9]|[12][0-9]|3[01])[일]?')
             m = checker.search(file)
             if checker.search(file): # delimiter 종류에 따른 디렉토리 생성 
                 Y = m.group(1)
@@ -378,18 +380,20 @@ class ElWindow(QMainWindow, form_class):
         return y, ym, ymd, newFileName
 
     def saveExcel(self, f_list, fname):
-        target_folder = self.lineEdit_2.text()
-        df = pd.DataFrame (f_list, columns = ['Source Path', 'Destination Path', 'Filename'])
-        FileName = pathlib.Path(target_folder, fname)
-        try:
-            if os.path.isfile(FileName):
-                os.remove(FileName)
-                df.to_excel(FileName,index=False,header=True)
-            else:
-                df.to_excel(FileName,index=False,header=True)
-        except:
-            QMessageBox.about(self, "경고", "파일을 사용하고 있습니다. 파일을 닫아주세요.")
-        pass
+        if len(f_list) > 0:
+            target_folder = self.lineEdit_2.text()
+            df = pd.DataFrame (f_list, columns = ['Source Path', 'Destination Path', 'Filename'])
+            FileName = pathlib.Path(target_folder, fname)
+            try:
+                if os.path.isfile(FileName):
+                    os.remove(FileName)
+                    df.to_excel(FileName,index=False,header=True)
+                else:
+                    df.to_excel(FileName,index=False,header=True)
+            except:
+                QMessageBox.about(self, "경고", "파일을 사용하고 있습니다. 파일을 닫아주세요.")
+        else:
+            pass
 
     def progressbarInit(self, length):
         self.progressBar.setMinimum(0)
