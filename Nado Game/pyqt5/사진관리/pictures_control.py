@@ -83,11 +83,21 @@ class ElWindow(QMainWindow, form_class):
         self.pushButton_12.clicked.connect(self.delSelectedFile) # Fit to Normal size 
         self.pushButton_13.clicked.connect(self.delAllOtherFiles) # Fit to Normal size 
         self.listWidget.itemClicked.connect(self.qImageViewer)
-        # self.lineEdit.textChanged.connect(self.list_files)
+        self.disablePBCopyMove()
+        self.lineEdit.textChanged.connect(self.enablePBCopyMove)
         # self.listwidget = QListWidget(self)
         # self.listwidget.setAlternatingRowColors(True)
 
     @pyqtSlot()
+
+    def disablePBCopyMove(self):
+        self.pushButton_3.setDisabled(True)
+        self.pushButton_4.setDisabled(True)
+
+
+    def enablePBCopyMove(self):
+        self.pushButton_3.setEnabled(True)
+        self.pushButton_4.setEnabled(True)
 
     def disablePushButton(self):
         self.pushButton_6.setDisabled(True) # Zoom in
@@ -195,9 +205,11 @@ class ElWindow(QMainWindow, form_class):
         srcTFiles = 0
         srcGFile = []
         srcOFile = []
+        self.progressbarInit(len(self.filesList()))
         for path, dir, files in self.filesList():
             for file in files:
                 srcTFiles += 1
+                self.progressbarUpdate(srcTFiles)
                 if self.suffixVerify(path, file):
                     srcGFile.append([path, file])
                 else:
@@ -205,10 +217,10 @@ class ElWindow(QMainWindow, form_class):
         self.lineEdit_4.setText(str(srcTFiles))
         self.dispListWidget(srcGFile)
         self.dispListWidget_3(srcOFile)
-        self.saveGraphicFileListToExcel(srcGFile)
         if sys._getframe(1).f_code.co_name == 'delAllOtherFiles':
             return srcOFile
         else:
+            self.saveGraphicFileListToExcel(srcGFile)
             return srcGFile
     
     
@@ -241,7 +253,7 @@ class ElWindow(QMainWindow, form_class):
         self.lineEdit_6.setText(str(i))
 
     def suffixVerify(self, path, f):
-        allow_exts = ['.jpg', '.jpeg', '.png', '.gif', '.avi','.mov', '.mp4', '.bmp', '.tif', 'tiff']
+        allow_exts = ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.tif', 'tiff'] #, '.avi','.mov', '.mp4'
         # f = pathlib.Path(path, name)  # 원본 파일
         src = pathlib.Path(path, f)
         if src.suffix.lower() in allow_exts:
@@ -250,17 +262,30 @@ class ElWindow(QMainWindow, form_class):
             pass
 
     def delSelectedFile(self):
+        allow_exts = ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.tif', 'tiff', '.avi','.mov', '.mp4']
         if self.listWidget_3.currentItem():
             file = self.listWidget_3.currentItem().text()
-            os.remove(file)
-            self.list_files()
+            path, ext = os.path.splitext(file)
+            if str.lower(ext) not in allow_exts:
+                os.remove(file)
+                self.list_files()
+            else:
+                QMessageBox.about(self, "경고", "그래픽이나 동영상 파일은 삭제할 수 없습니다.")
 
     
     def delAllOtherFiles(self):
+        allow_exts = ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.tif', 'tiff', '.avi','.mov', '.mp4']
         otherFiles = self.selectListGraphicFiles()
         for path, fileName in otherFiles:
-            f = pathlib.Path(path, fileName)
-            os.remove(f)
+            file, ext = os.path.splitext(fileName)
+            print(ext)
+            if str.lower(ext) not in allow_exts:
+                f = pathlib.Path(path, fileName)
+                print(f)
+                print('os.remove(f)')
+                os.remove(f)
+            else:
+                QMessageBox.about(self, "경고", "그래픽이나 동영상 파일은 삭제할 수 없습니다.")
         self.list_files()
 
     def getRootdir(self):
@@ -312,23 +337,26 @@ class ElWindow(QMainWindow, form_class):
                 decoded = TAGS.get(tag, tag)
                 taglabel[decoded] = value
             s = taglabel['DateTimeOriginal']
+            print(path, f, s)
             # print(s)
             timestamp = time.mktime(datetime.strptime(s, '%Y:%m:%d %H:%M:%S').timetuple())
+            return timestamp
         except:
+            return None
             now = datetime.now()
             timestamp = datetime.timestamp(now)
-        return timestamp
 
     def estimateDateFromFileName(self, fname):
         folderName = []
-        l = self.delimiter_select() # delimiter
+        D0, D1, D2 = self.delimiter_select() # delimiter
         G_files = 0
-
+        self.progressbarInit(len(fname))
         for path, file in fname:
             #path = pathfile[0]
             #file = pathfile[1]
             G_files += 1
             self.lineEdit_5.setText(str(G_files))
+            self.progressbarUpdate(G_files)
             # 기존 폴더에 설명이 있을 경우 가져옴
             remark = self.get_remark(path)
             
@@ -340,9 +368,9 @@ class ElWindow(QMainWindow, form_class):
                 Y = m.group(1)
                 M = m.group(2)
                 D = m.group(3)
-                folderName.append([path, Y+l[0], Y+l[0]+M+l[1], Y+l[0]+M+l[1]+D+l[2]+remark, file, ''])
+                folderName.append([path, Y+D0, Y+D0+M+D1, Y+D0+M+D1+D+D2+remark, file, ''])
             else:# checker1.search(file):
-                [y, ym, ymd, newFileName] = self.folderNameFromTakeMinTime(path, file, l, remark)
+                [y, ym, ymd, newFileName] = self.folderNameFromTakeMinTime(path, file, [D0, D1, D2], remark)
                 folderName.append([path, y, ym, ymd, file, newFileName])
 
             '''    
@@ -362,6 +390,7 @@ class ElWindow(QMainWindow, form_class):
         # 사진찍은 날짜 가져오기
         if self.takePictureTime(path, f):
             min_time = self.takePictureTime(path, f)
+            print('takePictureTime:', datetime.fromtimestamp(min_time))
         else:
             filename = os.path.join(path, f)
             T = os.stat(filename)
@@ -371,6 +400,7 @@ class ElWindow(QMainWindow, form_class):
             a_time = T.st_atime
             #c_time = os.path.getctime(filename)
             min_time = min(c_time, m_time, a_time)
+            print('takeTimeFromFile: ', datetime.fromtimestamp(min_time))
         newFileName = self.makeNewFileName(f, min_time)
         # print(newFileName)
         dt = datetime.fromtimestamp(min_time)
@@ -464,10 +494,13 @@ class ElWindow(QMainWindow, form_class):
     def moveFile(self, folderName):
         R_files = 0
         M_files = 0
+        P_files = 0
         Rfile = []
         Mfile = []
+        self.progressbarInit(len(folderName))
         target_folder = self.getDestdir()
         for folder in folderName:
+            P_files += 1
             source, y, ym, ymd, oriFileName, newFileName = folder
             f = pathlib.Path(source, oriFileName) # source file 경로 및 이름
             folder_tree = self.folder_tree()
@@ -477,6 +510,7 @@ class ElWindow(QMainWindow, form_class):
                 newFileName = oriFileName # New file name이 없을 경우 원본 파일 이름 사용
             t_file = pathlib.Path(t, newFileName) # target file 경로 및 이름 
             t.mkdir(parents=True, exist_ok=True) # 파일 경로에 있는 모든 폴더를 생성함. 있으면 놔둠
+            self.progressbarUpdate(P_files)
             if os.path.isfile(t_file):
                 if os.stat(f).st_mode == 33060: # 33060 readonly, 33206 writable
                     os.chmod(f, stat.S_IWRITE)
