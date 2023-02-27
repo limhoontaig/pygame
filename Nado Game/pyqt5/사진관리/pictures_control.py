@@ -278,7 +278,7 @@ class ElWindow(QMainWindow, form_class):
             if checker.match(f):
                 return True
         else:
-            pass
+            return False
 
     def delSelectedFile(self):
         allow_exts = ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.tif', 'tiff', '.avi','.mov', '.mp4']
@@ -328,6 +328,7 @@ class ElWindow(QMainWindow, form_class):
             return delimiter
 
     def get_remark(self, path):
+        '''
         if path.find('/') > 0:
             separator = '/'
         if path.find('\\') > 0:
@@ -335,6 +336,8 @@ class ElWindow(QMainWindow, form_class):
 
         sub_dir = path.split(separator)
         sub = sub_dir[-1]
+        '''
+        sub = os.path.basename(path)
         checker = re.compile(r'(19\d\d|20\d\d|\d\d)[년\-_. ]?(0[1-9]|1[012])[월\-_. ]?(0[1-9]|[12][0-9]|3[01])[일]?')
         m = checker.match(sub)
         if m and len(sub) > m.end():
