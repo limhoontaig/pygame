@@ -40,6 +40,9 @@ LE =  [
     ]
 TEMPFILE = 'TEMP_EXCEL_FileList.xlsx'
 
+ALLOW_GRAPHIC = ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.tif', 'tiff']
+ALLOW_MEDIA = ['.avi','.mov', '.mp4']
+ALLOW_EXTS = ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.tif', 'tiff', '.avi','.mov', '.mp4']
 class ElWindow(QMainWindow, form_class):
     def __init__(self):
         super().__init__()
@@ -61,6 +64,7 @@ class ElWindow(QMainWindow, form_class):
         #pixmap = QPixmap()
         #if pixmap == None:
         self.disablePushButton()
+        self.disablePBCopyMove()
 
         '''
         self.scrollArea = QScrollArea()
@@ -84,7 +88,6 @@ class ElWindow(QMainWindow, form_class):
         self.pushButton_13.clicked.connect(self.delAllOtherFiles) # Fit to Normal size 
         self.pushButton_14.clicked.connect(self.renameFolder) # Fit to Normal size 
         self.listWidget.itemClicked.connect(self.qImageViewer)
-        self.disablePBCopyMove()
         # self.lineEdit.textChanged.connect(self.enablePBCopyMove)
         # self.listwidget = QListWidget(self)
         # self.listwidget.setAlternatingRowColors(True)
@@ -151,7 +154,6 @@ class ElWindow(QMainWindow, form_class):
     def scaleImage(self, factor):
         self.scaleFactor *= factor
         self.label_8.resize(self.scaleFactor * self.label_8.pixmap().size())
-
         self.pushButton_6.setEnabled(self.scaleFactor < 1.0)
         self.pushButton_7.setEnabled(self.scaleFactor > 0.6)
 
@@ -166,8 +168,7 @@ class ElWindow(QMainWindow, form_class):
         file = self.listWidget.currentItem().text()
         path, f = os.path.split(file)
         root, lastDir = os.path.split(path)
-        checker = re.compile(r'^(19\d\d|20\d\d)[년\-_. ]?(0[1-9]|1[012])[월\-_. ]?(0[1-9]|[12][0-9]|3[01])[일]?')
-        m = checker.match(lastDir)
+        m = self.checkReMatch(lastDir)
         newDirName = lastDir[:m.end()] + self.lineEdit_3.text()
         newDir = pathlib.Path(root, newDirName)
         os.rename(path, newDir)
@@ -238,8 +239,6 @@ class ElWindow(QMainWindow, form_class):
             self.saveGraphicFileListToExcel(srcGFile)
             return srcGFile
     
-    
-    
     def saveGraphicFileListToExcel(self, srcGFile):
         FileName = pathlib.Path(self.getRootdir(),TEMPFILE)
         df = pd.DataFrame (srcGFile, columns = ['Source Path', 'Filename'])
@@ -255,38 +254,34 @@ class ElWindow(QMainWindow, form_class):
     
     def dispListWidget(self, srcGFile):
         i = 0
-        for [path, file] in srcGFile:
-            self.listWidget.addItem(path + '/' + file)
+        for path, file in srcGFile:
+            self.listWidget.addItem(str(pathlib.Path(path, file)))
             i += 1
         self.lineEdit_5.setText(str(i))
 
     def dispListWidget_3(self, srcOFile):
         i = 0
-        for [path, file] in srcOFile:
-            self.listWidget_3.addItem(path + '/' + file)
+        for path, file in srcOFile:
+            self.listWidget_3.addItem(str(pathlib.Path(path, file)))
             i += 1
         self.lineEdit_6.setText(str(i))
 
     def suffixVerify(self, path, f):
-        allow_exts = ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.tif', 'tiff']
-        allowMedia = ['.avi','.mov', '.mp4']
         # f = pathlib.Path(path, name)  # 원본 파일
         src = pathlib.Path(path, f)
-        if src.suffix.lower() in allow_exts:
+        if src.suffix.lower() in ALLOW_GRAPHIC:
             return True
-        elif src.suffix.lower() in allowMedia:
-            checker = re.compile(r'^(19\d\d|20\d\d)[년\-_. ]?(0[1-9]|1[012])[월\-_. ]?(0[1-9]|[12][0-9]|3[01])[일]?')
-            if checker.match(f):
+        elif src.suffix.lower() in ALLOW_MEDIA:
+            if self.checkReMatch(f):
                 return True
         else:
             return False
 
     def delSelectedFile(self):
-        allow_exts = ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.tif', 'tiff', '.avi','.mov', '.mp4']
         if self.listWidget_3.currentItem():
             file = self.listWidget_3.currentItem().text()
             path, ext = os.path.splitext(file)
-            if str.lower(ext) not in allow_exts:
+            if str.lower(ext) not in ALLOW_EXTS:
                 os.remove(file)
                 self.list_files()
             else:
@@ -294,12 +289,11 @@ class ElWindow(QMainWindow, form_class):
 
     
     def delAllOtherFiles(self):
-        allow_exts = ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.tif', 'tiff', '.avi','.mov', '.mp4']
         otherFiles = self.selectListGraphicFiles()
         for path, fileName in otherFiles:
             file, ext = os.path.splitext(fileName)
             # print(ext)
-            if str.lower(ext) not in allow_exts:
+            if str.lower(ext) not in ALLOW_EXTS:
                 f = pathlib.Path(path, fileName)
                 os.remove(f)
             else:
@@ -328,23 +322,21 @@ class ElWindow(QMainWindow, form_class):
             delimiter = ['', '', '']
             return delimiter
 
-    def get_remark(self, path):
-        '''
-        if path.find('/') > 0:
-            separator = '/'
-        if path.find('\\') > 0:
-            separator = '\\'
-
-        sub_dir = path.split(separator)
-        sub = sub_dir[-1]
-        '''
-        sub = os.path.basename(path)
-        print(sub)
+    def checkReMatch(self, path):
         checker = re.compile(r'(19\d\d|20\d\d|\d\d)[년\-_. ]?(0[1-9]|1[012])[월\-_. ]?(0[1-9]|[12][0-9]|3[01])[일]?')
-        m = checker.match(sub)
-        if m and len(sub) > m.end():
-            print(sub[m.end():])
-            return sub[m.end():]
+        return checker.match(path)
+    
+    def checkReSearch(self, path):
+        checker = re.compile(r'(19\d\d|20\d\d|\d\d)[년\-_. ]?(0[1-9]|1[012])[월\-_. ]?(0[1-9]|[12][0-9]|3[01])[일]?')
+        return checker.search(path)
+    
+
+    def get_remark(self, path):
+        lastDir = os.path.basename(path)
+        m = self.checkReMatch(lastDir)
+        if m and len(lastDir) > m.end():
+            #print(sub[m.end():])
+            return lastDir[m.end():]
         else:
             return ""        
 
@@ -372,8 +364,6 @@ class ElWindow(QMainWindow, form_class):
         G_files = 0
         self.progressbarInit(len(fname))
         for path, file in fname:
-            #path = pathfile[0]
-            #file = pathfile[1]
             G_files += 1
             self.lineEdit_5.setText(str(G_files))
             self.progressbarUpdate(G_files)
@@ -381,10 +371,8 @@ class ElWindow(QMainWindow, form_class):
             remark = self.get_remark(path)
             
             # 파일 이름에 날짜 형식이 들어가 있는지 검사하여 디렉토리 생성
-            checker = re.compile(r'^(19\d\d|20\d\d)[년\-_. ]?(0[1-9]|1[012])[월\-_. ]?(0[1-9]|[12][0-9]|3[01])[일]?')
-            #checker1 = re.compile(r'^(\d\d)[년\-_. ]?(0[1-9]|1[012])[월\-_. ]?(0[1-9]|[12][0-9]|3[01])[일]?')
-            m = checker.search(file)
-            if checker.search(file): # delimiter 종류에 따른 디렉토리 생성 
+            m = self.checkReSearch(file)
+            if m: # delimiter 종류에 따른 디렉토리 생성 
                 Y = m.group(1)
                 M = m.group(2)
                 D = m.group(3)
@@ -392,12 +380,6 @@ class ElWindow(QMainWindow, form_class):
             else:# checker1.search(file):
                 [y, ym, ymd, newFileName] = self.folderNameFromTakeMinTime(path, file, [D0, D1, D2], remark)
                 folderName.append([path, y, ym, ymd, file, newFileName])
-
-            '''    
-            else: # 파일 이름에 날짜가 없을 경우 파일 생성 날짜를 유추하여 파일 디렉토리 생성
-                [y, ym, ymd, newFileName] = self.folderNameFromTakeMinTime(path, file, l, remark)
-                folderName.append([path, y, ym, ymd, file, newFileName])
-            '''
         return folderName
 
     def makeNewFileName(self, f, min_time):
@@ -671,7 +653,7 @@ class ElWindow(QMainWindow, form_class):
 
     def addListWidget(self, path, f):
         # self.addItemText = path + " " + f
-        self.listWidget.addItem(path + "/" + f)
+        self.listWidget.addItem(str(pathlib.Path(path, f)))
         #self.listWidget.addItem(self.addItemText)
 
 class QImageViewer(QMainWindow):
