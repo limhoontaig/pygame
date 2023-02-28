@@ -165,13 +165,14 @@ class ElWindow(QMainWindow, form_class):
     def renameFolder(self):
         file = self.listWidget.currentItem().text()
         path, f = os.path.split(file)
-        new_path = 
-
-        pass
-
-
-
-
+        root, lastDir = os.path.split(path)
+        checker = re.compile(r'^(19\d\d|20\d\d)[년\-_. ]?(0[1-9]|1[012])[월\-_. ]?(0[1-9]|[12][0-9]|3[01])[일]?')
+        m = checker.match(lastDir)
+        newDirName = lastDir[:m.end()] + self.lineEdit_3.text()
+        newDir = pathlib.Path(root, newDirName)
+        os.rename(path, newDir)
+        self.lineEdit.setText(str(newDir))
+        self.list_files()
 
     def qImageViewer(self):    
         width = 660
@@ -338,10 +339,11 @@ class ElWindow(QMainWindow, form_class):
         sub = sub_dir[-1]
         '''
         sub = os.path.basename(path)
+        print(sub)
         checker = re.compile(r'(19\d\d|20\d\d|\d\d)[년\-_. ]?(0[1-9]|1[012])[월\-_. ]?(0[1-9]|[12][0-9]|3[01])[일]?')
         m = checker.match(sub)
         if m and len(sub) > m.end():
-            #print(sub[m.end():])
+            print(sub[m.end():])
             return sub[m.end():]
         else:
             return ""        
