@@ -19,6 +19,8 @@ import shutil
 from PIL import Image
 from PIL.ExifTags import TAGS
 import pandas as pd
+import mysql
+import mysql.connector
 
 def resource_path(relative_path):
     base_path = getattr(sys, "_MAIPASS", os.path.dirname(os.path.abspath(__file__)))
@@ -35,8 +37,8 @@ yyyymmdd = now.strftime("%Y")+now.strftime("%m")+'월'+ now.strftime("%D")+'일'
 yyyy = now.strftime("%Y")
 
 LE =  [
-    'c:/사진',
-    'c:/사진정리'
+    'c:/사진정리',
+    'c:/사진'
     ]
 TEMPFILE = 'TEMP_EXCEL_FileList.xlsx'
 
@@ -54,10 +56,10 @@ class ElWindow(QMainWindow, form_class):
         self.lineEdit_2.setText(LE[1])
         issued = '프로그램 작성 : 임훈택 Rev 0 '+ yyyymmdd + ' Issued'
         self.label.setText(issued)
-        self.scaleFactor = 1.0
+        #self.scaleFactor = 1.0
         
         #self.imageLabel = QLabel()
-        self.label_8.setBackgroundRole(QPalette.Base)
+        #self.label_8.setBackgroundRole(QPalette.Base)
         #self.label_8.setSizePolicy(QSizePolicy.Ignored, QSizePolicy.Ignored)
         #self.label_8.setScaledContents(True)
 
@@ -75,7 +77,7 @@ class ElWindow(QMainWindow, form_class):
 
         self.pushButton.clicked.connect(self.add_file)
         self.pushButton_2.clicked.connect(self.add_file)
-        self.pushButton_3.clicked.connect(self.copy_start)
+        self.pushButton_3.clicked.connect(self.fileToDB) #copy_start)
         self.pushButton_4.clicked.connect(self.move_start)
         self.pushButton_5.clicked.connect(self.list_files) 
         self.pushButton_6.clicked.connect(self.zoomIn) # Zoom in
@@ -136,9 +138,11 @@ class ElWindow(QMainWindow, form_class):
         pixmap = pixmap.scaledToHeight(460)
 
     def normalSize(self):
+        return
         self.label_8.adjustSize()
 
     def fitToWindow(self):
+        return
         fitToWindow = True
         self.label_8.setWidgetResizable(fitToWindow)
         if not fitToWindow:
@@ -146,12 +150,15 @@ class ElWindow(QMainWindow, form_class):
         self.updateActions()
 
     def zoomIn(self):
+        return
         self.scaleImage(1.25)
 
     def zoomOut(self):
+        return
         self.scaleImage(0.8)
 
     def scaleImage(self, factor):
+        return
         self.scaleFactor *= factor
         self.label_8.resize(self.scaleFactor * self.label_8.pixmap().size())
         self.pushButton_6.setEnabled(self.scaleFactor < 1.0)
@@ -164,22 +171,14 @@ class ElWindow(QMainWindow, form_class):
         pixmap = QPixmap(file)
         return pixmap
 
-    def renameFolder(self):
-        file = self.listWidget.currentItem().text()
-        path, f = os.path.split(file)
-        root, lastDir = os.path.split(path)
-        m = self.checkReMatch(lastDir)
-        newDirName = lastDir[:m.end()] + self.lineEdit_3.text()
-        newDir = pathlib.Path(root, newDirName)
-        os.rename(path, newDir)
-        self.lineEdit.setText(str(newDir))
-        self.list_files()
-
     def qImageViewer(self):    
         width = 660
         height = 460
         self.label_8.resize(width,height)
         pixmap = self.makePixmap()
+        file = self.listWidget.currentItem().text()
+        pixmap = QPixmap(file)
+        print(self.scaleDirection(width, height, pixmap))
         if self.scaleDirection(width, height, pixmap) == 'width':
             pixmap = pixmap.scaledToWidth(width)
         else:
@@ -195,6 +194,17 @@ class ElWindow(QMainWindow, form_class):
             return 'width'
         else:
             return 'height'
+        
+    def renameFolder(self):
+        file = self.listWidget.currentItem().text()
+        path, f = os.path.split(file)
+        root, lastDir = os.path.split(path)
+        m = self.checkReMatch(lastDir)
+        newDirName = lastDir[:m.end()] + self.lineEdit_3.text()
+        newDir = pathlib.Path(root, newDirName)
+        os.rename(path, newDir)
+        self.lineEdit.setText(str(newDir))
+        self.list_files()
 
     def list_files(self):
         self.lineEdit_clear()
@@ -225,12 +235,12 @@ class ElWindow(QMainWindow, form_class):
             self.progressbarInit(len(files))
             for file in files:
                 srcTFiles += 1
+                self.lineEdit_4.setText(str(srcTFiles))
                 self.progressbarUpdate(srcTFiles)
                 if self.suffixVerify(path, file):
                     srcGFile.append([path, file])
                 else:
                     srcOFile.append([path, file])
-        self.lineEdit_4.setText(str(srcTFiles))
         self.dispListWidget(srcGFile)
         self.dispListWidget_3(srcOFile)
         if sys._getframe(1).f_code.co_name == 'delAllOtherFiles':
@@ -238,6 +248,109 @@ class ElWindow(QMainWindow, form_class):
         else:
             self.saveGraphicFileListToExcel(srcGFile)
             return srcGFile
+        
+    def connDB(self):
+        conn = mysql.connector.connect(
+        host='localhost', 
+        port='3306', 
+        database='mypictures', 
+        user='root', 
+        password='1234'
+        )
+        return conn
+    
+    def fileToDB(self):
+        target_folder = self.lineEdit_2.text()
+        folder_tree = self.folder_tree()
+        Graphicfiles = self.estimateDateFromFileName(self.selectListGraphicFiles())
+        for folder in Graphicfiles:
+            srcPath, y, ym, ymd, originalFileName, newFileName = folder
+            f = pathlib.Path(srcPath, originalFileName)
+            destPath = self.makeFolder(folder_tree, target_folder, folder)
+            destPath.mkdir(parents=True, exist_ok=True)
+            remark = self.get_remark(srcPath)
+            tt = self.takePictureTime(srcPath, originalFileName)
+            #print(originalFileName, tt)
+            exist = self.selectDB(str(originalFileName))
+            pathExist = self.selectPathDB(originalFileName, srcPath)
+            #print('exist: ', exist)
+
+            if not exist:
+                #print('not exist insertDB: ', srcPath, originalFileName)
+                self.insertDB(newFileName, str(destPath), originalFileName, srcPath, tt, remark)
+            elif pathExist:
+                print(pathExist['pictureFileOldName'])
+                pass
+            else:
+                dupliExist = self.selectDupliDB(originalFileName, srcPath)
+                #print(dupliExist)
+                if not dupliExist:
+                    # print('not duplicated insertDupliDB: ', originalFileName, srcPath)
+                    self.insertDupliDB(originalFileName, srcPath, destPath, remark)
+
+    def insertDupliDB(self, f, srcDir, desDir, d):
+        print(d)
+        conn = self.connDB()
+        cursor = conn.cursor(dictionary=True)
+        sql = "insert into duplicatedpicturefiles (duPicFileName, srcDir, destDir, action) \
+        values (%s, %s, %s, %s)"
+        val = (f, str(srcDir), str(desDir), 'Delete')
+        cursor.execute(sql, val)
+        conn.commit()
+        conn.close()
+        return
+    
+    def insertDB(self, f, destDir, oF, srcDir, TT, remark):
+        conn = self.connDB()
+        cursor = conn.cursor(dictionary=True)
+        sql = "insert into mypicturefiles (pictureFileName, pictureFileDestDir, pictureFileOldName, pictureFileSrcDir, TakeTime, remark) \
+        values (%s, %s, %s, %s, %s, %s)"
+        val = (f, destDir, oF, srcDir, TT, remark)
+        cursor.execute(sql, val)
+        conn.commit()
+        conn.close()
+        return
+    
+    def selectDupliDB(self, file, path):
+        conn = self.connDB()
+        #if conn.is_connected():
+        #print(True)
+        cursor = conn.cursor(dictionary=True)
+        sql = "select duPicFileName from duplicatedpicturefiles \
+            where duPicFileName = %s and srcDir = %s;"
+        val = (file, path)
+        cursor.execute(sql, val)
+        #print(cursor)
+        result = cursor.fetchall()
+        #print('selectDupliDB result: ', result)
+        conn.close()
+        return result
+    
+    def selectPathDB(self, file, path):
+        conn = self.connDB()
+        cursor = conn.cursor(dictionary=True)
+        sql = "select pictureFileOldName from mypicturefiles where pictureFileSrcDir = %s and pictureFileOldName = %s;"
+        val = (path, file)
+        cursor.execute(sql, val)
+        result = cursor.fetchone()
+        print(result)
+        conn.close()
+        return result
+    
+    def selectDB(self, f):
+        conn = self.connDB()
+        #if conn.is_connected():
+        #print(True)
+        cursor = conn.cursor(dictionary=True)
+        sql = "select pictureFileSrcDir from mypicturefiles where pictureFileName = %s;"
+        val = ([f])
+        cursor.execute(sql, val)
+        #print(cursor)
+        result = cursor.fetchone()
+        #print(result)
+        #print(result['pictureFileSrcDir'])
+        conn.close()
+        return result
     
     def saveGraphicFileListToExcel(self, srcGFile):
         FileName = pathlib.Path(self.getRootdir(),TEMPFILE)
@@ -352,7 +465,10 @@ class ElWindow(QMainWindow, form_class):
                 taglabel[decoded] = value
             s = taglabel['DateTimeOriginal']
             timestamp = time.mktime(datetime.strptime(s, '%Y:%m:%d %H:%M:%S').timetuple())
-            return timestamp
+            if sys._getframe(1).f_code.co_name == 'fileToDB':
+                return s
+            else:
+                return timestamp
         except:
             return None
             now = datetime.now()
@@ -376,7 +492,7 @@ class ElWindow(QMainWindow, form_class):
                 Y = m.group(1)
                 M = m.group(2)
                 D = m.group(3)
-                folderName.append([path, Y+D0, Y+D0+M+D1, Y+D0+M+D1+D+D2+remark, file, ''])
+                folderName.append([path, Y+D0, Y+D0+M+D1, Y+D0+M+D1+D+D2+remark, file, file])
             else:# checker1.search(file):
                 [y, ym, ymd, newFileName] = self.folderNameFromTakeMinTime(path, file, [D0, D1, D2], remark)
                 folderName.append([path, y, ym, ymd, file, newFileName])
@@ -454,7 +570,7 @@ class ElWindow(QMainWindow, form_class):
         for folder in folderName:
             source, y, ym, ymd, originalFileName, newFileName = folder
             if len(newFileName) > 0:
-                self.reNameSourceFile(folder)
+                #self.reNameSourceFile(folder)
                 originalFileName = newFileName
             P_files += 1
             self.progressbarUpdate(P_files)
