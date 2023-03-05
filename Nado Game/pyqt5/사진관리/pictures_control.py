@@ -21,6 +21,7 @@ from PIL.ExifTags import TAGS
 import pandas as pd
 import mysql
 import mysql.connector
+import math
 
 def resource_path(relative_path):
     base_path = getattr(sys, "_MAIPASS", os.path.dirname(os.path.abspath(__file__)))
@@ -37,7 +38,7 @@ yyyymmdd = now.strftime("%Y")+now.strftime("%m")+'월'+ now.strftime("%D")+'일'
 yyyy = now.strftime("%Y")
 
 LE =  [
-    'c:/사진정리',
+    'C:\\사진정리\\2004년\\2004년01월\\2004년01월06일 신월성 사업팀 덕유산',
     'c:/사진'
     ]
 TEMPFILE = 'TEMP_EXCEL_FileList.xlsx'
@@ -190,21 +191,44 @@ class ElWindow(QMainWindow, form_class):
         W = pixmap.width() / width
         H = pixmap.height() / height
         # print('W: ', W, 'H: ', H)
-        if W < H:
+        if W > H:
             return 'width'
         else:
             return 'height'
         
     def renameFolder(self):
+        if self.listWidget.currentItem() == None:
+            QMessageBox.about(self, "경고", "파일이 선택되지 않았습니다. 파일을 선택해 주세요.")
+            return
         file = self.listWidget.currentItem().text()
         path, f = os.path.split(file)
         root, lastDir = os.path.split(path)
         m = self.checkReMatch(lastDir)
         newDirName = lastDir[:m.end()] + self.lineEdit_3.text()
         newDir = pathlib.Path(root, newDirName)
-        os.rename(path, newDir)
+        #path = os.path.abspath(path)
+        print('renameFolder:', str(newDir), self.lineEdit_3.text(), path)
+        self.updateRemarkDB(str(newDir), self.lineEdit_3.text(), path)
+        #os.rename(path, newDir)
         self.lineEdit.setText(str(newDir))
         self.list_files()
+
+    def updateRemarkDB(self, newDir, remark, path):
+        #newDir = str(newDir).replace('\\', '\\\\', -1)
+        #path = str(path).replace('\\', '\\\\', -1)
+        print('updateRemarkDB: ', newDir, remark, path)
+        conn = self.connDB()
+        cursor = conn.cursor(dictionary=True)
+        sql = 'UPDATE mypicturefiles SET pictureFileDestDir = %s, remark = %s WHERE pictureFileDestDir = %s;'
+        val = (str(newDir), remark, str(path))
+        print('updateRemarkDB val: ', val)
+        cursor.execute(sql, val)
+        conn.commit()
+        #print(cursor.rowcount, "record(s) affected")
+        cursor.close()
+        conn.close()
+        print(cursor.rowcount, "record(s) affected")
+        return
 
     def list_files(self):
         self.lineEdit_clear()
@@ -225,19 +249,27 @@ class ElWindow(QMainWindow, form_class):
             return True            
 
     def filesList(self):
+        if os.path.isdir(self.getRootdir()) == False:
+            QMessageBox.about(self, "경고", "선택된 디렉터리가 없습니다. 다시 선택해 주세요.")
+            return
         return os.walk(self.getRootdir())
     
     def selectListGraphicFiles(self):
         srcTFiles = 0
         srcGFile = []
         srcOFile = []
+        if self.filesList() == None:
+            return
         for path, dir, files in self.filesList():
+            #path = path.replace('\\', '/', -1)
+            #print(path)
             self.progressbarInit(len(files))
             for file in files:
                 srcTFiles += 1
                 self.lineEdit_4.setText(str(srcTFiles))
                 self.progressbarUpdate(srcTFiles)
                 if self.suffixVerify(path, file):
+                    #print(path)
                     srcGFile.append([path, file])
                 else:
                     srcOFile.append([path, file])
@@ -246,7 +278,7 @@ class ElWindow(QMainWindow, form_class):
         if sys._getframe(1).f_code.co_name == 'delAllOtherFiles':
             return srcOFile
         else:
-            self.saveGraphicFileListToExcel(srcGFile)
+            #self.saveGraphicFileListToExcel(srcGFile)
             return srcGFile
         
     def connDB(self):
@@ -259,6 +291,16 @@ class ElWindow(QMainWindow, form_class):
         )
         return conn
     
+    def convert_size(self, f):
+        size_bytes = os.path.getsize(f)
+        if size_bytes == 0:
+            return "0B"
+        size_name = ("B", "KB", "MB", "GB", "TB", "PB", "EB", "ZB", "YB")
+        i = int(math.floor(math.log(size_bytes, 1024)))
+        p = math.pow(1024, i)
+        s = round(size_bytes / p, 4)
+        return "%s %s" % (s, size_name[i])
+    
     def fileToDB(self):
         target_folder = self.lineEdit_2.text()
         folder_tree = self.folder_tree()
@@ -269,67 +311,66 @@ class ElWindow(QMainWindow, form_class):
             destPath = self.makeFolder(folder_tree, target_folder, folder)
             destPath.mkdir(parents=True, exist_ok=True)
             remark = self.get_remark(srcPath)
+            file_size = self.convert_size(f)
             tt = self.takePictureTime(srcPath, originalFileName)
-            #print(originalFileName, tt)
             exist = self.selectDB(str(originalFileName))
             pathExist = self.selectPathDB(originalFileName, srcPath)
-            #print('exist: ', exist)
-
             if not exist:
-                #print('not exist insertDB: ', srcPath, originalFileName)
-                self.insertDB(newFileName, str(destPath), originalFileName, srcPath, tt, remark)
+                self.insertDB(newFileName, str(destPath), originalFileName, srcPath, tt, remark, file_size)
             elif pathExist:
                 print(pathExist['pictureFileOldName'])
                 pass
             else:
                 dupliExist = self.selectDupliDB(originalFileName, srcPath)
-                #print(dupliExist)
                 if not dupliExist:
-                    # print('not duplicated insertDupliDB: ', originalFileName, srcPath)
                     self.insertDupliDB(originalFileName, srcPath, destPath, remark)
 
-    def insertDupliDB(self, f, srcDir, desDir, d):
-        print(d)
+    def insertDupliDB(self, f, srcDir, destDir, d):
+        #destDir = str(destDir).replace('\\', '/', -1)
+        #srcDir = srcDir.replace('\\', '/', -1)
+        print('insertDupliDB:', destDir, srcDir, f, d)
         conn = self.connDB()
         cursor = conn.cursor(dictionary=True)
         sql = "insert into duplicatedpicturefiles (duPicFileName, srcDir, destDir, action) \
         values (%s, %s, %s, %s)"
-        val = (f, str(srcDir), str(desDir), 'Delete')
+        val = (f, str(srcDir), str(destDir), 'Delete')
         cursor.execute(sql, val)
         conn.commit()
         conn.close()
         return
     
-    def insertDB(self, f, destDir, oF, srcDir, TT, remark):
+    def insertDB(self, newFile, destDir, oldFile, srcDir, TakeTime, remark, fileSize):
+        #destDir = destDir.replace('\\', '/', -1)
+        #srcDir = srcDir.replace('\\', '/', -1)
         conn = self.connDB()
         cursor = conn.cursor(dictionary=True)
-        sql = "insert into mypicturefiles (pictureFileName, pictureFileDestDir, pictureFileOldName, pictureFileSrcDir, TakeTime, remark) \
-        values (%s, %s, %s, %s, %s, %s)"
-        val = (f, destDir, oF, srcDir, TT, remark)
+        sql = "insert into mypicturefiles (pictureFileName, pictureFileDestDir, \
+            pictureFileOldName, pictureFileSrcDir, TakeTime, remark, fileSize) \
+            values (%s, %s, %s, %s, %s, %s, %s)"
+        val = (newFile, destDir, oldFile, srcDir, TakeTime, remark, fileSize)
         cursor.execute(sql, val)
         conn.commit()
         conn.close()
         return
     
     def selectDupliDB(self, file, path):
+        #path = path.replace('\\', '/', -1)
         conn = self.connDB()
-        #if conn.is_connected():
-        #print(True)
         cursor = conn.cursor(dictionary=True)
         sql = "select duPicFileName from duplicatedpicturefiles \
             where duPicFileName = %s and srcDir = %s;"
         val = (file, path)
         cursor.execute(sql, val)
-        #print(cursor)
         result = cursor.fetchall()
-        #print('selectDupliDB result: ', result)
         conn.close()
         return result
     
     def selectPathDB(self, file, path):
+        #path = path.replace('\\', '/', -1)
         conn = self.connDB()
         cursor = conn.cursor(dictionary=True)
-        sql = "select pictureFileOldName from mypicturefiles where pictureFileSrcDir = %s and pictureFileOldName = %s;"
+        sql = "select pictureFileOldName from mypicturefiles \
+            where pictureFileSrcDir = %s and pictureFileOldName = %s;"
         val = (path, file)
         cursor.execute(sql, val)
         result = cursor.fetchone()
@@ -339,16 +380,11 @@ class ElWindow(QMainWindow, form_class):
     
     def selectDB(self, f):
         conn = self.connDB()
-        #if conn.is_connected():
-        #print(True)
         cursor = conn.cursor(dictionary=True)
         sql = "select pictureFileSrcDir from mypicturefiles where pictureFileName = %s;"
         val = ([f])
         cursor.execute(sql, val)
-        #print(cursor)
         result = cursor.fetchone()
-        #print(result)
-        #print(result['pictureFileSrcDir'])
         conn.close()
         return result
     
