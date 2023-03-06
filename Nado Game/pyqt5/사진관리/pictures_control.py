@@ -313,9 +313,11 @@ class ElWindow(QMainWindow, form_class):
             remark = self.get_remark(srcPath)
             file_size = self.convert_size(f)
             tt = self.takePictureTime(srcPath, originalFileName)
-            exist = self.selectDB(str(originalFileName))
-            pathExist = self.selectPathDB(originalFileName, srcPath)
+            exist = self.selectDB(str(newFileName)) # newfileName으로 검색하여야 함
+            print('exist = self.selectDB(str(originalFileName))', exist)
+            pathExist = self.selectPathDB(newFileName, str(destPath))
             if not exist:
+                print(newFileName, str(destPath), originalFileName, srcPath, tt, remark, file_size)
                 self.insertDB(newFileName, str(destPath), originalFileName, srcPath, tt, remark, file_size)
             elif pathExist:
                 print(pathExist['pictureFileOldName'])
@@ -385,6 +387,7 @@ class ElWindow(QMainWindow, form_class):
         val = ([f])
         cursor.execute(sql, val)
         result = cursor.fetchone()
+        print('result = cursor.fetchone()', f, result)
         conn.close()
         return result
     
@@ -621,7 +624,7 @@ class ElWindow(QMainWindow, form_class):
                 EFile.append([source,t, originalFileName])
             else:
                 C_files += 1
-                shutil.copy2(f, t) # 파일 복사 (파일 개정 시간 등 포함하여 복사를 위해 copy2 사용)pass
+                #shutil.copy2(f, t) # 파일 복사 (파일 개정 시간 등 포함하여 복사를 위해 copy2 사용)pass
                 self.disp_C_files(C_files)
                 self.listWidget_2.addItem(str(source) +' ' + str(t) +' ' + originalFileName)
                 CFile.append([source, t, originalFileName])
@@ -676,9 +679,10 @@ class ElWindow(QMainWindow, form_class):
                 M_files += 1
                 if os.stat(f).st_mode == 33060: # 33060 readonly, 33206 writable
                     os.chmod(f, stat.S_IWRITE)
-                    shutil.move(f, t_file) # 파일 이동 후 원본 삭제
+                    #shutil.move(f, t_file) # 파일 이동 후 원본 삭제
                 else:
-                    shutil.move(f, t_file) # 파일 이동 후 원본 삭제
+                    #shutil.move(f, t_file) # 파일 이동 후 원본 삭제
+                    pass
                 self.lineEdit_8.setText(str(M_files))
                 self.listWidget_2.addItem(str(source) + ' ' + str(t) +'/' + oriFileName)
                 Mfile.append([source, t, oriFileName])
