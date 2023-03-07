@@ -39,7 +39,7 @@ yyyy = now.strftime("%Y")
 
 LE =  [
     'C:\\사진정리\\2004년\\2004년01월\\2004년01월06일 신월성 사업팀 덕유산',
-    'c:/사진'
+    'c:\\사진'
     ]
 TEMPFILE = 'TEMP_EXCEL_FileList.xlsx'
 
@@ -780,6 +780,7 @@ class ElWindow(QMainWindow, form_class):
         if sname == '원본 폴더':
             init_dir = self.LE[0]
             fname = QFileDialog.getExistingDirectory(self, '원본 사진 파일이 있는 디렉토리를 선택하세요', init_dir)
+            print('add_file: ', fname)
             if len(fname) != 0:
                 self.lineEdit.setText(fname)
             else:
