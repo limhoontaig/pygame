@@ -223,11 +223,12 @@ class ElWindow(QMainWindow, form_class):
         val = (str(newDir), remark, str(path))
         print('updateRemarkDB val: ', val)
         cursor.execute(sql, val)
+        print(cursor)
         conn.commit()
         #print(cursor.rowcount, "record(s) affected")
+        print(cursor.rowcount, "record(s) affected")
         cursor.close()
         conn.close()
-        print(cursor.rowcount, "record(s) affected")
         return
 
     def list_files(self):
@@ -316,6 +317,8 @@ class ElWindow(QMainWindow, form_class):
             exist = self.selectDB(str(newFileName)) # newfileName으로 검색하여야 함
             print('exist = self.selectDB(str(originalFileName))', exist)
             pathExist = self.selectPathDB(newFileName, str(destPath))
+            print('self.selectPathDB(newFileName, str(destPath)): ', pathExist)
+            print('self.selectPathDB(newFileName, str(destPath)): ', newFileName, str(destPath))
             if not exist:
                 print(newFileName, str(destPath), originalFileName, srcPath, tt, remark, file_size)
                 self.insertDB(newFileName, str(destPath), originalFileName, srcPath, tt, remark, file_size)
@@ -383,7 +386,7 @@ class ElWindow(QMainWindow, form_class):
     def selectDB(self, f):
         conn = self.connDB()
         cursor = conn.cursor(dictionary=True)
-        sql = "select pictureFileSrcDir from mypicturefiles where pictureFileName = %s;"
+        sql = "select pictureFileDestDir from mypicturefiles where pictureFileName = %s;"
         val = ([f])
         cursor.execute(sql, val)
         result = cursor.fetchone()
@@ -779,18 +782,18 @@ class ElWindow(QMainWindow, form_class):
         sname = self.sender().text()
         if sname == '원본 폴더':
             init_dir = self.LE[0]
-            fname = QFileDialog.getExistingDirectory(self, '원본 사진 파일이 있는 디렉토리를 선택하세요', init_dir)
+            fname = pathlib.Path(QFileDialog.getExistingDirectory(self, '원본 사진 파일이 있는 디렉토리를 선택하세요', init_dir))
             print('add_file: ', fname)
-            if len(fname) != 0:
-                self.lineEdit.setText(fname)
+            if len(str(fname)) != 0:
+                self.lineEdit.setText(str(fname))
             else:
                 self.lineEdit.setText(LE[0])
         else :
             # sname == '정리할 폴더':
             init_dir = self.LE[1]
-            fname = QFileDialog.getExistingDirectory(self, '사진 파일을 정리해 놓을 디렉토리를 선택하세요', init_dir)
-            if len(fname[0]) != 0:
-                self.lineEdit_2.setText(fname)
+            fname = pathlib.Path(QFileDialog.getExistingDirectory(self, '사진 파일을 정리해 놓을 디렉토리를 선택하세요', init_dir))
+            if len(str(fname[0])) != 0:
+                self.lineEdit_2.setText(str(fname))
             else:
                 self.lineEdit_2.setText(LE[1])
 
