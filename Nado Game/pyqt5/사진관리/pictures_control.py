@@ -39,7 +39,7 @@ yyyy = now.strftime("%Y")
 
 LE =  [
     'C:\\사진정리\\2004년\\2004년01월\\2004년01월06일 신월성 사업팀 덕유산',
-    'c:\\사진'
+    'C:\\사진'
     ]
 TEMPFILE = 'TEMP_EXCEL_FileList.xlsx'
 
@@ -270,7 +270,7 @@ class ElWindow(QMainWindow, form_class):
             destPath.mkdir(parents=True, exist_ok=True)
             remark = self.get_remark(srcPath)
             file_size = self.convert_size(f)
-            tt = self.takePictureTime(srcPath, originalFileName)
+            _, tt = self.takePictureTime(srcPath, originalFileName)
             exist = self.selectDB(str(newFileName)) # newfileName으로 검색하여야 함
             pathExist = self.selectPathDB(newFileName, str(destPath))
             if not exist:
@@ -350,8 +350,11 @@ class ElWindow(QMainWindow, form_class):
         m = self.checkReMatch(lastDir)
         newDirName = lastDir[:m.end()] + self.lineEdit_3.text()
         newDir = pathlib.Path(root, newDirName)
-        self.updateRemarkDB(str(newDir), self.lineEdit_3.text(), path)
-        #os.rename(path, newDir)
+        destDirDB = self.selectDB(f)
+        destDir = destDirDB['pictureFileDestDir']
+        print('renamefolder function destDir: ', destDir)
+        self.updateRemarkDB(str(newDir), self.lineEdit_3.text(), destDir)
+        os.rename(path, newDir)
         self.lineEdit.setText(str(newDir))
         self.list_files()
 
@@ -479,6 +482,7 @@ class ElWindow(QMainWindow, form_class):
                 taglabel[decoded] = value
             s = taglabel['DateTimeOriginal']
             timestamp = time.mktime(datetime.strptime(s, '%Y:%m:%d %H:%M:%S').timetuple())
+            return s, timestamp
             if sys._getframe(1).f_code.co_name == 'fileToDB' \
                 or sys._getframe(1).f_code.co_name == 'copyFile':
                 return s
@@ -522,7 +526,7 @@ class ElWindow(QMainWindow, form_class):
     def folderNameFromTakeMinTime(self, path, f, l, remark):
         # 사진찍은 날짜 가져오기
         if self.takePictureTime(path, f):
-            min_time = self.takePictureTime(path, f)
+            _, min_time = self.takePictureTime(path, f)
             #print('takePictureTime:', datetime.fromtimestamp(min_time))
         else:
             filename = os.path.join(path, f)
@@ -572,6 +576,12 @@ class ElWindow(QMainWindow, form_class):
         else:
             os.rename(source, newFile)
         return
+    def getVariables(self, srcPath, f, originalFileName):
+        remark = self.get_remark(srcPath)
+        fileSize = self.convert_size(f)
+        takeTime, _ = self.takePictureTime(srcPath, originalFileName)
+        return remark, fileSize, takeTime
+
 
     def copyFile(self, pathFileList):
         C_files = 0
@@ -586,9 +596,7 @@ class ElWindow(QMainWindow, form_class):
         for folder in pathFileList:
             srcPath, y, ym, ymd, originalFileName, newFileName = folder
             f = pathlib.Path(srcPath, originalFileName)
-            remark = self.get_remark(srcPath)
-            fileSize = self.convert_size(f)
-            takeTime = self.takePictureTime(srcPath, originalFileName)
+            remark, fileSize, takeTime = self.getVariables(srcPath, f, originalFileName)
             #if len(newFileName) > 0:
                 #self.reNameSourceFile(folder)
             #    originalFileName = newFileName
@@ -604,7 +612,9 @@ class ElWindow(QMainWindow, form_class):
                 self.disp_C_files(C_files)
                 self.listWidget_2.addItem(str(srcPath) +' ' + str(destPath) +' ' + originalFileName)
                 CFile.append([originalFileName, srcPath, destPath])
-            elif self.selectPathDB(originalFileName, str(srcPath)):
+            elif self.selectPathDB(originalFileName, srcPath):
+                
+
                 I_files += 1
                 self.disp_I_files(I_files)
                 pass
@@ -646,17 +656,33 @@ class ElWindow(QMainWindow, form_class):
         target_folder = self.getDestdir()
         for folder in folderName:
             P_files += 1
-            source, y, ym, ymd, oriFileName, newFileName = folder
-            f = pathlib.Path(source, oriFileName) # source file 경로 및 이름
+            srcPath, y, ym, ymd, oriFileName, newFileName = folder
+            f = pathlib.Path(srcPath, oriFileName) # source file 경로 및 이름
             folder_tree = self.folder_tree()
             # 분류될 경로 생성
-            t = self.makeFolder(folder_tree, target_folder, folder)
+            destPath = self.makeFolder(folder_tree, target_folder, folder)
+            remark, fileSize, takeTime = self.getVariables(srcPath, f, oriFileName)
             if len(newFileName) == 0:
                 newFileName = oriFileName # New file name이 없을 경우 원본 파일 이름 사용
-            t_file = pathlib.Path(t, newFileName) # target file 경로 및 이름 
-            t.mkdir(parents=True, exist_ok=True) # 파일 경로에 있는 모든 폴더를 생성함. 있으면 놔둠
+            t_file = pathlib.Path(destPath, newFileName) # target file 경로 및 이름 
+            destPath.mkdir(parents=True, exist_ok=True) # 파일 경로에 있는 모든 폴더를 생성함. 있으면 놔둠
             self.progressbarUpdate(P_files)
-            if os.path.isfile(t_file):
+            if not self.selectDB(newFileName):
+                self.insertDB(newFileName, str(destPath), oriFileName, srcPath, takeTime, remark, fileSize)
+                M_files += 1
+                if os.stat(f).st_mode == 33060: # 33060 readonly, 33206 writable
+                    os.chmod(f, stat.S_IWRITE)
+                    shutil.move(f, t_file) # 파일 이동 후 원본 삭제
+                else:
+                    shutil.move(f, t_file) # 파일 이동 후 원본 삭제
+                    pass
+                self.lineEdit_8.setText(str(M_files))
+                self.listWidget_2.addItem(oriFileName, str(srcPath), str(destPath))
+                Mfile.append([oriFileName, srcPath, destPath])
+            else:
+
+
+
                 if os.stat(f).st_mode == 33060: # 33060 readonly, 33206 writable
                     os.chmod(f, stat.S_IWRITE)
                     os.remove(f)
@@ -664,21 +690,10 @@ class ElWindow(QMainWindow, form_class):
                     os.remove(f)
                 R_files += 1
                 self.lineEdit_9.setText(str(R_files))
-                self.listWidget_4.addItem(str(pathlib.Path(source, oriFileName)))
-                Rfile.append([source, t, oriFileName])
-            else:
-                M_files += 1
-                if os.stat(f).st_mode == 33060: # 33060 readonly, 33206 writable
-                    os.chmod(f, stat.S_IWRITE)
-                    #shutil.move(f, t_file) # 파일 이동 후 원본 삭제
-                else:
-                    #shutil.move(f, t_file) # 파일 이동 후 원본 삭제
-                    pass
-                self.lineEdit_8.setText(str(M_files))
-                self.listWidget_2.addItem(str(source) + ' ' + str(t) +'/' + oriFileName)
-                Mfile.append([source, t, oriFileName])
+                self.listWidget_4.addItem(str(pathlib.Path(srcPath, oriFileName)))
+                Rfile.append([srcPath, destPath, oriFileName])
             try:
-                os.rmdir(source)
+                os.rmdir(srcPath)
             except:
                 pass
         self.removeTempFile()
@@ -686,11 +701,16 @@ class ElWindow(QMainWindow, form_class):
         self.saveExcel(Mfile, 'moveFileMovedFiles.xlsx')
     
     def removeDir(self):
-        for path, dir, f in self.filesList():
-            if len(dir) == 0 and len(f) == 0 :
-                if path != self.getRootdir():
-                    os.rmdir(path)
-        self.checkDir(self.getRootdir())
+        if self.filesList() == None:
+            QMessageBox.about(self, "폴더 재지정", "이동 후 폴더가 존재하지 않습니다")
+            return
+        else:
+            for path, dir, f in self.filesList():
+                if len(dir) == 0 and len(f) == 0 :
+                    if path != self.getRootdir():
+                        os.rmdir(path)
+            self.checkDir(self.getRootdir())
+            
     
                 
     def checkDir(self, root_dir):
@@ -777,7 +797,7 @@ class ElWindow(QMainWindow, form_class):
             # sname == '정리할 폴더':
             init_dir = self.LE[1]
             fname = pathlib.Path(QFileDialog.getExistingDirectory(self, '사진 파일을 정리해 놓을 디렉토리를 선택하세요', init_dir))
-            if len(str(fname[0])) != 0:
+            if len(str(fname)) != 0:
                 self.lineEdit_2.setText(str(fname))
             else:
                 self.lineEdit_2.setText(LE[1])
