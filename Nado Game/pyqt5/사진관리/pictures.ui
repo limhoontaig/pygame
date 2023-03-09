@@ -375,9 +375,9 @@
   <widget class="QFrame" name="frame">
    <property name="geometry">
     <rect>
-     <x>680</x>
+     <x>670</x>
      <y>550</y>
-     <width>661</width>
+     <width>691</width>
      <height>231</height>
     </rect>
    </property>
@@ -590,12 +590,41 @@
      <rect>
       <x>20</x>
       <y>170</y>
-      <width>621</width>
+      <width>651</width>
       <height>23</height>
      </rect>
     </property>
     <property name="value">
      <number>0</number>
+    </property>
+   </widget>
+   <widget class="QLabel" name="label_14">
+    <property name="geometry">
+     <rect>
+      <x>470</x>
+      <y>110</y>
+      <width>81</width>
+      <height>16</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Identical Files</string>
+    </property>
+   </widget>
+   <widget class="QLineEdit" name="lineEdit_10">
+    <property name="geometry">
+     <rect>
+      <x>560</x>
+      <y>110</y>
+      <width>113</width>
+      <height>21</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string/>
+    </property>
+    <property name="alignment">
+     <set>Qt::AlignCenter</set>
     </property>
    </widget>
   </widget>
@@ -700,6 +729,9 @@
     </property>
     <property name="text">
      <string>TextLabel</string>
+    </property>
+    <property name="alignment">
+     <set>Qt::AlignCenter</set>
     </property>
    </widget>
   </widget>
