@@ -78,7 +78,7 @@ class ElWindow(QMainWindow, form_class):
 
         self.pushButton.clicked.connect(self.add_file)
         self.pushButton_2.clicked.connect(self.add_file)
-        self.pushButton_3.clicked.connect(self.fileToDB) #copy_start)
+        self.pushButton_3.clicked.connect(self.copy_start)
         self.pushButton_4.clicked.connect(self.move_start)
         self.pushButton_5.clicked.connect(self.list_files) 
         self.pushButton_6.clicked.connect(self.zoomIn) # Zoom in
@@ -124,26 +124,20 @@ class ElWindow(QMainWindow, form_class):
         self.pushButton_11.setEnabled(True) # Fit to Normal size 
 
     def fitToWidth(self):
-        #pixmap = self.makePixmap()
-        #self.label_8.resize(pixmap.scaledToWidth(self.label_8.pixmap.size()))
-        #self.label_8.resize(pixmap.scaledToWidth(self.label_8.pixmap.size()))
-        #pixmap = pixmap.scaledToWidth(660)
-        #self.label_8.pixmap.setToWidth()
-        pass
-
+        pixmap = self.makePixmap()
+        self.label_8.resize(pixmap.scaledToWidth(self.label_8.pixmap.size()))
+        pixmap = pixmap.scaledToWidth(660)
+        self.label_8.pixmap.setToWidth()
 
     def fitToHeight(self):
-        return
         pixmap = self.makePixmap()
-        #self.label_8.resize(pixmap.scaledToHeight(self.label_8.pixmap.size()))
+        self.label_8.resize(pixmap.scaledToHeight(self.label_8.pixmap.size()))
         pixmap = pixmap.scaledToHeight(460)
 
     def normalSize(self):
-        return
         self.label_8.adjustSize()
 
     def fitToWindow(self):
-        return
         fitToWindow = True
         self.label_8.setWidgetResizable(fitToWindow)
         if not fitToWindow:
@@ -151,15 +145,12 @@ class ElWindow(QMainWindow, form_class):
         self.updateActions()
 
     def zoomIn(self):
-        return
         self.scaleImage(1.25)
 
     def zoomOut(self):
-        return
         self.scaleImage(0.8)
 
     def scaleImage(self, factor):
-        return
         self.scaleFactor *= factor
         self.label_8.resize(self.scaleFactor * self.label_8.pixmap().size())
         self.pushButton_6.setEnabled(self.scaleFactor < 1.0)
@@ -177,9 +168,9 @@ class ElWindow(QMainWindow, form_class):
         height = 460
         self.label_8.resize(width,height)
         pixmap = self.makePixmap()
-        file = self.listWidget.currentItem().text()
-        pixmap = QPixmap(file)
-        print(self.scaleDirection(width, height, pixmap))
+        #file = self.listWidget.currentItem().text()
+        #pixmap = QPixmap(file)
+        #print(self.scaleDirection(width, height, pixmap))
         if self.scaleDirection(width, height, pixmap) == 'width':
             pixmap = pixmap.scaledToWidth(width)
         else:
@@ -196,40 +187,6 @@ class ElWindow(QMainWindow, form_class):
         else:
             return 'height'
         
-    def renameFolder(self):
-        if self.listWidget.currentItem() == None:
-            QMessageBox.about(self, "경고", "파일이 선택되지 않았습니다. 파일을 선택해 주세요.")
-            return
-        file = self.listWidget.currentItem().text()
-        path, f = os.path.split(file)
-        root, lastDir = os.path.split(path)
-        m = self.checkReMatch(lastDir)
-        newDirName = lastDir[:m.end()] + self.lineEdit_3.text()
-        newDir = pathlib.Path(root, newDirName)
-        #path = os.path.abspath(path)
-        print('renameFolder:', str(newDir), self.lineEdit_3.text(), path)
-        self.updateRemarkDB(str(newDir), self.lineEdit_3.text(), path)
-        #os.rename(path, newDir)
-        self.lineEdit.setText(str(newDir))
-        self.list_files()
-
-    def updateRemarkDB(self, newDir, remark, path):
-        #newDir = str(newDir).replace('\\', '\\\\', -1)
-        #path = str(path).replace('\\', '\\\\', -1)
-        print('updateRemarkDB: ', newDir, remark, path)
-        conn = self.connDB()
-        cursor = conn.cursor(dictionary=True)
-        sql = 'UPDATE mypicturefiles SET pictureFileDestDir = %s, remark = %s WHERE pictureFileDestDir = %s;'
-        val = (str(newDir), remark, str(path))
-        print('updateRemarkDB val: ', val)
-        cursor.execute(sql, val)
-        print(cursor)
-        conn.commit()
-        #print(cursor.rowcount, "record(s) affected")
-        print(cursor.rowcount, "record(s) affected")
-        cursor.close()
-        conn.close()
-        return
 
     def list_files(self):
         self.lineEdit_clear()
@@ -281,17 +238,7 @@ class ElWindow(QMainWindow, form_class):
         else:
             #self.saveGraphicFileListToExcel(srcGFile)
             return srcGFile
-        
-    def connDB(self):
-        conn = mysql.connector.connect(
-        host='localhost', 
-        port='3306', 
-        database='mypictures', 
-        user='root', 
-        password='1234'
-        )
-        return conn
-    
+
     def convert_size(self, f):
         size_bytes = os.path.getsize(f)
         if size_bytes == 0:
@@ -301,6 +248,16 @@ class ElWindow(QMainWindow, form_class):
         p = math.pow(1024, i)
         s = round(size_bytes / p, 4)
         return "%s %s" % (s, size_name[i])
+    
+    def connDB(self):
+        conn = mysql.connector.connect(
+        host='localhost', 
+        port='3306', 
+        database='mypictures', 
+        user='root', 
+        password='1234'
+        )
+        return conn
     
     def fileToDB(self):
         target_folder = self.lineEdit_2.text()
@@ -315,10 +272,7 @@ class ElWindow(QMainWindow, form_class):
             file_size = self.convert_size(f)
             tt = self.takePictureTime(srcPath, originalFileName)
             exist = self.selectDB(str(newFileName)) # newfileName으로 검색하여야 함
-            print('exist = self.selectDB(str(originalFileName))', exist)
             pathExist = self.selectPathDB(newFileName, str(destPath))
-            print('self.selectPathDB(newFileName, str(destPath)): ', pathExist)
-            print('self.selectPathDB(newFileName, str(destPath)): ', newFileName, str(destPath))
             if not exist:
                 print(newFileName, str(destPath), originalFileName, srcPath, tt, remark, file_size)
                 self.insertDB(newFileName, str(destPath), originalFileName, srcPath, tt, remark, file_size)
@@ -331,9 +285,6 @@ class ElWindow(QMainWindow, form_class):
                     self.insertDupliDB(originalFileName, srcPath, destPath, remark)
 
     def insertDupliDB(self, f, srcDir, destDir, d):
-        #destDir = str(destDir).replace('\\', '/', -1)
-        #srcDir = srcDir.replace('\\', '/', -1)
-        print('insertDupliDB:', destDir, srcDir, f, d)
         conn = self.connDB()
         cursor = conn.cursor(dictionary=True)
         sql = "insert into duplicatedpicturefiles (duPicFileName, srcDir, destDir, action) \
@@ -345,8 +296,6 @@ class ElWindow(QMainWindow, form_class):
         return
     
     def insertDB(self, newFile, destDir, oldFile, srcDir, TakeTime, remark, fileSize):
-        #destDir = destDir.replace('\\', '/', -1)
-        #srcDir = srcDir.replace('\\', '/', -1)
         conn = self.connDB()
         cursor = conn.cursor(dictionary=True)
         sql = "insert into mypicturefiles (pictureFileName, pictureFileDestDir, \
@@ -359,7 +308,6 @@ class ElWindow(QMainWindow, form_class):
         return
     
     def selectDupliDB(self, file, path):
-        #path = path.replace('\\', '/', -1)
         conn = self.connDB()
         cursor = conn.cursor(dictionary=True)
         sql = "select duPicFileName from duplicatedpicturefiles \
@@ -371,7 +319,6 @@ class ElWindow(QMainWindow, form_class):
         return result
     
     def selectPathDB(self, file, path):
-        #path = path.replace('\\', '/', -1)
         conn = self.connDB()
         cursor = conn.cursor(dictionary=True)
         sql = "select pictureFileOldName from mypicturefiles \
@@ -390,9 +337,37 @@ class ElWindow(QMainWindow, form_class):
         val = ([f])
         cursor.execute(sql, val)
         result = cursor.fetchone()
-        print('result = cursor.fetchone()', f, result)
         conn.close()
         return result
+    
+    def renameFolder(self):
+        if self.listWidget.currentItem() == None:
+            QMessageBox.about(self, "경고", "파일이 선택되지 않았습니다. 파일을 선택해 주세요.")
+            return
+        file = self.listWidget.currentItem().text()
+        path, f = os.path.split(file)
+        root, lastDir = os.path.split(path)
+        m = self.checkReMatch(lastDir)
+        newDirName = lastDir[:m.end()] + self.lineEdit_3.text()
+        newDir = pathlib.Path(root, newDirName)
+        self.updateRemarkDB(str(newDir), self.lineEdit_3.text(), path)
+        #os.rename(path, newDir)
+        self.lineEdit.setText(str(newDir))
+        self.list_files()
+
+    def updateRemarkDB(self, newDir, remark, path):
+        print('updateRemarkDB: ', newDir, remark, path)
+        conn = self.connDB()
+        cursor = conn.cursor(dictionary=True)
+        sql = 'UPDATE mypicturefiles SET pictureFileDestDir = %s, remark = %s WHERE pictureFileDestDir = %s;'
+        val = (str(newDir), remark, str(path))
+        print('updateRemarkDB val: ', val)
+        cursor.execute(sql, val)
+        print(cursor)
+        conn.commit()
+        cursor.close()
+        conn.close()
+        return
     
     def saveGraphicFileListToExcel(self, srcGFile):
         FileName = pathlib.Path(self.getRootdir(),TEMPFILE)
@@ -441,13 +416,11 @@ class ElWindow(QMainWindow, form_class):
                 self.list_files()
             else:
                 QMessageBox.about(self, "경고", "그래픽이나 동영상 파일은 삭제할 수 없습니다.")
-
     
     def delAllOtherFiles(self):
         otherFiles = self.selectListGraphicFiles()
         for path, fileName in otherFiles:
             file, ext = os.path.splitext(fileName)
-            # print(ext)
             if str.lower(ext) not in ALLOW_EXTS:
                 f = pathlib.Path(path, fileName)
                 os.remove(f)
@@ -485,7 +458,6 @@ class ElWindow(QMainWindow, form_class):
         checker = re.compile(r'(19\d\d|20\d\d|\d\d)[년\-_. ]?(0[1-9]|1[012])[월\-_. ]?(0[1-9]|[12][0-9]|3[01])[일]?')
         return checker.search(path)
     
-
     def get_remark(self, path):
         lastDir = os.path.basename(path)
         m = self.checkReMatch(lastDir)
@@ -507,7 +479,8 @@ class ElWindow(QMainWindow, form_class):
                 taglabel[decoded] = value
             s = taglabel['DateTimeOriginal']
             timestamp = time.mktime(datetime.strptime(s, '%Y:%m:%d %H:%M:%S').timetuple())
-            if sys._getframe(1).f_code.co_name == 'fileToDB':
+            if sys._getframe(1).f_code.co_name == 'fileToDB' \
+                or sys._getframe(1).f_code.co_name == 'copyFile':
                 return s
             else:
                 return timestamp
@@ -600,37 +573,49 @@ class ElWindow(QMainWindow, form_class):
             os.rename(source, newFile)
         return
 
-    def copyFile(self, folderName):
+    def copyFile(self, pathFileList):
         C_files = 0
         E_files = 0
+        I_files = 0
         P_files = 0
         EFile = []
         CFile = []
         target_folder = self.lineEdit_2.text()
         folder_tree = self.folder_tree()
-        self.progressbarInit(len(folderName))
-        for folder in folderName:
-            source, y, ym, ymd, originalFileName, newFileName = folder
-            if len(newFileName) > 0:
+        self.progressbarInit(len(pathFileList))
+        for folder in pathFileList:
+            srcPath, y, ym, ymd, originalFileName, newFileName = folder
+            f = pathlib.Path(srcPath, originalFileName)
+            remark = self.get_remark(srcPath)
+            fileSize = self.convert_size(f)
+            takeTime = self.takePictureTime(srcPath, originalFileName)
+            #if len(newFileName) > 0:
                 #self.reNameSourceFile(folder)
-                originalFileName = newFileName
+            #    originalFileName = newFileName
             P_files += 1
             self.progressbarUpdate(P_files)
-            f = pathlib.Path(source, originalFileName)
             # 분류될 경로 생성
-            t = self.makeFolder(folder_tree, target_folder, folder)
-            t.mkdir(parents=True, exist_ok=True) # 파일 경로에 있는 모든 폴더를 생성함. 있으면 놔둠
-            if os.path.isfile(pathlib.Path(t, originalFileName)):
-                E_files += 1
-                self.disp_E_files(E_files)
-                self.listWidget_4.addItem(str(source) +' ' + str(t) +' ' + originalFileName)
-                EFile.append([source,t, originalFileName])
-            else:
+            destPath = self.makeFolder(folder_tree, target_folder, folder)
+            destPath.mkdir(parents=True, exist_ok=True) # 파일 경로에 있는 모든 폴더를 생성함. 있으면 놔둠
+            if not self.selectDB(newFileName):
+                self.insertDB(newFileName, str(destPath), originalFileName, srcPath, takeTime, remark, fileSize)
                 C_files += 1
-                #shutil.copy2(f, t) # 파일 복사 (파일 개정 시간 등 포함하여 복사를 위해 copy2 사용)pass
+                shutil.copy2(f, destPath) # 파일 복사 (파일 개정 시간 등 포함하여 복사를 위해 copy2 사용)pass
                 self.disp_C_files(C_files)
-                self.listWidget_2.addItem(str(source) +' ' + str(t) +' ' + originalFileName)
-                CFile.append([source, t, originalFileName])
+                self.listWidget_2.addItem(str(srcPath) +' ' + str(destPath) +' ' + originalFileName)
+                CFile.append([originalFileName, srcPath, destPath])
+            elif self.selectPathDB(originalFileName, str(srcPath)):
+                I_files += 1
+                self.disp_I_files(I_files)
+                pass
+            else:
+                if not self.selectDupliDB(originalFileName, srcPath):
+                    print(self.selectDupliDB(originalFileName, srcPath))
+                    self.insertDupliDB(originalFileName, srcPath, destPath, 'Delete')
+                    E_files += 1
+                    self.disp_E_files(E_files)
+                    self.listWidget_4.addItem(originalFileName + ' ' + str(srcPath) +' ' + str(destPath))
+                    EFile.append([originalFileName, srcPath, destPath])
         self.removeTempFile()
         self.saveExcel(EFile, 'fileCopyExistingFiles.xlsx')
         self.saveExcel(CFile, 'fileCopyCopyedFiles.xlsx')
@@ -647,6 +632,9 @@ class ElWindow(QMainWindow, form_class):
 
     def disp_E_files(self, E_files):
         self.lineEdit_9.setText(str(E_files))
+    
+    def disp_I_files(self, I_files):
+        self.lineEdit_10.setText(str(I_files))
 
     def moveFile(self, folderName):
         R_files = 0
@@ -740,10 +728,16 @@ class ElWindow(QMainWindow, form_class):
         self.lineEdit_7.setText('0')
         self.lineEdit_8.setText('0')
         self.lineEdit_9.setText('0')
+        self.lineEdit_10.setText('0')
         self.listWidget_2.clear()
         self.listWidget_4.clear()
 
     def copy_start(self):
+        self.copyFile(self.get_pathFileList())
+        QMessageBox.about(self, "복사 완료", "파일 복사가 완료 되었습니다")
+        return
+
+    def get_pathFileList(self):
         if not self.checkSourceDest():
             self.count_clear()
             fl = pathlib.Path(self.getRootdir(),TEMPFILE)
@@ -751,26 +745,17 @@ class ElWindow(QMainWindow, form_class):
                 pathFileList = self.estimateDateFromFileName(self.openExcelFileList(fl))
             else:
                 pathFileList = self.estimateDateFromFileName(self.selectListGraphicFiles())
-            self.copyFile(pathFileList)
-            QMessageBox.about(self, "복사 완료", "파일 복사가 완료 되었습니다")
-        return
-
+        return pathFileList
+    
     def openExcelFileList(self,fl):
         df = pd.read_excel(fl, header=None , skiprows=0)
         return df.values.tolist()
 
 
     def move_start(self):
-        if not self.checkSourceDest():
-            self.count_clear()
-            fl = pathlib.Path(self.getRootdir(),TEMPFILE)
-            if os.path.isfile(fl):
-                pathFileList = self.estimateDateFromFileName(self.openExcelFileList(fl))
-            else:
-                pathFileList = self.estimateDateFromFileName(self.selectListGraphicFiles())
-            self.moveFile(pathFileList)
-            QMessageBox.about(self, "이동 완료", "파일 이동이 완료 되었습니다")
-            self.removeDir()
+        self.moveFile(self.get_pathFileList())
+        QMessageBox.about(self, "이동 완료", "파일 이동이 완료 되었습니다")
+        self.removeDir()
         return
 
     def checkSourceDest(self):
