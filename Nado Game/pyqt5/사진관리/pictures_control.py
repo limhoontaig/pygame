@@ -492,7 +492,10 @@ class ElWindow(QMainWindow, form_class):
                 decoded = TAGS.get(tag, tag)
                 taglabel[decoded] = value
             s = taglabel['DateTimeOriginal']
-            return s
+            if s != '0000:00:00 00:00:00':
+                return s
+            else:
+                return None
         except:
             return None
 
