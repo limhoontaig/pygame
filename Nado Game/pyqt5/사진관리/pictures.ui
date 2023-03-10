@@ -379,7 +379,7 @@
        <x>10</x>
        <y>150</y>
        <width>641</width>
-       <height>411</height>
+       <height>61</height>
       </rect>
      </property>
      <property name="editTriggers">
@@ -492,6 +492,16 @@
      </property>
      <property name="text">
       <string>총 작업 파일 목록</string>
+     </property>
+    </widget>
+    <widget class="QTableWidget" name="tableWidget">
+     <property name="geometry">
+      <rect>
+       <x>10</x>
+       <y>230</y>
+       <width>651</width>
+       <height>321</height>
+      </rect>
      </property>
     </widget>
    </widget>

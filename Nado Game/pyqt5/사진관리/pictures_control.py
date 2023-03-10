@@ -470,7 +470,18 @@ class ElWindow(QMainWindow, form_class):
         else:
             return ""        
 
-    def takePictureTime(self, path, f):
+    def takePictureTimeStrf(self, path, f):
+        return self.getexif(path, f)
+    
+    def takePictureTimestamp(self, path, f):
+        if self.getexif(path, f):
+            s = self.getexif(path, f)
+            timestamp = time.mktime(datetime.strptime(s, '%Y:%m:%d %H:%M:%S').timetuple())
+            return timestamp
+        else:
+            return None
+
+    def getexif(self, path, f):
         filename = pathlib.Path(path, f)
         try :
             with Image.open(filename) as im:
@@ -481,17 +492,9 @@ class ElWindow(QMainWindow, form_class):
                 decoded = TAGS.get(tag, tag)
                 taglabel[decoded] = value
             s = taglabel['DateTimeOriginal']
-            timestamp = time.mktime(datetime.strptime(s, '%Y:%m:%d %H:%M:%S').timetuple())
-            return s, timestamp
-            if sys._getframe(1).f_code.co_name == 'fileToDB' \
-                or sys._getframe(1).f_code.co_name == 'copyFile':
-                return s
-            else:
-                return timestamp
+            return s
         except:
             return None
-            now = datetime.now()
-            timestamp = datetime.timestamp(now)
 
     def estimateDateFromFileName(self, fname):
         folderName = []
@@ -525,16 +528,11 @@ class ElWindow(QMainWindow, form_class):
     
     def folderNameFromTakeMinTime(self, path, f, l, remark):
         # 사진찍은 날짜 가져오기
-        if self.takePictureTime(path, f):
-            _, min_time = self.takePictureTime(path, f)
+        if self.takePictureTimestamp(path, f):
+            min_time = self.takePictureTimestamp(path, f)
             #print('takePictureTime:', datetime.fromtimestamp(min_time))
         else:
-            filename = os.path.join(path, f)
-            T = os.stat(filename)
-            c_time = T.st_ctime
-            m_time = T.st_mtime
-            a_time = T.st_atime
-            min_time = min(c_time, m_time, a_time)
+            min_time = self.get_min_time(path, f)
             #print('takeTimeFromFile: ', datetime.fromtimestamp(min_time))
         newFileName = self.makeNewFileName(f, min_time)
         dt = datetime.fromtimestamp(min_time)
@@ -542,6 +540,14 @@ class ElWindow(QMainWindow, form_class):
         ym = dt.strftime("%Y"+l[0]+"%m"+l[1])
         ymd = dt.strftime("%Y"+l[0]+"%m"+l[1]+"%d"+l[2]+remark)
         return y, ym, ymd, newFileName
+
+    def get_min_time(delf, path, f):
+        filename = os.path.join(path, f)
+        T = os.stat(filename)
+        c_time = T.st_ctime
+        m_time = T.st_mtime
+        a_time = T.st_atime
+        return min(c_time, m_time, a_time)
 
     def saveExcel(self, f_list, fname):
         if len(f_list) > 0:
@@ -579,7 +585,14 @@ class ElWindow(QMainWindow, form_class):
     def getVariables(self, srcPath, f, originalFileName):
         remark = self.get_remark(srcPath)
         fileSize = self.convert_size(f)
-        takeTime, _ = self.takePictureTime(srcPath, originalFileName)
+        if self.takePictureTimeStrf(srcPath, originalFileName):
+            takeTime = self.takePictureTimeStrf(srcPath, originalFileName)
+            print(takeTime)
+        else:
+            min_time = self.get_min_time(srcPath, originalFileName)
+            dt = datetime.fromtimestamp(min_time)
+            takeTime = dt.strftime('%Y:%m:%d %H:%M:%S')
+            print(min_time, takeTime)
         return remark, fileSize, takeTime
 
 
@@ -608,7 +621,7 @@ class ElWindow(QMainWindow, form_class):
             if not self.selectDB(newFileName):
                 self.insertDB(newFileName, str(destPath), originalFileName, srcPath, takeTime, remark, fileSize)
                 C_files += 1
-                shutil.copy2(f, destPath) # 파일 복사 (파일 개정 시간 등 포함하여 복사를 위해 copy2 사용)pass
+                # shutil.copy2(f, destPath) # 파일 복사 (파일 개정 시간 등 포함하여 복사를 위해 copy2 사용)pass
                 self.disp_C_files(C_files)
                 self.listWidget_2.addItem(str(srcPath) +' ' + str(destPath) +' ' + originalFileName)
                 CFile.append([originalFileName, srcPath, destPath])
@@ -672,9 +685,9 @@ class ElWindow(QMainWindow, form_class):
                 M_files += 1
                 if os.stat(f).st_mode == 33060: # 33060 readonly, 33206 writable
                     os.chmod(f, stat.S_IWRITE)
-                    shutil.move(f, t_file) # 파일 이동 후 원본 삭제
+                    #shutil.move(f, t_file) # 파일 이동 후 원본 삭제
                 else:
-                    shutil.move(f, t_file) # 파일 이동 후 원본 삭제
+                    #shutil.move(f, t_file) # 파일 이동 후 원본 삭제
                     pass
                 self.lineEdit_8.setText(str(M_files))
                 self.listWidget_2.addItem(oriFileName, str(srcPath), str(destPath))
