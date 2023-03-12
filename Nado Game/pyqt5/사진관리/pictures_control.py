@@ -38,7 +38,7 @@ yyyymmdd = now.strftime("%Y")+now.strftime("%m")+'월'+ now.strftime("%D")+'일'
 yyyy = now.strftime("%Y")
 
 LE =  [
-    'C:\\사진정리\\2004년\\2004년01월\\2004년01월06일 신월성 사업팀 덕유산',
+    'D:\\개인자료\\개인 사진\\2004년\\041106 한수원 신불산행 사진',
     'C:\\사진'
     ]
 TEMPFILE = 'TEMP_EXCEL_FileList.xlsx'
@@ -274,10 +274,10 @@ class ElWindow(QMainWindow, form_class):
             exist = self.selectDB(str(newFileName)) # newfileName으로 검색하여야 함
             pathExist = self.selectPathDB(newFileName, str(destPath))
             if not exist:
-                print(newFileName, str(destPath), originalFileName, srcPath, tt, remark, file_size)
+                #print(newFileName, str(destPath), originalFileName, srcPath, tt, remark, file_size)
                 self.insertDB(newFileName, str(destPath), originalFileName, srcPath, tt, remark, file_size)
             elif pathExist:
-                print(pathExist['pictureFileOldName'])
+                #print(pathExist['pictureFileOldName'])
                 pass
             else:
                 dupliExist = self.selectDupliDB(originalFileName, srcPath)
@@ -326,7 +326,7 @@ class ElWindow(QMainWindow, form_class):
         val = (path, file)
         cursor.execute(sql, val)
         result = cursor.fetchone()
-        print(result)
+        #print(result)
         conn.close()
         return result
     
@@ -347,26 +347,26 @@ class ElWindow(QMainWindow, form_class):
         file = self.listWidget.currentItem().text()
         path, f = os.path.split(file)
         root, lastDir = os.path.split(path)
-        m = self.checkReMatch(lastDir)
+        m = self.checkReMatchYMD(lastDir)
         newDirName = lastDir[:m.end()] + self.lineEdit_3.text()
         newDir = pathlib.Path(root, newDirName)
         destDirDB = self.selectDB(f)
         destDir = destDirDB['pictureFileDestDir']
-        print('renamefolder function destDir: ', destDir)
+        #print('renamefolder function destDir: ', destDir)
         self.updateRemarkDB(str(newDir), self.lineEdit_3.text(), destDir)
         os.rename(path, newDir)
         self.lineEdit.setText(str(newDir))
         self.list_files()
 
     def updateRemarkDB(self, newDir, remark, path):
-        print('updateRemarkDB: ', newDir, remark, path)
+        #print('updateRemarkDB: ', newDir, remark, path)
         conn = self.connDB()
         cursor = conn.cursor(dictionary=True)
         sql = 'UPDATE mypicturefiles SET pictureFileDestDir = %s, remark = %s WHERE pictureFileDestDir = %s;'
         val = (str(newDir), remark, str(path))
-        print('updateRemarkDB val: ', val)
+        #print('updateRemarkDB val: ', val)
         cursor.execute(sql, val)
-        print(cursor)
+        #print(cursor)
         conn.commit()
         cursor.close()
         conn.close()
@@ -453,24 +453,32 @@ class ElWindow(QMainWindow, form_class):
             delimiter = ['', '', '']
             return delimiter
 
-    def checkReMatch(self, path):
-        checker = re.compile(r'(19\d\d|20\d\d|\d\d)[년\-_. ]?(0[1-9]|1[012])[월\-_. ]?(0[1-9]|[12][0-9]|3[01])[일]?')
+    def checkReMatch(self, path):# 처음부터 맞는지 확인하는삭
+        checker = re.compile(r'(19\d\d|20\d\d|\d\d)[년\-_.: ]?(0[1-9]|1[012])[월\-_.: ]?(0[1-9]|[12][0-9]|3[01])[일]?[_ ]([01][0-9]|2[0-3])?[시\-_.: ]?[[0-5][0-9]]?[분\-_.: ]?[[0-5][0-9]]?[초]?')
         return checker.match(path)
     
-    def checkReSearch(self, path):
-        checker = re.compile(r'(19\d\d|20\d\d|\d\d)[년\-_. ]?(0[1-9]|1[012])[월\-_. ]?(0[1-9]|[12][0-9]|3[01])[일]?')
+    def checkReSearch(self, path):# 중간부터라도 있는지 확인하는식
+        checker = re.compile(r'(19\d\d|20\d\d|\d\d)[년\-_.: ]?(0[1-9]|1[012])[월\-_.: ]?(0[1-9]|[12][0-9]|3[01])[일]?[_ ]([01][0-9]|2[0-3])?[시\-_.: ]?[[0-5][0-9]]?[분\-_.: ]?[[0-5][0-9]]?[초]?')
+        return checker.search(path)
+    
+    def checkReMatchYMD(self, path):# 처음부터 맞는지 확인하는삭
+        checker = re.compile(r'(19\d\d|20\d\d|\d\d)[년\-_.: ]?(0[1-9]|1[012])[월\-_.: ]?(0[1-9]|[12][0-9]|3[01])[일]?')
+        return checker.match(path)
+    
+    def checkReSearchYMD(self, path):#중간에라도 맞는 식이 있는지 확인
+        checker = re.compile(r'(19\d\d|20\d\d|\d\d)[년\-_.: ]?(0[1-9]|1[012])[월\-_.: ]?(0[1-9]|[12][0-9]|3[01])[일]?')
         return checker.search(path)
     
     def get_remark(self, path):
         lastDir = os.path.basename(path)
-        m = self.checkReMatch(lastDir)
-        if m and len(lastDir) > m.end():
-            #print(sub[m.end():])
+        m = self.checkReMatchYMD(lastDir)
+        if (m and len(lastDir) > m.end()):
             return lastDir[m.end():]
         else:
             return ""        
 
     def takePictureTimeStrf(self, path, f):
+        s = self.getexif(path, f)
         return self.getexif(path, f)
     
     def takePictureTimestamp(self, path, f):
@@ -491,8 +499,14 @@ class ElWindow(QMainWindow, form_class):
             for tag, value in info.items():
                 decoded = TAGS.get(tag, tag)
                 taglabel[decoded] = value
-            s = taglabel['DateTimeOriginal']
-            if s != '0000:00:00 00:00:00':
+            if self.checkReMatch(taglabel['DateTimeOriginal']):
+                s = taglabel['DateTimeOriginal']
+                return s
+            elif self.checkReMatch(taglabel['DateTimeDigitized']):
+                s = taglabel['DateTimeDigitized']
+                return s
+            elif self.checkReMatch(taglabel['DateTime']):
+                s = taglabel['DateTime']
                 return s
             else:
                 return None
@@ -510,33 +524,62 @@ class ElWindow(QMainWindow, form_class):
             self.progressbarUpdate(G_files)
             # 기존 폴더에 설명이 있을 경우 가져옴
             remark = self.get_remark(path)
-            
             # 파일 이름에 날짜 형식이 들어가 있는지 검사하여 디렉토리 생성
             m = self.checkReSearch(file)
-            if m: # delimiter 종류에 따른 디렉토리 생성 
-                Y = m.group(1)
-                M = m.group(2)
-                D = m.group(3)
-                folderName.append([path, Y+D0, Y+D0+M+D1, Y+D0+M+D1+D+D2+remark, file, file])
+            if m: # delimiter 종류에 따른 디렉토리 생성
+                if m.end() == 15:
+                    Y = m.group(1)
+                    y, ym, ymd, newFileName = self.folderNameFromTakeMinTime(path, file, [D0, D1, D2], remark)
+                    M = m.group(2)
+                    D = m.group(3)
+                    folderName.append([path, Y+D0, Y+D0+M+D1, Y+D0+M+D1+D+D2+remark, file, file])
+                else:
+                    y, ym, ymd, newFileName = self.folderNameFromTakeMinTime(path, file, [D0, D1, D2], remark)
+                    folderName.append([path, y, ym, ymd, file, newFileName])
             else:# checker1.search(file):
-                [y, ym, ymd, newFileName] = self.folderNameFromTakeMinTime(path, file, [D0, D1, D2], remark)
+                y, ym, ymd, newFileName = self.folderNameFromTakeMinTime(path, file, [D0, D1, D2], remark)
                 folderName.append([path, y, ym, ymd, file, newFileName])
         return folderName
 
     def makeNewFileName(self, f, min_time):
         dt = datetime.fromtimestamp(min_time)
         y = dt.strftime("%Y%m%d_%H%M%S")
-        new_f = y+'_'+f
+        p =self.checkReMatch(f)
+        if p != None:
+            if p.end() == 15:
+                new_f = f
+                return new_f
+        if f[0] == '_': # file 명이 _로 시작하면 _ 제외
+            f = f[1:]
+        n = self.checkReSearch(f)
+        if n != None:
+            if n.start() == 0:
+                f = f[n.end():]
+            else:
+                f = f[:n.start()] + f[n.end():]
+                if f[0] == '_' or f[0] == ' ': # file 명이 _로 시작하면 _ 제외
+                    f = f[1:]
+            new_f = y + '_' + f
+            return new_f
+        m = self.checkReSearchYMD(f)
+        if m != None:
+            if m.start() == 0:
+                f = f[m.end():]
+            else:
+                f = f[:m.start()] + f[m.end():]
+                if (f[0] == ' ' or f[0] == '_'): # file 명이 _로 시작하면 _ 제외
+                    f = f[1:]
+            new_f = y + '_' + f
+            return new_f
+        new_f = y + '_' + f
         return new_f
     
     def folderNameFromTakeMinTime(self, path, f, l, remark):
         # 사진찍은 날짜 가져오기
         if self.takePictureTimestamp(path, f):
             min_time = self.takePictureTimestamp(path, f)
-            #print('takePictureTime:', datetime.fromtimestamp(min_time))
         else:
             min_time = self.get_min_time(path, f)
-            #print('takeTimeFromFile: ', datetime.fromtimestamp(min_time))
         newFileName = self.makeNewFileName(f, min_time)
         dt = datetime.fromtimestamp(min_time)
         y = dt.strftime("%Y"+l[0])
@@ -590,12 +633,12 @@ class ElWindow(QMainWindow, form_class):
         fileSize = self.convert_size(f)
         if self.takePictureTimeStrf(srcPath, originalFileName):
             takeTime = self.takePictureTimeStrf(srcPath, originalFileName)
-            print(takeTime)
+            #print('from exif time: ', takeTime, originalFileName, srcPath)
         else:
             min_time = self.get_min_time(srcPath, originalFileName)
             dt = datetime.fromtimestamp(min_time)
             takeTime = dt.strftime('%Y:%m:%d %H:%M:%S')
-            print(min_time, takeTime)
+            #print('from minTime time: ', min_time, takeTime, originalFileName, srcPath)
         return remark, fileSize, takeTime
 
 
@@ -613,9 +656,6 @@ class ElWindow(QMainWindow, form_class):
             srcPath, y, ym, ymd, originalFileName, newFileName = folder
             f = pathlib.Path(srcPath, originalFileName)
             remark, fileSize, takeTime = self.getVariables(srcPath, f, originalFileName)
-            #if len(newFileName) > 0:
-                #self.reNameSourceFile(folder)
-            #    originalFileName = newFileName
             P_files += 1
             self.progressbarUpdate(P_files)
             # 분류될 경로 생성
@@ -629,14 +669,12 @@ class ElWindow(QMainWindow, form_class):
                 self.listWidget_2.addItem(str(srcPath) +' ' + str(destPath) +' ' + originalFileName)
                 CFile.append([originalFileName, srcPath, destPath])
             elif self.selectPathDB(originalFileName, srcPath):
-                
-
                 I_files += 1
                 self.disp_I_files(I_files)
                 pass
             else:
                 if not self.selectDupliDB(originalFileName, srcPath):
-                    print(self.selectDupliDB(originalFileName, srcPath))
+                    #print(self.selectDupliDB(originalFileName, srcPath))
                     self.insertDupliDB(originalFileName, srcPath, destPath, 'Delete')
                     E_files += 1
                     self.disp_E_files(E_files)
@@ -804,7 +842,7 @@ class ElWindow(QMainWindow, form_class):
         if sname == '원본 폴더':
             init_dir = self.LE[0]
             fname = pathlib.Path(QFileDialog.getExistingDirectory(self, '원본 사진 파일이 있는 디렉토리를 선택하세요', init_dir))
-            print('add_file: ', fname)
+            #print('add_file: ', fname)
             if len(str(fname)) != 0:
                 self.lineEdit.setText(str(fname))
             else:
