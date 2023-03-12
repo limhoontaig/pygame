@@ -3,12 +3,12 @@ import os
 import stat
 import pathlib
 import pandas as pd
-from PyQt5.QtCore import Qt, pyqtSlot, QObject, pyqtSignal
+from PyQt5.QtCore import Qt, pyqtSlot, QObject, pyqtSignal, QStringListModel
 from PyQt5 import uic
-from PyQt5.QtGui import QImage, QPixmap, QPalette, QPainter
+from PyQt5.QtGui import QImage, QPixmap, QPalette, QPainter, QBrush
 from PyQt5.QtPrintSupport import QPrintDialog, QPrinter
 from PyQt5.QtWidgets import QLabel, QSizePolicy, QScrollArea, QMessageBox, QMainWindow, QMenu, QAction, \
-    qApp, QFileDialog, QApplication
+    qApp, QFileDialog, QApplication, QTableWidget, QTableWidgetItem, QHeaderView
 
 from datetime import datetime
 from datetime import date
@@ -90,12 +90,74 @@ class ElWindow(QMainWindow, form_class):
         self.pushButton_12.clicked.connect(self.delSelectedFile) # Fit to Normal size 
         self.pushButton_13.clicked.connect(self.delAllOtherFiles) # Fit to Normal size 
         self.pushButton_14.clicked.connect(self.renameFolder) # Fit to Normal size 
+        self.pushButton_20.clicked.connect(self.searchData) # Fit to Normal size 
         self.listWidget.itemClicked.connect(self.qImageViewer)
         # self.lineEdit.textChanged.connect(self.enablePBCopyMove)
         # self.listwidget = QListWidget(self)
         # self.listwidget.setAlternatingRowColors(True)
 
     @pyqtSlot()
+    def searchData(self):
+        from_date = self.dateEdit.text()
+        to_date = self.dateEdit_2.text()
+        results = self.searchPeriod(from_date, to_date)
+        print(from_date, to_date)
+        data = []
+        for result in results:
+            data = [str(result['Number']), result['pictureFileName'], result['pictureFileDestDir'], result['remark'], result['fileSize']]
+            #print(result['Number'])
+            print(data)
+            self.set_tableWidget(data)
+
+    def searchPeriod(self, fromDate, toDate):
+        conn = self.connDB()
+        cursor = conn.cursor(dictionary=True)
+        sql = "select * from mypicturefiles where DATE(TakeTime) between %s and %s;"
+        val = (fromDate, toDate)
+        cursor.execute(sql, val)
+        result = cursor.fetchall()
+        conn.close()
+        return result
+    
+    def set_tableWidget(self,data):
+        self.tableWidget.insertRow(0)
+        HEADERS = ['Number', 'File Name', 'Directory', 'Take Time', 'File Size']
+        #table = QTableWidget()
+        self.tableWidget.setAlternatingRowColors(True)
+        self.tableWidget.setHorizontalHeaderLabels(HEADERS)#.split(";"))
+        hitem = self.tableWidget.horizontalHeaderItem(1)
+        if hitem is not None:
+            hitem.setBackground(QBrush(Qt.cyan))
+        #self.tableWidget.horizontalHeaderItem().setTextAlignment(Qt.AlignHCenter)
+        #rowCount = self.usedIntableWidget.rowCount()
+        #self.usedIntableWidget.setRowCount(rowCount+1)
+        self.tableWidget.setColumnCount(len(HEADERS))
+
+        c = 0
+        for i in data:
+            self.tableWidget.setItem(0, c, QTableWidgetItem(i))
+            c = c+1
+        
+        #self.tableWidget.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+        self.tableWidget.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeToContents)
+        self.tableWidget.resizeRowsToContents()
+        
+        #self.table_display_used_in()
+        #self.table_display()
+
+    def table_display(self):
+        header = self.tableWidget.horizontalHeader()
+        twidth = header.width()
+        width = []
+        for column in range(header.count()):
+            header.setSectionResizeMode(column, QHeaderView.ResizeToContents)
+            width.append(header.sectionSize(column))
+        
+        wfactor = int(twidth / sum(width))
+        for column in range(header.count()):
+            header.setSectionResizeMode(column, QHeaderView.Interactive)
+            header.resizeSection(column, width[column]*wfactor)
+        self.tableWidget.scrollToBottom
 
 
     def disablePBCopyMove(self):
@@ -664,7 +726,7 @@ class ElWindow(QMainWindow, form_class):
             if not self.selectDB(newFileName):
                 self.insertDB(newFileName, str(destPath), originalFileName, srcPath, takeTime, remark, fileSize)
                 C_files += 1
-                # shutil.copy2(f, destPath) # 파일 복사 (파일 개정 시간 등 포함하여 복사를 위해 copy2 사용)pass
+                #shutil.copy2(f, destPath) # 파일 복사 (파일 개정 시간 등 포함하여 복사를 위해 copy2 사용)pass
                 self.disp_C_files(C_files)
                 self.listWidget_2.addItem(str(srcPath) +' ' + str(destPath) +' ' + originalFileName)
                 CFile.append([originalFileName, srcPath, destPath])
@@ -731,25 +793,24 @@ class ElWindow(QMainWindow, form_class):
                     #shutil.move(f, t_file) # 파일 이동 후 원본 삭제
                     pass
                 self.lineEdit_8.setText(str(M_files))
-                self.listWidget_2.addItem(oriFileName, str(srcPath), str(destPath))
+                self.listWidget_2.addItem(oriFileName + ' ' + str(srcPath) +' ' + str(destPath))
                 Mfile.append([oriFileName, srcPath, destPath])
             else:
-
-
-
                 if os.stat(f).st_mode == 33060: # 33060 readonly, 33206 writable
                     os.chmod(f, stat.S_IWRITE)
-                    os.remove(f)
+                    #os.remove(f)
                 else:
+                    pass
                     os.remove(f)
                 R_files += 1
                 self.lineEdit_9.setText(str(R_files))
                 self.listWidget_4.addItem(str(pathlib.Path(srcPath, oriFileName)))
                 Rfile.append([srcPath, destPath, oriFileName])
-            try:
-                os.rmdir(srcPath)
-            except:
-                pass
+        try:
+            self.removeDir()
+            #os.rmdir(srcPath)
+        except:
+            pass
         self.removeTempFile()
         self.saveExcel(Rfile, 'moveFileExistingFiles.xlsx')
         self.saveExcel(Mfile, 'moveFileMovedFiles.xlsx')
