@@ -336,10 +336,10 @@ class MyWindow(QMainWindow, form_class):
         df, df_c, df_f, df_f_c, df3, df3_c, df4, df4_c = self.seperate_dongho(sheet_names)
         #df, df_c, df_f, df_f_c, df3, df3_c, df4, df4_c 
         total_복지 = len(df)
-        self.lineEdit_5.setText(str(f'{total_복지:>7,}'))
+        self.lineEdit_6.setText(str(f'{total_복지:>7,}'))
 
         total_대가족 = len(df_f)
-        self.lineEdit_6.setText(str(f'{total_대가족:>7,}'))
+        self.lineEdit_5.setText(str(f'{total_대가족:>7,}'))
 
         total_중증 = len(df3)
         self.lineEdit_7.setText(str(f'{total_중증:>7,}'))
