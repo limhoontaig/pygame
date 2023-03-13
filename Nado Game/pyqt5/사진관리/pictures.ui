@@ -378,7 +378,7 @@
       <rect>
        <x>10</x>
        <y>150</y>
-       <width>641</width>
+       <width>651</width>
        <height>61</height>
       </rect>
      </property>
@@ -393,16 +393,6 @@
        <y>620</y>
        <width>641</width>
        <height>131</height>
-      </rect>
-     </property>
-    </widget>
-    <widget class="QLineEdit" name="lineEdit_12">
-     <property name="geometry">
-      <rect>
-       <x>10</x>
-       <y>10</y>
-       <width>541</width>
-       <height>31</height>
       </rect>
      </property>
     </widget>
@@ -422,10 +412,10 @@
     <widget class="QLineEdit" name="lineEdit_13">
      <property name="geometry">
       <rect>
-       <x>140</x>
-       <y>50</y>
+       <x>100</x>
+       <y>40</y>
        <width>401</width>
-       <height>31</height>
+       <height>21</height>
       </rect>
      </property>
     </widget>
@@ -445,10 +435,10 @@
     <widget class="QPushButton" name="pushButton_18">
      <property name="geometry">
       <rect>
-       <x>10</x>
-       <y>50</y>
+       <x>510</x>
+       <y>40</y>
        <width>111</width>
-       <height>31</height>
+       <height>21</height>
       </rect>
      </property>
      <property name="text">
@@ -458,21 +448,21 @@
     <widget class="QPushButton" name="pushButton_20">
      <property name="geometry">
       <rect>
-       <x>572</x>
+       <x>390</x>
        <y>10</y>
-       <width>81</width>
-       <height>31</height>
+       <width>71</width>
+       <height>21</height>
       </rect>
      </property>
      <property name="text">
-      <string>원본 폴더</string>
+      <string>검색</string>
      </property>
     </widget>
     <widget class="QPushButton" name="pushButton_21">
      <property name="geometry">
       <rect>
-       <x>550</x>
-       <y>50</y>
+       <x>560</x>
+       <y>10</y>
        <width>93</width>
        <height>31</height>
       </rect>
@@ -502,6 +492,105 @@
        <width>651</width>
        <height>321</height>
       </rect>
+     </property>
+    </widget>
+    <widget class="QLabel" name="label_16">
+     <property name="geometry">
+      <rect>
+       <x>10</x>
+       <y>10</y>
+       <width>64</width>
+       <height>21</height>
+      </rect>
+     </property>
+     <property name="frameShape">
+      <enum>QFrame::WinPanel</enum>
+     </property>
+     <property name="frameShadow">
+      <enum>QFrame::Raised</enum>
+     </property>
+     <property name="text">
+      <string>검색기간</string>
+     </property>
+     <property name="alignment">
+      <set>Qt::AlignCenter</set>
+     </property>
+    </widget>
+    <widget class="QDateEdit" name="dateEdit">
+     <property name="geometry">
+      <rect>
+       <x>120</x>
+       <y>10</y>
+       <width>110</width>
+       <height>22</height>
+      </rect>
+     </property>
+     <property name="calendarPopup">
+      <bool>true</bool>
+     </property>
+    </widget>
+    <widget class="QLabel" name="label_17">
+     <property name="geometry">
+      <rect>
+       <x>80</x>
+       <y>10</y>
+       <width>41</width>
+       <height>21</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>From</string>
+     </property>
+     <property name="alignment">
+      <set>Qt::AlignCenter</set>
+     </property>
+    </widget>
+    <widget class="QLabel" name="label_19">
+     <property name="geometry">
+      <rect>
+       <x>230</x>
+       <y>10</y>
+       <width>41</width>
+       <height>21</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>To</string>
+     </property>
+     <property name="alignment">
+      <set>Qt::AlignCenter</set>
+     </property>
+    </widget>
+    <widget class="QDateEdit" name="dateEdit_2">
+     <property name="geometry">
+      <rect>
+       <x>270</x>
+       <y>10</y>
+       <width>110</width>
+       <height>22</height>
+      </rect>
+     </property>
+     <property name="calendarPopup">
+      <bool>true</bool>
+     </property>
+    </widget>
+    <widget class="QLabel" name="label_20">
+     <property name="geometry">
+      <rect>
+       <x>10</x>
+       <y>40</y>
+       <width>81</width>
+       <height>21</height>
+      </rect>
+     </property>
+     <property name="frameShape">
+      <enum>QFrame::Panel</enum>
+     </property>
+     <property name="frameShadow">
+      <enum>QFrame::Raised</enum>
+     </property>
+     <property name="text">
+      <string>Folder Name</string>
      </property>
     </widget>
    </widget>
