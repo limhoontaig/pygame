@@ -726,7 +726,7 @@ class ElWindow(QMainWindow, form_class):
             if not self.selectDB(newFileName):
                 self.insertDB(newFileName, str(destPath), originalFileName, srcPath, takeTime, remark, fileSize)
                 C_files += 1
-                #shutil.copy2(f, destPath) # 파일 복사 (파일 개정 시간 등 포함하여 복사를 위해 copy2 사용)pass
+                shutil.copy2(f, destPath) # 파일 복사 (파일 개정 시간 등 포함하여 복사를 위해 copy2 사용)pass
                 self.disp_C_files(C_files)
                 self.listWidget_2.addItem(str(srcPath) +' ' + str(destPath) +' ' + originalFileName)
                 CFile.append([originalFileName, srcPath, destPath])
