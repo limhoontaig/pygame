@@ -22,7 +22,7 @@ yyyy = now.strftime("%Y")
 LE =  [
     'D:/과장/1 1 부과자료/'+yyyy+'년/'+yyyymm+'/한전부과자료',
     'D:/과장/1 1 부과자료/'+yyyy+'년/'+yyyymm+'/한전부과자료',
-    'D:/과장/1 1 부과자료/'+yyyy+'년/Templates/Elec_Template_File_for_XPERP_upload.xls',
+    'D:/과장/1 1 부과자료/'+yyyy+'년/Templates/Elec_Template_File_for_XPERP_upload.xlsx',
     'D:/과장/1 1 부과자료/'+yyyy+'년/'+yyyymm+'/xperp_감면자료',
     'D:/과장/1 1 부과자료/'+yyyy+'년/Templates/xperp_code_comparasion_table.xlsx'
     ]
@@ -237,6 +237,7 @@ class ElWindow(QMainWindow, form_class):
             return
 
         df2 = self.welfare_calc(f1)
+        print('df2', df2)
         subset_df_w, subset_df_f = self.kind_calc(f2)
         # subset_df_w = subset_df[0]
         # subset_df_f = subset_df[1]
@@ -302,7 +303,7 @@ class ElWindow(QMainWindow, form_class):
         code = ['가족','복지']
         code_dict = self.code_dict_make(code)
         kind_list = [code_dict[0],code_dict[3]]
-        print(kind_list)
+        # print(kind_list)
         kind_dict = [code_dict[2],code_dict[5]]
         df_list = []
         for i in range(len(kind_list)):
@@ -310,24 +311,32 @@ class ElWindow(QMainWindow, form_class):
             for kind, code in kind_dict[i].items():
                 df_1.loc[df_1.할인종류 == kind, '복지코드'] = code
             df_1.set_index(['동','호'],inplace=True)
-            print(df_1)
+            # print(df_1)
             df_list.append(df_1)
         return df_list
 
     def discount_file(self, f3,df2,subset_df_f,subset_df_w):
         
         df_x = pd.read_excel(f3,skiprows=0)
+        pd.set_option('display.max_rows', None)
+        
+        print ("pd.set_option('display.max_rows', None)\n", df_x['취약계층경감금액'])
+        #df_x = df_x.fillna(0)
         
         # xperp upload template 양식의 columns list 생성
         # 동호를 indexing하여 dataFrame merge 준비
         
         df_x.set_index(['동','호'],inplace=True)
         # discount df 생성 (Template df(df_x)에 필수사용공제(df2) merge
-        
+        print("pd.merge(df_x, df2[0], how = 'outer', on = ['동','호'])", df2[0])
         discount = pd.merge(df_x, df2[0], how = 'outer', on = ['동','호'])
+        discount = discount.fillna(0)
         # discount = pd.merge(discount, subset_df_a, how = 'outer', on = ['동','호'])
         # print(df2[0])
-        # print(discount)
+        #pd.set_option('display.max_columns', None)
+        #pd.set_option('display.width', None)
+        #pd.set_option('display.max_colwidth', -1)
+        print(discount)
 
         # 사용량 보장공제를 한전금액(필수사용공제) Data로 Update
         discount['사용량보장공제'] = discount['필수사용\n공제']
@@ -340,7 +349,7 @@ class ElWindow(QMainWindow, form_class):
         
         # 취약계층경감액 임시데이터 columns를 drop
         discount = discount.drop(['취약계층경감'],axis=1)
-
+        print("discount = discount.drop(['취약계층경감'],axis=1)", discount)
 
         
         # Template df에 필수사용공제 merge
@@ -354,8 +363,10 @@ class ElWindow(QMainWindow, form_class):
         discount['복지할인액'] = discount['할인요금']
         discount['복지할인구분'] = discount['복지코드']
         discount = discount.drop(['복지코드','할인요금','할인종류'],axis=1)
+        discount = discount.fillna(0)
         
         total_사용량보장공제 = int(discount['사용량보장공제'].sum())
+        print(discount)
         total_대가족할인액 = int(discount['대가족할인액'].sum())
         total_복지할인액 = int(discount['복지할인액'].sum())# + discount['취약계층경감금액'].sum())
         total_취약계층경감 = discount['취약계층경감금액'].sum()
