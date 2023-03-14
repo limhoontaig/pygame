@@ -176,6 +176,7 @@ class ElWindow(QMainWindow, form_class):
         elif sname == '할인종류':
             init_dir = self.LE[1]
             fname = QFileDialog.getOpenFileName(self, '엑셀 데이타 파일을 선택하세요', init_dir, 'All Files (*) :: Excel (*.xls *.xlsx)')
+            print(fname)
             if len(fname[0]) != 0:
                 self.lineEdit_2.setText(fname[0])
             else:
@@ -185,9 +186,9 @@ class ElWindow(QMainWindow, form_class):
             init_dir = self.LE[4]
             fname = QFileDialog.getOpenFileName(self, '엑셀 데이타 파일을 선택하세요', init_dir, 'All Files (*) :: Excel (*.xls *.xlsx)')
             if len(fname[0]) != 0:
-                self.lineEdit_2.setText(fname[0])
+                self.lineEdit_15.setText(fname[0])
             else:
-                self.lineEdit_2.setText(LE[1])
+                self.lineEdit_15.setText(LE[2])
 
         elif sname == 'Template':
             init_dir = self.LE[2]
@@ -195,7 +196,7 @@ class ElWindow(QMainWindow, form_class):
             if len(fname[0]) != 0:
                 self.lineEdit_3.setText(fname[0]) 
             else: 
-                self.lineEdit_3.setText(LE[2])
+                self.lineEdit_3.setText(LE[3])
         
         else:
             init_dir = self.LE[3]
@@ -203,7 +204,7 @@ class ElWindow(QMainWindow, form_class):
             if len(fname) != 0:
                 self.lineEdit_4.setText(fname)
             else:
-                self.lineEdit_4.setText(LE[3])
+                self.lineEdit_4.setText(LE[4])
 
     # 계산 시작
     def start(self):
@@ -224,7 +225,7 @@ class ElWindow(QMainWindow, form_class):
             return
 
         if '.xls' not in f5 or f5 == 0:
-            QMessageBox.about(self, "경고", "한전 감면 종류 파일을 추가하세요")
+            QMessageBox.about(self, "경고", "XPERP code table 파일을 추가하세요")
             return
 
         if '.xls' not in f3 or f3 == 0:
@@ -237,7 +238,7 @@ class ElWindow(QMainWindow, form_class):
             return
 
         df2 = self.welfare_calc(f1)
-        print('df2', df2)
+        #print('df2', df2)
         subset_df_w, subset_df_f = self.kind_calc(f2)
         # subset_df_w = subset_df[0]
         # subset_df_f = subset_df[1]
@@ -287,19 +288,23 @@ class ElWindow(QMainWindow, form_class):
 
     def df_create(self, f1):
         df = pd.read_excel(f1,skiprows=2)
+        #print(df)
         df.dropna(subset=['동', '호'],inplace=True)
         con = df[df['할인종류'].str.contains('200kWh이하감액')].index
         df.drop(con, inplace=True)
         con = df[df['할인종류'].str.contains('취약계층경감')].index
         df.drop(con, inplace=True)
-        df_1 = df[['동', '호','할인종류','할인요금']].copy()
+        df_w = df[['동', '호','할인종류','할인요금']].copy()
+        #print('할인요금 찾기 df_1',df_1)
         # 동일한 종류의 할인이 중복 되었을 때 하나로 묶어 주는 기능 추가 함
-        df_final = df_1.groupby(['동','호', '할인종류']).sum()
-        df_w = df_final.reset_index()
+        #df_final = df_1.groupby(['동','호', '할인종류']).sum()
+        #df_w = df_final.reset_index()
+        #print('할인요금 찾기',df_w)
         return df_w
 
     def kind_calc(self, f1):
         df = self.df_create(f1)
+        print(df)
         code = ['가족','복지']
         code_dict = self.code_dict_make(code)
         kind_list = [code_dict[0],code_dict[3]]
@@ -311,16 +316,17 @@ class ElWindow(QMainWindow, form_class):
             for kind, code in kind_dict[i].items():
                 df_1.loc[df_1.할인종류 == kind, '복지코드'] = code
             df_1.set_index(['동','호'],inplace=True)
-            # print(df_1)
+            #print(df_1)
             df_list.append(df_1)
         return df_list
 
     def discount_file(self, f3,df2,subset_df_f,subset_df_w):
-        
-        df_x = pd.read_excel(f3,skiprows=0)
         pd.set_option('display.max_rows', None)
         
-        print ("pd.set_option('display.max_rows', None)\n", df_x['취약계층경감금액'])
+        df_x = pd.read_excel(f3,skiprows=0)
+        #pd.set_option('display.max_rows', None)
+        
+        print ("pd.set_option('display.max_rows', None)\n", df_x)
         #df_x = df_x.fillna(0)
         
         # xperp upload template 양식의 columns list 생성
@@ -328,9 +334,9 @@ class ElWindow(QMainWindow, form_class):
         
         df_x.set_index(['동','호'],inplace=True)
         # discount df 생성 (Template df(df_x)에 필수사용공제(df2) merge
-        print("pd.merge(df_x, df2[0], how = 'outer', on = ['동','호'])", df2[0])
+        #print("pd.merge(df_x, df2[0], how = 'outer', on = ['동','호'])", df2[0])
         discount = pd.merge(df_x, df2[0], how = 'outer', on = ['동','호'])
-        discount = discount.fillna(0)
+        #discount = discount.fillna(0)
         # discount = pd.merge(discount, subset_df_a, how = 'outer', on = ['동','호'])
         # print(df2[0])
         #pd.set_option('display.max_columns', None)
@@ -349,21 +355,26 @@ class ElWindow(QMainWindow, form_class):
         
         # 취약계층경감액 임시데이터 columns를 drop
         discount = discount.drop(['취약계층경감'],axis=1)
-        print("discount = discount.drop(['취약계층경감'],axis=1)", discount)
+        #print("discount = discount.drop(['취약계층경감'],axis=1)", discount)
 
         
+        #print(subset_df_f)
         # Template df에 필수사용공제 merge
         discount = pd.merge(discount, subset_df_f, how = 'outer', on = ['동','호'])
+        #print(discount)
         discount['대가족할인액'] = discount['할인요금']
         discount['대가족할인구분'] = discount['복지코드']
+        #print("discount['대가족할인구분'] = discount['복지코드']", discount)
         discount = discount.drop(['복지코드','할인요금','할인종류'],axis=1)
         discount = pd.merge(discount, subset_df_w, how = 'outer', on = ['동','호'])
-
         #discount1 = discount.reset_index()
         discount['복지할인액'] = discount['할인요금']
         discount['복지할인구분'] = discount['복지코드']
         discount = discount.drop(['복지코드','할인요금','할인종류'],axis=1)
-        discount = discount.fillna(0)
+        pd.set_option('display.max_rows', None)
+        print("discount.drop(['복지코드','할인요금','할인종류'],axis=1)", discount)
+        #discount = discount.fillna(0)
+        print("discount.fillna(0)", discount)
         
         total_사용량보장공제 = int(discount['사용량보장공제'].sum())
         print(discount)
