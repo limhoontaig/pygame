@@ -103,8 +103,9 @@ class ElWindow(QMainWindow, form_class):
         results = self.searchPeriod(from_date, to_date)
         print(from_date, to_date)
         data = []
+        self.tableWidget.clear()
         for result in results:
-            data = [str(result['Number']), result['pictureFileName'], result['pictureFileDestDir'], result['remark'], result['fileSize']]
+            data = [str(result['Number']), result['pictureFileName'], result['pictureFileDestDir'], str(result['TakeTime']), result['remark'], result['fileSize']]
             #print(result['Number'])
             print(data)
             self.set_tableWidget(data)
@@ -121,7 +122,7 @@ class ElWindow(QMainWindow, form_class):
     
     def set_tableWidget(self,data):
         self.tableWidget.insertRow(0)
-        HEADERS = ['Number', 'File Name', 'Directory', 'Take Time', 'File Size']
+        HEADERS = ['Number', 'File Name', 'Directory', 'Take Time', 'Remark', 'File Size']
         #table = QTableWidget()
         self.tableWidget.setAlternatingRowColors(True)
         self.tableWidget.setHorizontalHeaderLabels(HEADERS)#.split(";"))
