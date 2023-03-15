@@ -249,15 +249,15 @@ class ElWindow(QMainWindow, form_class):
     def welfare_calc(self, f1):
         df = pd.read_excel(f1,skiprows=2)#, dtype={'동':int, '호':int}) #,thousands=',')
         df.dropna(subset=['동', '호'],inplace=True)
-        col_sel =['동','호', '필수사용\n공제','복지추가\n감액', '취약계층경감', '취약계층소급']
+        col_sel =['동','호', '필수사용\n공제','복지추가\n감액', '취약계층경감']#, '취약계층소급']
         col_sel1 =['동','호', '필수사용\n공제', '취약계층경감'] # 취약계층경감 합계
         필수사용공제 = df[col_sel[2]].sum()
         복지추가감액 = df[col_sel[3]].sum()
-        취약계층경감 = df[col_sel[4]].sum() + df[col_sel[5]].sum()
+        취약계층경감 = df[col_sel[4]].sum()# + df[col_sel[5]].sum()
         df1= df[col_sel].copy()
         # print(df1)
         df1['sum'] = df1[col_sel[2]] + df1[col_sel[3]]
-        df1['취약'] = df1['취약계층경감'] + df1['취약계층소급']
+        df1['취약'] = df1['취약계층경감']# + df1['취약계층소급']
         df1[col_sel[2]] = df1['sum']
         df1[col_sel[4]] = df1['취약']
         df1t = df1[col_sel1].copy()
@@ -321,12 +321,12 @@ class ElWindow(QMainWindow, form_class):
         return df_list
 
     def discount_file(self, f3,df2,subset_df_f,subset_df_w):
-        pd.set_option('display.max_rows', None)
+        #pd.set_option('display.max_rows', None)
         
         df_x = pd.read_excel(f3,skiprows=0)
         #pd.set_option('display.max_rows', None)
         
-        print ("pd.set_option('display.max_rows', None)\n", df_x)
+        #print ("pd.set_option('display.max_rows', None)\n", df_x)
         #df_x = df_x.fillna(0)
         
         # xperp upload template 양식의 columns list 생성
@@ -342,7 +342,7 @@ class ElWindow(QMainWindow, form_class):
         #pd.set_option('display.max_columns', None)
         #pd.set_option('display.width', None)
         #pd.set_option('display.max_colwidth', -1)
-        print(discount)
+        #print(discount)
 
         # 사용량 보장공제를 한전금액(필수사용공제) Data로 Update
         discount['사용량보장공제'] = discount['필수사용\n공제']
@@ -372,12 +372,12 @@ class ElWindow(QMainWindow, form_class):
         discount['복지할인구분'] = discount['복지코드']
         discount = discount.drop(['복지코드','할인요금','할인종류'],axis=1)
         pd.set_option('display.max_rows', None)
-        print("discount.drop(['복지코드','할인요금','할인종류'],axis=1)", discount)
+        #print("discount.drop(['복지코드','할인요금','할인종류'],axis=1)", discount)
         #discount = discount.fillna(0)
-        print("discount.fillna(0)", discount)
+        #print("discount.fillna(0)", discount)
         
         total_사용량보장공제 = int(discount['사용량보장공제'].sum())
-        print(discount)
+        #print(discount)
         total_대가족할인액 = int(discount['대가족할인액'].sum())
         total_복지할인액 = int(discount['복지할인액'].sum())# + discount['취약계층경감금액'].sum())
         total_취약계층경감 = discount['취약계층경감금액'].sum()
