@@ -101,14 +101,16 @@ class ElWindow(QMainWindow, form_class):
         from_date = self.dateEdit.text()
         to_date = self.dateEdit_2.text()
         results = self.searchPeriod(from_date, to_date)
-        print(from_date, to_date)
+        #print(from_date, to_date)
         data = []
         self.tableWidget.clear()
+        self.tableWidget.setRowCount(0)
+        self.tableWidget.setSortingEnabled(True)
         for result in results:
-            data = [str(result['Number']), result['pictureFileName'], result['pictureFileDestDir'], str(result['TakeTime']), result['remark'], result['fileSize']]
+            data.append([str(result['Number']), result['pictureFileName'], result['pictureFileDestDir'], str(result['TakeTime']), result['remark'], result['fileSize']])
             #print(result['Number'])
-            print(data)
-            self.set_tableWidget(data)
+            #print(data)
+        self.set_tableWidget(data)
 
     def searchPeriod(self, fromDate, toDate):
         conn = self.connDB()
@@ -121,7 +123,7 @@ class ElWindow(QMainWindow, form_class):
         return result
     
     def set_tableWidget(self,data):
-        self.tableWidget.insertRow(0)
+        
         HEADERS = ['Number', 'File Name', 'Directory', 'Take Time', 'Remark', 'File Size']
         #table = QTableWidget()
         self.tableWidget.setAlternatingRowColors(True)
@@ -130,14 +132,20 @@ class ElWindow(QMainWindow, form_class):
         if hitem is not None:
             hitem.setBackground(QBrush(Qt.cyan))
         #self.tableWidget.horizontalHeaderItem().setTextAlignment(Qt.AlignHCenter)
-        #rowCount = self.usedIntableWidget.rowCount()
+        #rowCount = self.tableWidget.rowCount()
         #self.usedIntableWidget.setRowCount(rowCount+1)
-        self.tableWidget.setColumnCount(len(HEADERS))
+        rowCount = len(data)
+        #self.usedIntableWidget.setRowCount(rowCount+1)
+        self.tableWidget.setRowCount(rowCount)
 
         c = 0
-        for i in data:
-            self.tableWidget.setItem(0, c, QTableWidgetItem(i))
-            c = c+1
+        for list in data:
+            #self.tableWidget.insertRow(0)
+            self.tableWidget.setColumnCount(len(list))
+            print(list)
+            for i in list:
+                self.tableWidget.setItem(0, c, QTableWidgetItem(i))
+                c = c+1
         
         #self.tableWidget.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
         self.tableWidget.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeToContents)
