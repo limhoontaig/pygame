@@ -145,7 +145,7 @@ class ElWindow(QMainWindow, form_class):
         self.lineEdit_3.setText(LE[2])
         self.lineEdit_4.setText(LE[3])
         self.lineEdit_15.setText(LE[4])
-        self.label_5.setText('프로그램 작성 : 임훈택 Rev 0, 2022.05.11 Issued')
+        self.label_5.setText('프로그램 작성 : 임훈택 Rev 1, 2023.03.16 Revised')
 
         self.pushButton.clicked.connect(self.add_file)
         self.pushButton_2.clicked.connect(self.add_file)
@@ -176,7 +176,6 @@ class ElWindow(QMainWindow, form_class):
         elif sname == '할인종류':
             init_dir = self.LE[1]
             fname = QFileDialog.getOpenFileName(self, '엑셀 데이타 파일을 선택하세요', init_dir, 'All Files (*) :: Excel (*.xls *.xlsx)')
-            print(fname)
             if len(fname[0]) != 0:
                 self.lineEdit_2.setText(fname[0])
             else:
@@ -238,15 +237,17 @@ class ElWindow(QMainWindow, form_class):
             return
 
         df2 = self.welfare_calc(f1)
-        #print('df2', df2)
         subset_df_w, subset_df_f = self.kind_calc(f2)
-        # subset_df_w = subset_df[0]
-        # subset_df_f = subset_df[1]
         discount = self.discount_file(f3,df2,subset_df_w,subset_df_f)
         self.pd_save(discount,f4)
         return
 
     def welfare_calc(self, f1):
+        """
+        한전 복지 감면 파일을 읽어들여 '동','호', '필수사용\n공제','복지추가\n감액', '취약계층경감'
+        필드를 가져와서 필수사용공제 및 복지추가감액을 합하여 필수사용공제로 변환하고
+        XPERP 입력필드로 필수사용공제 및 취약계층 경감을 입력값으로 사용함
+        """
         df = pd.read_excel(f1,skiprows=2)#, dtype={'동':int, '호':int}) #,thousands=',')
         df.dropna(subset=['동', '호'],inplace=True)
         col_sel =['동','호', '필수사용\n공제','복지추가\n감액', '취약계층경감']#, '취약계층소급']
@@ -255,21 +256,18 @@ class ElWindow(QMainWindow, form_class):
         복지추가감액 = df[col_sel[3]].sum()
         취약계층경감 = df[col_sel[4]].sum()# + df[col_sel[5]].sum()
         df1= df[col_sel].copy()
-        # print(df1)
-        df1['sum'] = df1[col_sel[2]] + df1[col_sel[3]]
-        df1['취약'] = df1['취약계층경감']# + df1['취약계층소급']
-        df1[col_sel[2]] = df1['sum']
+        df1['sum'] = df1[col_sel[2]] + df1[col_sel[3]] # 필수사용공제 및 복지추가감액 합하기
+        df1[col_sel[2]] = df1['sum'] # 합한값을 필수사용공제 값으로 대입하여 XPERP로 보냄
+        df1['취약'] = df1['취약계층경감']# + df1['취약계층소급'] 소급 금액이 있을 경우에 적용
         df1[col_sel[4]] = df1['취약']
+
         df1t = df1[col_sel1].copy()
-        #print(df1t)
         df1t[col_sel1[:4]] = df1t[col_sel1[:4]].astype('int')
         df2 = df1t[col_sel1[:4]].copy()
-        #print(df2)
         return df2, 필수사용공제, 복지추가감액, 취약계층경감
 
     def code_dict_make(self, kind_code):
         file = self.lineEdit_15.text()
-        # file = r'E:\source\pygame\Nado Game\pyqt5\감면자료\xperp code comparasion table.xlsx'
         with pd.ExcelFile(file) as f:
             df = pd.read_excel(f, sheet_name = 1)
         sheet = f.sheet_names
@@ -287,28 +285,37 @@ class ElWindow(QMainWindow, form_class):
         return code_dict
 
     def df_create(self, f1):
+        """
+        한전 상세 감면내역에서 할인종류별 입력자료를 출력함
+        전처리로 취약계층 경감 및 200kWh이하감액은 복지감면 파일처리시
+        미리처리하였으므로 상세내역에서 전처리로 삭제하고 처리함
+        추가 감액같은 동일세대에 2번이상 감면이 있을 경우 에는 
+        groupby로 하나의 값으로 만드는 기능이 추가되어 있으나 
+        필요시 주석을 풀고 사용할 예정임 
+        """
         df = pd.read_excel(f1,skiprows=2)
-        #print(df)
         df.dropna(subset=['동', '호'],inplace=True)
         con = df[df['할인종류'].str.contains('200kWh이하감액')].index
         df.drop(con, inplace=True)
         con = df[df['할인종류'].str.contains('취약계층경감')].index
         df.drop(con, inplace=True)
         df_w = df[['동', '호','할인종류','할인요금']].copy()
-        #print('할인요금 찾기 df_1',df_1)
+        """
         # 동일한 종류의 할인이 중복 되었을 때 하나로 묶어 주는 기능 추가 함
         #df_final = df_1.groupby(['동','호', '할인종류']).sum()
         #df_w = df_final.reset_index()
-        #print('할인요금 찾기',df_w)
+        """
         return df_w
 
     def kind_calc(self, f1):
+        """
+        가족감면 및 복지감면을 분리하여 XPERP에 입력할 수 있도록 분류하는 작업
+        code 에 따라 분류하는 코드를 code_dict_make에서 수행함
+        """
         df = self.df_create(f1)
-        print(df)
         code = ['가족','복지']
         code_dict = self.code_dict_make(code)
         kind_list = [code_dict[0],code_dict[3]]
-        # print(kind_list)
         kind_dict = [code_dict[2],code_dict[5]]
         df_list = []
         for i in range(len(kind_list)):
@@ -316,34 +323,23 @@ class ElWindow(QMainWindow, form_class):
             for kind, code in kind_dict[i].items():
                 df_1.loc[df_1.할인종류 == kind, '복지코드'] = code
             df_1.set_index(['동','호'],inplace=True)
-            #print(df_1)
             df_list.append(df_1)
         return df_list
 
     def discount_file(self, f3,df2,subset_df_f,subset_df_w):
-        #pd.set_option('display.max_rows', None)
-        
+        """
+        최종 감면 자료 만드는 곳임 template 파일에 각종 감면자료를 merge하여
+        XPERP 자료 필드로 대치하는 작업
+        """
+        # template file df 변환
         df_x = pd.read_excel(f3,skiprows=0)
-        #pd.set_option('display.max_rows', None)
-        
-        #print ("pd.set_option('display.max_rows', None)\n", df_x)
-        #df_x = df_x.fillna(0)
-        
-        # xperp upload template 양식의 columns list 생성
-        # 동호를 indexing하여 dataFrame merge 준비
-        
-        df_x.set_index(['동','호'],inplace=True)
-        # discount df 생성 (Template df(df_x)에 필수사용공제(df2) merge
-        #print("pd.merge(df_x, df2[0], how = 'outer', on = ['동','호'])", df2[0])
-        discount = pd.merge(df_x, df2[0], how = 'outer', on = ['동','호'])
-        #discount = discount.fillna(0)
-        # discount = pd.merge(discount, subset_df_a, how = 'outer', on = ['동','호'])
-        # print(df2[0])
-        #pd.set_option('display.max_columns', None)
-        #pd.set_option('display.width', None)
-        #pd.set_option('display.max_colwidth', -1)
-        #print(discount)
 
+        # 동호를 indexing하여 dataFrame merge 준비
+        df_x.set_index(['동','호'],inplace=True)
+        
+        # discount df 생성 (Template df(df_x)에 필수사용공제(df2) merge
+        discount = pd.merge(df_x, df2[0], how = 'outer', on = ['동','호'])
+        
         # 사용량 보장공제를 한전금액(필수사용공제) Data로 Update
         discount['사용량보장공제'] = discount['필수사용\n공제']
         
@@ -355,34 +351,23 @@ class ElWindow(QMainWindow, form_class):
         
         # 취약계층경감액 임시데이터 columns를 drop
         discount = discount.drop(['취약계층경감'],axis=1)
-        #print("discount = discount.drop(['취약계층경감'],axis=1)", discount)
-
         
-        #print(subset_df_f)
         # Template df에 필수사용공제 merge
         discount = pd.merge(discount, subset_df_f, how = 'outer', on = ['동','호'])
-        #print(discount)
         discount['대가족할인액'] = discount['할인요금']
         discount['대가족할인구분'] = discount['복지코드']
-        #print("discount['대가족할인구분'] = discount['복지코드']", discount)
         discount = discount.drop(['복지코드','할인요금','할인종류'],axis=1)
         discount = pd.merge(discount, subset_df_w, how = 'outer', on = ['동','호'])
-        #discount1 = discount.reset_index()
         discount['복지할인액'] = discount['할인요금']
         discount['복지할인구분'] = discount['복지코드']
         discount = discount.drop(['복지코드','할인요금','할인종류'],axis=1)
-        pd.set_option('display.max_rows', None)
-        #print("discount.drop(['복지코드','할인요금','할인종류'],axis=1)", discount)
-        #discount = discount.fillna(0)
-        #print("discount.fillna(0)", discount)
-        
         total_사용량보장공제 = int(discount['사용량보장공제'].sum())
-        #print(discount)
         total_대가족할인액 = int(discount['대가족할인액'].sum())
         total_복지할인액 = int(discount['복지할인액'].sum())# + discount['취약계층경감금액'].sum())
         total_취약계층경감 = discount['취약계층경감금액'].sum()
-        sub_total = int(total_대가족할인액 + total_복지할인액 + total_취약계층경감)
-        grand_total = int(sub_total + total_사용량보장공제)
+        sub_total = int(total_대가족할인액 + total_복지할인액)
+        grand_total = int(sub_total + total_사용량보장공제 + total_취약계층경감)
+        
         # display the result of computation
         self.lineEdit_5.setText(str(f'{total_사용량보장공제:>20,}'))
         self.lineEdit_6.setText(str(f'{total_대가족할인액:>20,}'))
@@ -400,7 +385,7 @@ class ElWindow(QMainWindow, form_class):
         #작업월을 파일이름에 넣기 위한 코드 (작업일 기준)
         now = datetime.now()
         dt1 = now.strftime("%Y")+now.strftime("%m")
-        dt1 = dt1+'ELEC_XPERP_Upload_J_K_R_S_T_columns.xlsx'
+        dt1 = dt1+'ELEC_XPERP_Upload_J_K_R_S_T_U_columns.xlsx'
         file_name = f4+'/'+dt1
 
         #file save
