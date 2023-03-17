@@ -69,6 +69,8 @@ class ElWindow(QMainWindow, form_class):
         self.disablePushButton()
         self.disablePBCopyMove()
 
+        self.tableWidget.cellClicked.connect(self.set_label)
+
         '''
         self.scrollArea = QScrollArea()
         self.scrollArea.setBackgroundRole(QPalette.Dark)
@@ -95,6 +97,18 @@ class ElWindow(QMainWindow, form_class):
         # self.lineEdit.textChanged.connect(self.enablePBCopyMove)
         # self.listwidget = QListWidget(self)
         # self.listwidget.setAlternatingRowColors(True)
+
+    def set_label(self, row, column):
+        column = 0
+        file = (self.tableWidget.item(row, 1).text())
+        path = (self.tableWidget.item(row, 2).text())
+        remark = (self.tableWidget.item(row, 4).text())
+        fileName = str(pathlib.Path(path, file))
+        self.lineEdit_13.setText(remark)
+        #print(fileName)
+        self.qImageViewer(fileName)
+        #label_string = 'Row: ' + str(row+1) + ', Column: ' + str(column+1) + ', Value: ' + str(value)
+        #self.label.setText(label_string)
 
     @pyqtSlot()
     def searchData(self):
@@ -234,11 +248,11 @@ class ElWindow(QMainWindow, form_class):
         pixmap = QPixmap(file)
         return pixmap
 
-    def qImageViewer(self):    
+    def qImageViewer(self, f):    
         width = 660
         height = 460
-        self.label_8.resize(width,height)
-        pixmap = self.makePixmap()
+        #self.label_8.resize(width,height)
+        pixmap = QPixmap(f)
         #file = self.listWidget.currentItem().text()
         #pixmap = QPixmap(file)
         #print(self.scaleDirection(width, height, pixmap))
@@ -246,7 +260,7 @@ class ElWindow(QMainWindow, form_class):
             pixmap = pixmap.scaledToWidth(width)
         else:
             pixmap = pixmap.scaledToHeight(height)
-        self.label_8.setPixmap(QPixmap(pixmap))
+        self.label_21.setPixmap(QPixmap(pixmap)) # lable_8
         self.show()
     
     def scaleDirection(self, width, height, pixmap):
