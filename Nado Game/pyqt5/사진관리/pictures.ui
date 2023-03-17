@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1376</width>
+    <width>1970</width>
     <height>799</height>
    </rect>
   </property>
@@ -570,6 +570,16 @@
        <height>22</height>
       </rect>
      </property>
+     <property name="dateTime">
+      <datetime>
+       <hour>0</hour>
+       <minute>0</minute>
+       <second>0</second>
+       <year>2004</year>
+       <month>1</month>
+       <day>31</day>
+      </datetime>
+     </property>
      <property name="calendarPopup">
       <bool>true</bool>
      </property>
@@ -958,6 +968,42 @@
     </property>
    </widget>
   </widget>
+  <widget class="QScrollArea" name="scrollArea">
+   <property name="geometry">
+    <rect>
+     <x>1380</x>
+     <y>30</y>
+     <width>581</width>
+     <height>511</height>
+    </rect>
+   </property>
+   <property name="widgetResizable">
+    <bool>true</bool>
+   </property>
+   <widget class="QWidget" name="scrollAreaWidgetContents">
+    <property name="geometry">
+     <rect>
+      <x>0</x>
+      <y>0</y>
+      <width>579</width>
+      <height>509</height>
+     </rect>
+    </property>
+    <widget class="QLabel" name="label_21">
+     <property name="geometry">
+      <rect>
+       <x>20</x>
+       <y>40</y>
+       <width>521</width>
+       <height>441</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>TextLabel</string>
+     </property>
+    </widget>
+   </widget>
+  </widget>
   <zorder>groupBox</zorder>
   <zorder>tabWidget</zorder>
   <zorder>frame</zorder>
@@ -967,6 +1013,7 @@
   <zorder>pushButton_9</zorder>
   <zorder>pushButton_10</zorder>
   <zorder>pushButton_11</zorder>
+  <zorder>scrollArea</zorder>
  </widget>
  <resources/>
  <connections/>
