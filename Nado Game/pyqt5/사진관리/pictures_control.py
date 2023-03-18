@@ -57,15 +57,7 @@ class ElWindow(QMainWindow, form_class):
         self.lineEdit_2.setText(LE[1])
         issued = '프로그램 작성 : 임훈택 Rev 0 '+ yyyymmdd + ' Issued'
         self.label.setText(issued)
-        #self.scaleFactor = 1.0
         
-        #self.imageLabel = QLabel()
-        #self.label_8.setBackgroundRole(QPalette.Base)
-        #self.label_8.setSizePolicy(QSizePolicy.Ignored, QSizePolicy.Ignored)
-        #self.label_8.setScaledContents(True)
-
-        #pixmap = QPixmap()
-        #if pixmap == None:
         self.disablePushButton()
         self.disablePBCopyMove()
 
@@ -92,38 +84,30 @@ class ElWindow(QMainWindow, form_class):
         self.pushButton_12.clicked.connect(self.delSelectedFile) # Fit to Normal size 
         self.pushButton_13.clicked.connect(self.delAllOtherFiles) # Fit to Normal size 
         self.pushButton_14.clicked.connect(self.renameFolder) # Fit to Normal size 
-        self.pushButton_20.clicked.connect(self.searchData) # Fit to Normal size 
-        self.listWidget.itemClicked.connect(self.qImageViewer)
+        self.pushButton_20.clicked.connect(self.searchData) # 선택기간 DB 검색 
+        self.listWidget.itemClicked.connect(self.makePixmap)
         # self.lineEdit.textChanged.connect(self.enablePBCopyMove)
-        # self.listwidget = QListWidget(self)
-        # self.listwidget.setAlternatingRowColors(True)
-
+        
     def set_label(self, row, column):
         column = 0
         file = (self.tableWidget.item(row, 1).text())
-        path = (self.tableWidget.item(row, 2).text())
-        remark = (self.tableWidget.item(row, 4).text())
+        path = (self.tableWidget.item(row, 3).text())
+        remark = (self.tableWidget.item(row, 2).text())
         fileName = str(pathlib.Path(path, file))
         self.lineEdit_13.setText(remark)
-        #print(fileName)
         self.qImageViewer(fileName)
-        #label_string = 'Row: ' + str(row+1) + ', Column: ' + str(column+1) + ', Value: ' + str(value)
-        #self.label.setText(label_string)
-
+        
     @pyqtSlot()
     def searchData(self):
         from_date = self.dateEdit.text()
         to_date = self.dateEdit_2.text()
         results = self.searchPeriod(from_date, to_date)
-        #print(from_date, to_date)
         data = []
         self.tableWidget.clear()
         self.tableWidget.setRowCount(0)
         self.tableWidget.setSortingEnabled(True)
         for result in results:
-            data.append([str(result['Number']), result['pictureFileName'], result['pictureFileDestDir'], str(result['TakeTime']), result['remark'], result['fileSize']])
-            #print(result['Number'])
-            #print(data)
+            data.append([str(result['Number']), result['pictureFileName'], result['remark'], result['pictureFileDestDir'], str(result['TakeTime']), result['fileSize']])
         self.set_tableWidget(data)
 
     def searchPeriod(self, fromDate, toDate):
@@ -138,35 +122,26 @@ class ElWindow(QMainWindow, form_class):
     
     def set_tableWidget(self,data):
         
-        HEADERS = ['Number', 'File Name', 'Directory', 'Take Time', 'Remark', 'File Size']
-        #table = QTableWidget()
+        HEADERS = ['Number', 'File Name', 'Remark', 'Directory', 'Take Time', 'File Size']
+        self.tableWidget.setColumnCount(len(HEADERS))
         self.tableWidget.setAlternatingRowColors(True)
         self.tableWidget.setHorizontalHeaderLabels(HEADERS)#.split(";"))
+        '''
         hitem = self.tableWidget.horizontalHeaderItem(1)
         if hitem is not None:
             hitem.setBackground(QBrush(Qt.cyan))
-        #self.tableWidget.horizontalHeaderItem().setTextAlignment(Qt.AlignHCenter)
-        #rowCount = self.tableWidget.rowCount()
-        #self.usedIntableWidget.setRowCount(rowCount+1)
+        '''
         rowCount = len(data)
-        #self.usedIntableWidget.setRowCount(rowCount+1)
         self.tableWidget.setRowCount(rowCount)
 
         c = 0
         for list in data:
-            #self.tableWidget.insertRow(0)
             self.tableWidget.setColumnCount(len(list))
-            print(list)
             for i in list:
                 self.tableWidget.setItem(0, c, QTableWidgetItem(i))
                 c = c+1
-        
-        #self.tableWidget.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
         self.tableWidget.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeToContents)
         self.tableWidget.resizeRowsToContents()
-        
-        #self.table_display_used_in()
-        #self.table_display()
 
     def table_display(self):
         header = self.tableWidget.horizontalHeader()
@@ -245,28 +220,26 @@ class ElWindow(QMainWindow, form_class):
         file = self.listWidget.currentItem().text()
         path, f = os.path.split(file)
         self.lineEdit_3.setText(self.get_remark(path))
-        pixmap = QPixmap(file)
-        return pixmap
+        self.qImageViewer(file)
+        #pixmap = QPixmap(file)
+        #return pixmap
 
     def qImageViewer(self, f):    
         width = 660
         height = 460
-        #self.label_8.resize(width,height)
+        self.label_8.resize(width,height)
         pixmap = QPixmap(f)
-        #file = self.listWidget.currentItem().text()
-        #pixmap = QPixmap(file)
-        #print(self.scaleDirection(width, height, pixmap))
         if self.scaleDirection(width, height, pixmap) == 'width':
             pixmap = pixmap.scaledToWidth(width)
         else:
             pixmap = pixmap.scaledToHeight(height)
-        self.label_21.setPixmap(QPixmap(pixmap)) # lable_8
+        
+        self.label_8.setPixmap(QPixmap(pixmap)) # label_8
         self.show()
     
     def scaleDirection(self, width, height, pixmap):
         W = pixmap.width() / width
         H = pixmap.height() / height
-        # print('W: ', W, 'H: ', H)
         if W > H:
             return 'width'
         else:
@@ -304,15 +277,12 @@ class ElWindow(QMainWindow, form_class):
         if self.filesList() == None:
             return
         for path, dir, files in self.filesList():
-            #path = path.replace('\\', '/', -1)
-            #print(path)
             self.progressbarInit(len(files))
             for file in files:
                 srcTFiles += 1
                 self.lineEdit_4.setText(str(srcTFiles))
                 self.progressbarUpdate(srcTFiles)
                 if self.suffixVerify(path, file):
-                    #print(path)
                     srcGFile.append([path, file])
                 else:
                     srcOFile.append([path, file])
@@ -321,7 +291,6 @@ class ElWindow(QMainWindow, form_class):
         if sys._getframe(1).f_code.co_name == 'delAllOtherFiles':
             return srcOFile
         else:
-            #self.saveGraphicFileListToExcel(srcGFile)
             return srcGFile
 
     def convert_size(self, f):
@@ -359,7 +328,6 @@ class ElWindow(QMainWindow, form_class):
             exist = self.selectDB(str(newFileName)) # newfileName으로 검색하여야 함
             pathExist = self.selectPathDB(newFileName, str(destPath))
             if not exist:
-                #print(newFileName, str(destPath), originalFileName, srcPath, tt, remark, file_size)
                 self.insertDB(newFileName, str(destPath), originalFileName, srcPath, tt, remark, file_size)
             elif pathExist:
                 #print(pathExist['pictureFileOldName'])
@@ -411,7 +379,6 @@ class ElWindow(QMainWindow, form_class):
         val = (path, file)
         cursor.execute(sql, val)
         result = cursor.fetchone()
-        #print(result)
         conn.close()
         return result
     
@@ -437,21 +404,17 @@ class ElWindow(QMainWindow, form_class):
         newDir = pathlib.Path(root, newDirName)
         destDirDB = self.selectDB(f)
         destDir = destDirDB['pictureFileDestDir']
-        #print('renamefolder function destDir: ', destDir)
         self.updateRemarkDB(str(newDir), self.lineEdit_3.text(), destDir)
         os.rename(path, newDir)
         self.lineEdit.setText(str(newDir))
         self.list_files()
 
     def updateRemarkDB(self, newDir, remark, path):
-        #print('updateRemarkDB: ', newDir, remark, path)
         conn = self.connDB()
         cursor = conn.cursor(dictionary=True)
         sql = 'UPDATE mypicturefiles SET pictureFileDestDir = %s, remark = %s WHERE pictureFileDestDir = %s;'
         val = (str(newDir), remark, str(path))
-        #print('updateRemarkDB val: ', val)
         cursor.execute(sql, val)
-        #print(cursor)
         conn.commit()
         cursor.close()
         conn.close()
@@ -485,7 +448,6 @@ class ElWindow(QMainWindow, form_class):
         self.lineEdit_6.setText(str(i))
 
     def suffixVerify(self, path, f):
-        # f = pathlib.Path(path, name)  # 원본 파일
         src = pathlib.Path(path, f)
         if src.suffix.lower() in ALLOW_GRAPHIC:
             return True
@@ -718,12 +680,10 @@ class ElWindow(QMainWindow, form_class):
         fileSize = self.convert_size(f)
         if self.takePictureTimeStrf(srcPath, originalFileName):
             takeTime = self.takePictureTimeStrf(srcPath, originalFileName)
-            #print('from exif time: ', takeTime, originalFileName, srcPath)
         else:
             min_time = self.get_min_time(srcPath, originalFileName)
             dt = datetime.fromtimestamp(min_time)
             takeTime = dt.strftime('%Y:%m:%d %H:%M:%S')
-            #print('from minTime time: ', min_time, takeTime, originalFileName, srcPath)
         return remark, fileSize, takeTime
 
 
@@ -759,7 +719,6 @@ class ElWindow(QMainWindow, form_class):
                 pass
             else:
                 if not self.selectDupliDB(originalFileName, srcPath):
-                    #print(self.selectDupliDB(originalFileName, srcPath))
                     self.insertDupliDB(originalFileName, srcPath, destPath, 'Delete')
                     E_files += 1
                     self.disp_E_files(E_files)
