@@ -83,7 +83,7 @@ class ElWindow(QMainWindow, form_class):
         self.pushButton_11.clicked.connect(self.normalSize) # Fit to Normal size 
         self.pushButton_12.clicked.connect(self.delSelectedFile) # Fit to Normal size 
         self.pushButton_13.clicked.connect(self.delAllOtherFiles) # Fit to Normal size 
-        self.pushButton_14.clicked.connect(self.renameFolder) # Fit to Normal size 
+        self.pushButton_18.clicked.connect(self.renameFolder) # Fit to Normal size 
         self.pushButton_20.clicked.connect(self.searchData) # 선택기간 DB 검색 
         self.listWidget.itemClicked.connect(self.makePixmap)
         # self.lineEdit.textChanged.connect(self.enablePBCopyMove)
