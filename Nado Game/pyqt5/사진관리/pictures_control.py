@@ -412,34 +412,32 @@ class ElWindow(QMainWindow, form_class):
         return result
     
     def renameFolder(self):
-        #if self.listWidget.currentItem() == None:
-        #    QMessageBox.about(self, "경고", "파일이 선택되지 않았습니다. 파일을 선택해 주세요.")
-        #    return
-        index_row = int(self.lineEdit_15.text())
+        if self.lineEdit_3.text() == '':
+            QMessageBox.about(self, "경고", "파일이 선택되지 않았습니다. 파일을 선택해 주세요.")
+            return
+        #index_row = int(self.lineEdit_15.text())
         remark = self.lineEdit_13.text()
         new_remark = self.lineEdit_14.text()
-        file = self.lineEdit_3.text()
-        path = self.lineEdit_11.text()
-        print(index_row, remark, new_remark, file, path)
-        print(self.tableWidget.currentRow())
+        #file = self.lineEdit_3.text()
+        Path = self.lineEdit_11.text()
         if remark == new_remark:
             QMessageBox.about(self, "경고", "변경할 내용이 없습니다. 내용을 변경 후 다시 실행해 주세요.")
             return
-        
-        '''
-        file = self.listWidget.currentItem().text()
-        path, f = os.path.split(file)
-        root, lastDir = os.path.split(path)
-        m = self.checkReMatchYMD(lastDir)
-        newDirName = lastDir[:m.end()] + self.lineEdit_3.text()
-        newDir = pathlib.Path(root, newDirName)
-        destDirDB = self.selectDB(f)
-        destDir = destDirDB['pictureFileDestDir']
-        self.updateRemarkDB(str(newDir), self.lineEdit_3.text(), destDir)
+        head, tail = os.path.split(Path)
+        new_tail = tail.replace(remark, new_remark)
+        path = os.path.join(Path,)
+        newDir = pathlib.Path(head, new_tail)
+        self.updateRemarkDB(str(newDir), new_remark, self.lineEdit_11.text())
         os.rename(path, newDir)
-        self.lineEdit.setText(str(newDir))
-        self.list_files()
-        '''
+        self.searchData()
+        self.resetClickedData()
+        
+    def resetClickedData(self):
+        self.lineEdit_15.setText('')
+        self.lineEdit_13.setText('')
+        self.lineEdit_14.setText('')
+        self.lineEdit_3.setText('')
+        self.lineEdit_11.setText('')
 
     def updateRemarkDB(self, newDir, remark, path):
         conn = self.connDB()
