@@ -61,12 +61,16 @@ class ElWindow(QMainWindow, form_class):
         self.disablePushButton()
         self.disablePBCopyMove()
 
-        self.tableWidget.cellClicked.connect(self.set_label)
+        #self.label_8.setText('Image Viewer')
+        #self.label_8.setBackgroundRole(QPalette.Base)
+        #self.label_8.setSizePolicy(QSizePolicy.Ignored, QSizePolicy.Ignored)
+        #self.label_8.setScaledContents(True)
 
+        #self.scrollArea.setBackgroundRole(QPalette.Dark)
+        self.scrollArea.setWidget(self.label_8)
+        self.scrollArea.setVisible(True)
         '''
         self.scrollArea = QScrollArea()
-        self.scrollArea.setBackgroundRole(QPalette.Dark)
-        self.scrollArea.setWidget(self.label_8)
         self.setCentralWidget(self.scrollArea)
         '''
 
@@ -85,6 +89,7 @@ class ElWindow(QMainWindow, form_class):
         self.pushButton_13.clicked.connect(self.delAllOtherFiles) # Fit to Normal size 
         self.pushButton_18.clicked.connect(self.renameFolder) # Fit to Normal size 
         self.pushButton_20.clicked.connect(self.searchData) # 선택기간 DB 검색 
+        self.tableWidget.cellClicked.connect(self.set_label)
         self.listWidget.itemClicked.connect(self.makePixmap)
         # self.lineEdit.textChanged.connect(self.enablePBCopyMove)
         
@@ -95,6 +100,10 @@ class ElWindow(QMainWindow, form_class):
         remark = (self.tableWidget.item(row, 2).text())
         fileName = str(pathlib.Path(path, file))
         self.lineEdit_13.setText(remark)
+        self.lineEdit_14.setText(remark)
+        self.lineEdit_3.setText(file)
+        self.lineEdit_11.setText(path)
+        self.lineEdit_15.setText(str(row))
         self.qImageViewer(fileName)
         
     @pyqtSlot()
@@ -142,6 +151,7 @@ class ElWindow(QMainWindow, form_class):
                 c = c+1
         self.tableWidget.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeToContents)
         self.tableWidget.resizeRowsToContents()
+        self.tableWidget.horizontalHeader().setSectionResizeMode(QHeaderView.Interactive)
 
     def table_display(self):
         header = self.tableWidget.horizontalHeader()
@@ -228,13 +238,22 @@ class ElWindow(QMainWindow, form_class):
         width = 660
         height = 460
         self.label_8.resize(width,height)
+        #image = QImage(f)
+        #pixmap = QPixmap.fromImage(image)
+        pixmap = QPixmap(f)
+        #self.label_8.setPixmap(pixmap)
+
         pixmap = QPixmap(f)
         if self.scaleDirection(width, height, pixmap) == 'width':
             pixmap = pixmap.scaledToWidth(width)
         else:
             pixmap = pixmap.scaledToHeight(height)
         
-        self.label_8.setPixmap(QPixmap(pixmap)) # label_8
+        #self.label_8.setPixmap(QPixmap(pixmap)) # label_8
+        #pixmap = pixmap.scaledToWidth(width)
+        #self.label_8.setPixmap(QPixmap(pixmap))
+        self.label_8.setPixmap(QPixmap(pixmap))
+        #self.label_8.adjustSize()
         self.show()
     
     def scaleDirection(self, width, height, pixmap):
@@ -393,9 +412,21 @@ class ElWindow(QMainWindow, form_class):
         return result
     
     def renameFolder(self):
-        if self.listWidget.currentItem() == None:
-            QMessageBox.about(self, "경고", "파일이 선택되지 않았습니다. 파일을 선택해 주세요.")
+        #if self.listWidget.currentItem() == None:
+        #    QMessageBox.about(self, "경고", "파일이 선택되지 않았습니다. 파일을 선택해 주세요.")
+        #    return
+        index_row = int(self.lineEdit_15.text())
+        remark = self.lineEdit_13.text()
+        new_remark = self.lineEdit_14.text()
+        file = self.lineEdit_3.text()
+        path = self.lineEdit_11.text()
+        print(index_row, remark, new_remark, file, path)
+        print(self.tableWidget.currentRow())
+        if remark == new_remark:
+            QMessageBox.about(self, "경고", "변경할 내용이 없습니다. 내용을 변경 후 다시 실행해 주세요.")
             return
+        
+        '''
         file = self.listWidget.currentItem().text()
         path, f = os.path.split(file)
         root, lastDir = os.path.split(path)
@@ -408,6 +439,7 @@ class ElWindow(QMainWindow, form_class):
         os.rename(path, newDir)
         self.lineEdit.setText(str(newDir))
         self.list_files()
+        '''
 
     def updateRemarkDB(self, newDir, remark, path):
         conn = self.connDB()
