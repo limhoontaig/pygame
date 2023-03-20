@@ -802,9 +802,9 @@ class ElWindow(QMainWindow, form_class):
                 M_files += 1
                 if os.stat(f).st_mode == 33060: # 33060 readonly, 33206 writable
                     os.chmod(f, stat.S_IWRITE)
-                    #shutil.move(f, t_file) # 파일 이동 후 원본 삭제
+                    shutil.move(f, t_file) # 파일 이동 후 원본 삭제
                 else:
-                    #shutil.move(f, t_file) # 파일 이동 후 원본 삭제
+                    shutil.move(f, t_file) # 파일 이동 후 원본 삭제
                     pass
                 self.lineEdit_8.setText(str(M_files))
                 self.listWidget_2.addItem(oriFileName + ' ' + str(srcPath) +' ' + str(destPath))
@@ -812,7 +812,7 @@ class ElWindow(QMainWindow, form_class):
             else:
                 if os.stat(f).st_mode == 33060: # 33060 readonly, 33206 writable
                     os.chmod(f, stat.S_IWRITE)
-                    #os.remove(f)
+                    os.remove(f)
                 else:
                     pass
                     os.remove(f)
