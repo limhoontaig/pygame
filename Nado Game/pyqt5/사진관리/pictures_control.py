@@ -424,7 +424,10 @@ class ElWindow(QMainWindow, form_class):
             QMessageBox.about(self, "경고", "변경할 내용이 없습니다. 내용을 변경 후 다시 실행해 주세요.")
             return
         head, tail = os.path.split(Path)
-        new_tail = tail.replace(remark, new_remark)
+        if len(remark) != 0:
+            new_tail = tail.replace(remark, new_remark)
+        else:
+            new_tail = tail + ' ' + new_remark
         path = os.path.join(Path,)
         newDir = pathlib.Path(head, new_tail)
         self.updateRemarkDB(str(newDir), new_remark, self.lineEdit_11.text())
@@ -550,7 +553,7 @@ class ElWindow(QMainWindow, form_class):
         lastDir = os.path.basename(path)
         m = self.checkReMatchYMD(lastDir)
         if (m and len(lastDir) > m.end()):
-            return lastDir[m.end():]
+            return lastDir[m.end()+1:]
         else:
             return ""        
 
@@ -661,7 +664,7 @@ class ElWindow(QMainWindow, form_class):
         dt = datetime.fromtimestamp(min_time)
         y = dt.strftime("%Y"+l[0])
         ym = dt.strftime("%Y"+l[0]+"%m"+l[1])
-        ymd = dt.strftime("%Y"+l[0]+"%m"+l[1]+"%d"+l[2]+remark)
+        ymd = dt.strftime("%Y"+l[0]+"%m"+l[1]+"%d"+l[2] + remark)
         return y, ym, ymd, newFileName
 
     def get_min_time(delf, path, f):
@@ -736,10 +739,11 @@ class ElWindow(QMainWindow, form_class):
             # 분류될 경로 생성
             destPath = self.makeFolder(folder_tree, target_folder, folder)
             destPath.mkdir(parents=True, exist_ok=True) # 파일 경로에 있는 모든 폴더를 생성함. 있으면 놔둠
+            destFile = pathlib.Path(destPath, newFileName)
             if not self.selectDB(newFileName):
                 self.insertDB(newFileName, str(destPath), originalFileName, srcPath, takeTime, remark, fileSize)
                 C_files += 1
-                shutil.copy2(f, destPath) # 파일 복사 (파일 개정 시간 등 포함하여 복사를 위해 copy2 사용)pass
+                shutil.copy2(f, destFile) # 파일 복사 (파일 개정 시간 등 포함하여 복사를 위해 copy2 사용)pass
                 self.disp_C_files(C_files)
                 self.listWidget_2.addItem(str(srcPath) +' ' + str(destPath) +' ' + originalFileName)
                 CFile.append([originalFileName, srcPath, destPath])
