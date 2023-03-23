@@ -604,7 +604,12 @@ class ElWindow(QMainWindow, form_class):
         lastDir = os.path.basename(path)
         m = self.checkReMatchYMD(lastDir)
         if (m and len(lastDir) > m.end()):
-            return lastDir[m.end()+1:]
+            if (lastDir[m.end()] == ' ' or lastDir[m.end()] == '_' or lastDir[m.end()] == '-'):
+                print("'"+lastDir[m.end()+1:]+"'", 'lastDir[m.end()+1]', lastDir[m.end()+1])
+                return lastDir[m.end()+1:]
+            else:
+                print('lastDir[m.end()]', lastDir[m.end()], "'"+lastDir[m.end():]+"'")
+                return lastDir[m.end():]
         else:
             return ""        
 
@@ -663,7 +668,11 @@ class ElWindow(QMainWindow, form_class):
                     y, ym, ymd, newFileName = self.folderNameFromTakeMinTime(path, file, [D0, D1, D2], remark)
                     M = m.group(2)
                     D = m.group(3)
-                    folderName.append([path, Y+D0, Y+D0+M+D1, Y+D0+M+D1+D+D2+remark, file, file])
+                    if len(remark) != 0:
+                        folderName.append([path, Y+D0, Y+D0+M+D1, Y+D0+M+D1+D+D2+'_'+remark, file, file])
+                    else:
+                        folderName.append([path, Y+D0, Y+D0+M+D1, Y+D0+M+D1+D+D2+remark, file, file])
+
                 else:
                     y, ym, ymd, newFileName = self.folderNameFromTakeMinTime(path, file, [D0, D1, D2], remark)
                     folderName.append([path, y, ym, ymd, file, newFileName])
@@ -715,7 +724,10 @@ class ElWindow(QMainWindow, form_class):
         dt = datetime.fromtimestamp(min_time)
         y = dt.strftime("%Y"+l[0])
         ym = dt.strftime("%Y"+l[0]+"%m"+l[1])
-        ymd = dt.strftime("%Y"+l[0]+"%m"+l[1]+"%d"+l[2] + remark)
+        if len(remark) != 0:
+            ymd = dt.strftime("%Y"+l[0]+"%m"+l[1]+"%d"+l[2] +'_'+ remark)
+        else:
+            ymd = dt.strftime("%Y"+l[0]+"%m"+l[1]+"%d"+l[2] + remark)
         return y, ym, ymd, newFileName
 
     def get_min_time(delf, path, f):
