@@ -3,7 +3,7 @@ import os
 import stat
 import pathlib
 import pandas as pd
-from PyQt5.QtCore import Qt, pyqtSlot, QObject, pyqtSignal, QStringListModel
+from PyQt5.QtCore import Qt, pyqtSlot, QObject, pyqtSignal, QStringListModel, QDate
 from PyQt5 import uic
 from PyQt5.QtGui import QImage, QPixmap, QPalette, QPainter, QBrush
 from PyQt5.QtPrintSupport import QPrintDialog, QPrinter
@@ -60,6 +60,9 @@ class ElWindow(QMainWindow, form_class):
         
         self.disablePushButton()
         self.disablePBCopyMove()
+        self.checkBox_3.setCheckState(2)
+        self.checkBox_4.setCheckState(2)
+        self.checkBox_5.setCheckState(2)
 
         #self.label_8.setText('Image Viewer')
         #self.label_8.setBackgroundRole(QPalette.Base)
@@ -88,6 +91,7 @@ class ElWindow(QMainWindow, form_class):
         self.pushButton_12.clicked.connect(self.delSelectedFile) # Fit to Normal size 
         self.pushButton_13.clicked.connect(self.delAllOtherFiles) # Fit to Normal size 
         self.pushButton_18.clicked.connect(self.renameFolder) # Fit to Normal size 
+        #self.pushButton_19.clicked.connect(self.selectSQL) # 검색조건에 따른 sql문 선택
         self.pushButton_20.clicked.connect(self.searchData) # 선택기간 DB 검색 
         self.tableWidget.cellClicked.connect(self.set_label)
         self.listWidget.itemClicked.connect(self.makePixmap)
@@ -108,9 +112,15 @@ class ElWindow(QMainWindow, form_class):
         
     @pyqtSlot()
     def searchData(self):
-        from_date = self.dateEdit.text()
-        to_date = self.dateEdit_2.text()
-        results = self.searchPeriod(from_date, to_date)
+        if self.checkBox_5.isChecked():
+            from_date = '1970-01-01'
+            to_date = QDate.currentDate().toString(Qt.ISODate)
+        else:
+            from_date = self.dateEdit.text()
+            to_date = self.dateEdit_2.text()
+        # print(from_date, to_date)
+        fileName, activityName = self.selectSQL()
+        results = self.searchPeriod(from_date, to_date, fileName, activityName)
         data = []
         self.tableWidget.clear()
         self.tableWidget.setRowCount(0)
@@ -119,11 +129,53 @@ class ElWindow(QMainWindow, form_class):
             data.append([str(result['Number']), result['pictureFileName'], result['remark'], result['pictureFileDestDir'], str(result['TakeTime']), result['fileSize']])
         self.set_tableWidget(data)
 
-    def searchPeriod(self, fromDate, toDate):
+    def selectSQL(self):
+        if self.checkBox_3.isChecked():
+            if self.checkBox_4.isChecked():
+                if len(self.lineEdit_12.text()) == 0:
+                    fileName = '%%'
+                else:
+                    fileName = '%' + self.lineEdit_12.text() + '%'
+                if len(self.lineEdit_16.text()) == 0:
+                    activityName = '%%'
+                else:
+                    activityName = '%' + self.lineEdit_16.text() + '%'
+            else:
+                if len(self.lineEdit_12.text()) == 0:
+                    fileName = '%%'
+                else:
+                    fileName = '%' + self.lineEdit_12.text() + '%'
+                if len(self.lineEdit_16.text()) == 0:
+                    activityName = '%%'
+                else:
+                    activityName = self.lineEdit_16.text()
+        else:
+            if self.checkBox_4.isChecked():
+                if len(self.lineEdit_12.text()) == 0:
+                    fileName = '%%'
+                else:
+                    fileName = self.lineEdit_12.text()
+                if len(self.lineEdit_16.text()) == 0:
+                    activityName = '%%'
+                else:
+                    activityName = '%' + self.lineEdit_16.text() + '%'
+            else:
+                if len(self.lineEdit_12.text()) == 0:
+                    fileName = '%%'
+                else:
+                    fileName = self.lineEdit_12.text()
+                if len(self.lineEdit_16.text()) == 0:
+                    activityName = '%%'
+                else:
+                    activityName = self.lineEdit_16.text()
+        return fileName, activityName
+
+    def searchPeriod(self, fromDate, toDate, fileName, activityName):
         conn = self.connDB()
         cursor = conn.cursor(dictionary=True)
-        sql = "select * from mypicturefiles where DATE(TakeTime) between %s and %s;"
-        val = (fromDate, toDate)
+        sql = "select * from mypicturefiles where DATE(TakeTime) between %s and %s and \
+            pictureFileName like %s and remark like %s;"
+        val = (fromDate, toDate, fileName, activityName)
         cursor.execute(sql, val)
         result = cursor.fetchall()
         conn.close()
@@ -262,8 +314,7 @@ class ElWindow(QMainWindow, form_class):
         if W > H:
             return 'width'
         else:
-            return 'height'
-        
+            return 'height'        
 
     def list_files(self):
         self.lineEdit_clear()
@@ -841,8 +892,6 @@ class ElWindow(QMainWindow, form_class):
                     if path != self.getRootdir():
                         os.rmdir(path)
             self.checkDir(self.getRootdir())
-            
-    
                 
     def checkDir(self, root_dir):
         i = 0
@@ -932,7 +981,6 @@ class ElWindow(QMainWindow, form_class):
                 self.lineEdit_2.setText(str(fname))
             else:
                 self.lineEdit_2.setText(LE[1])
-
     
     def lineEdit_clear(self):
         self.listWidget.clear()
@@ -1096,8 +1144,6 @@ class QImageViewer(QMainWindow):
     def adjustScrollBar(self, scrollBar, factor):
         scrollBar.setValue(int(factor * scrollBar.value()
                                + ((factor - 1) * scrollBar.pageStep() / 2)))
-
-
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
