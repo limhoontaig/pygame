@@ -104,6 +104,7 @@ class ElWindow(QMainWindow, form_class):
         reply = QMessageBox.question(self, "파일 삭제 확인", "테이블 상의 모든 파일 " + str(rows) +"개 사진을 삭제하시겠습니까? 사진을 삭제하면 복구가 불가능합니다.")
         if reply != QMessageBox.Yes:
             return
+        j = 0
         for i in range(0, rows):
             fileName = self.tableWidget.item(i, 1).text()
             result = self.selectDB(fileName)
@@ -111,7 +112,20 @@ class ElWindow(QMainWindow, form_class):
             file = pathlib.Path(filePath, fileName)
             print(fileName)
             self.deleteDB([fileName])
-            os.remove(file)
+            try:
+                os.remove(file)
+            except:
+                j += 1
+                if j < 3:
+                    QMessageBox.about(self, "경고", "파일이 없습니다. 파일을 확인해 주세요.")
+                    pass
+                else:
+                    pass
+        try:
+            self.removeDir()
+            #os.rmdir(srcPath)
+        except:
+            pass
         self.searchData()
 
     def delSelectedItems(self):
