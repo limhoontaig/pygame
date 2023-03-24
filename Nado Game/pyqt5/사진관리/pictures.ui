@@ -340,14 +340,14 @@
     <widget class="QPushButton" name="pushButton_17">
      <property name="geometry">
       <rect>
-       <x>380</x>
+       <x>370</x>
        <y>720</y>
-       <width>131</width>
+       <width>141</width>
        <height>28</height>
       </rect>
      </property>
      <property name="text">
-      <string>기타파일 전체 삭제</string>
+      <string>리스트파일 전체 삭제</string>
      </property>
     </widget>
     <widget class="QPushButton" name="pushButton_18">
