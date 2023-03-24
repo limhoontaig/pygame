@@ -90,13 +90,62 @@ class ElWindow(QMainWindow, form_class):
         self.pushButton_11.clicked.connect(self.normalSize) # Fit to Normal size 
         self.pushButton_12.clicked.connect(self.delSelectedFile) # Fit to Normal size 
         self.pushButton_13.clicked.connect(self.delAllOtherFiles) # Fit to Normal size 
+        self.pushButton_16.clicked.connect(self.delSelectedItems) # delete select items
+        self.pushButton_17.clicked.connect(self.delAllItems) # delete all tablewidget items
         self.pushButton_18.clicked.connect(self.renameFolder) # Fit to Normal size 
         #self.pushButton_19.clicked.connect(self.selectSQL) # 검색조건에 따른 sql문 선택
         self.pushButton_20.clicked.connect(self.searchData) # 선택기간 DB 검색 
         self.tableWidget.cellClicked.connect(self.set_label)
         self.listWidget.itemClicked.connect(self.makePixmap)
         # self.lineEdit.textChanged.connect(self.enablePBCopyMove)
+    
+    def delAllItems(self):
+        rows = self.tableWidget.rowCount()
+        reply = QMessageBox.question(self, "파일 삭제 확인", "테이블 상의 모든 파일 " + str(rows) +"개 사진을 삭제하시겠습니까? 사진을 삭제하면 복구가 불가능합니다.")
+        if reply != QMessageBox.Yes:
+            return
+        for i in range(0, rows):
+            fileName = self.tableWidget.item(i, 1).text()
+            result = self.selectDB(fileName)
+            filePath = result['pictureFileDestDir'] # dict format read data
+            file = pathlib.Path(filePath, fileName)
+            print(fileName)
+            self.deleteDB([fileName])
+            os.remove(file)
+        self.searchData()
+
+    def delSelectedItems(self):
+        selectedList = []
+        for currentQTableWidgetItem in self.tableWidget.selectedItems():
+            if currentQTableWidgetItem.column() == 1:
+                fileName = currentQTableWidgetItem.text()
+                result = self.selectDB(fileName)
+                filePath = result['pictureFileDestDir'] # dict format read data
+                file = pathlib.Path(filePath, fileName)
+                selectedList.append([fileName, filePath, file])
+        reply = QMessageBox.question(self, "파일 삭제 확인", "선택하신 파일 " + str(len(selectedList)) +"개 사진을 삭제하시겠습니까?")
+        if reply != QMessageBox.Yes:
+            return
         
+        for fileName, filePath, file in selectedList:
+            self.deleteDB([fileName])
+            os.remove(file)
+        self.searchData()
+        '''    
+        print(currentQTableWidgetItem.row(),
+        currentQTableWidgetItem.column(),
+        currentQTableWidgetItem.text())
+        '''
+    def deleteDB(self, newFile):
+        conn = self.connDB()
+        cursor = conn.cursor(dictionary=True)
+        sql = "DELETE FROM mypicturefiles WHERE pictureFileName = %s"
+        val = (newFile)
+        cursor.execute(sql, val)
+        conn.commit()
+        conn.close()
+        return
+
     def set_label(self, row, column):
         column = 0
         file = (self.tableWidget.item(row, 1).text())
