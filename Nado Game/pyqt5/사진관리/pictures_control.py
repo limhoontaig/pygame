@@ -64,7 +64,7 @@ class ElWindow(QMainWindow, form_class):
         self.checkBox_4.setCheckState(2)
         self.checkBox_5.setCheckState(2)
 
-        #self.label_8.setText('Image Viewer')
+        self.label_8 = QLabel()#.setText('Image Viewer')
         #self.label_8.setBackgroundRole(QPalette.Base)
         #self.label_8.setSizePolicy(QSizePolicy.Ignored, QSizePolicy.Ignored)
         #self.label_8.setScaledContents(True)
@@ -358,17 +358,18 @@ class ElWindow(QMainWindow, form_class):
         pixmap = QPixmap(f)
         #self.label_8.setPixmap(pixmap)
 
+        '''
         pixmap = QPixmap(f)
         if self.scaleDirection(width, height, pixmap) == 'width':
             pixmap = pixmap.scaledToWidth(width)
         else:
             pixmap = pixmap.scaledToHeight(height)
-        
+        '''
         #self.label_8.setPixmap(QPixmap(pixmap)) # label_8
         #pixmap = pixmap.scaledToWidth(width)
         #self.label_8.setPixmap(QPixmap(pixmap))
         self.label_8.setPixmap(QPixmap(pixmap))
-        #self.label_8.adjustSize()
+        self.label_8.adjustSize()
         self.show()
     
     def scaleDirection(self, width, height, pixmap):
