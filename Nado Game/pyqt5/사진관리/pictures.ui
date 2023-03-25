@@ -1153,28 +1153,6 @@
    <property name="title">
     <string>GroupBox</string>
    </property>
-   <widget class="QLabel" name="label_8">
-    <property name="geometry">
-     <rect>
-      <x>20</x>
-      <y>30</y>
-      <width>651</width>
-      <height>461</height>
-     </rect>
-    </property>
-    <property name="sizePolicy">
-     <sizepolicy hsizetype="Ignored" vsizetype="Ignored">
-      <horstretch>0</horstretch>
-      <verstretch>0</verstretch>
-     </sizepolicy>
-    </property>
-    <property name="text">
-     <string>TextLabel</string>
-    </property>
-    <property name="alignment">
-     <set>Qt::AlignCenter</set>
-    </property>
-   </widget>
    <widget class="QScrollArea" name="scrollArea">
     <property name="geometry">
      <rect>
@@ -1204,8 +1182,6 @@
      </property>
     </widget>
    </widget>
-   <zorder>scrollArea</zorder>
-   <zorder>label_8</zorder>
   </widget>
   <zorder>groupBox</zorder>
   <zorder>tabWidget</zorder>
