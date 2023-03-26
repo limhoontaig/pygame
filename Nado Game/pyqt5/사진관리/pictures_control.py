@@ -114,6 +114,7 @@ class ElWindow(QMainWindow, form_class):
         self.tableWidget.cellClicked.connect(self.set_label)
         self.listWidget.itemClicked.connect(self.makePixmap)
         self.checkBox_2.stateChanged.connect(self.fitToWindow)
+        self.checkBox_6.stateChanged.connect(self.fitToScaledSize)
         # self.lineEdit.textChanged.connect(self.enablePBCopyMove)
 
 
@@ -204,7 +205,10 @@ class ElWindow(QMainWindow, form_class):
             self.disablePushButton()
         else:
             self.enablePushButton()
-        self.qImageViewer(fileName)
+        if self.checkBox_6.isChecked():
+            self.fitToScaledSize()
+        else:
+            self.qImageViewer(fileName)
         
     @pyqtSlot()
     def searchData(self):
@@ -329,7 +333,8 @@ class ElWindow(QMainWindow, form_class):
         self.pushButton_7.setDisabled(True) # Zoom out
         self.pushButton_9.setDisabled(True) # Fit to Scaled Size
         #self.pushButton_10.setDisabled(True) # Fit to Height 
-        self.pushButton_11.setDisabled(True) # Fit to Normal size 
+        self.pushButton_11.setDisabled(True) # Fit to Normal size
+        self.checkBox_6.setDisabled(True) #  Scaled
 
     def enablePushButton(self):
         self.pushButton_6.setEnabled(True) # Zoom in
@@ -337,7 +342,8 @@ class ElWindow(QMainWindow, form_class):
         #self.pushButton_8.setEnabled(True) # Fit to Label
         self.pushButton_9.setEnabled(True) # Fit to Scaled Size
         #self.pushButton_10.setEnabled(True) # Fit to Height 
-        self.pushButton_11.setEnabled(True) # Fit to Normal size 
+        self.pushButton_11.setEnabled(True) # Fit to Normal size
+        self.checkBox_6.setEnabled(True) # Fit Scaled
 
     def fitToWidth(self):
         #pixmap = self.makePixmap()
@@ -369,7 +375,7 @@ class ElWindow(QMainWindow, form_class):
         self.adjustScrollBar(self.scrollArea.horizontalScrollBar(), factor)
         self.adjustScrollBar(self.scrollArea.verticalScrollBar(), factor)
         
-        self.pushButton_6.setEnabled(self.scaleFactor < 2.0)
+        self.pushButton_6.setEnabled(self.scaleFactor < 3.0)
         self.pushButton_7.setEnabled(self.scaleFactor > 0.1)
     
     def adjustScrollBar(self, scrollBar, factor):
@@ -401,15 +407,18 @@ class ElWindow(QMainWindow, form_class):
         row = self.tableWidget.currentRow()
         file = self.tableWidget.item(row, 1).text()
         path = self.tableWidget.item(row, 3).text()
-        print(file, path) 
-        f = str(pathlib.Path(path, file))
-        pixmap = QPixmap(f)
-        if self.scaleDirection(width, height, pixmap) == 'width':
-            pixmap = pixmap.scaledToWidth(width)
-        else:
-            pixmap = pixmap.scaledToHeight(height)
         
-        self.label_8.setPixmap(QPixmap(pixmap))
+        f = str(pathlib.Path(path, file))
+        if self.checkBox_6.isChecked():
+            pixmap = QPixmap(f)
+            if self.scaleDirection(width, height, pixmap) == 'width':
+                pixmap = pixmap.scaledToWidth(width)
+            else:
+                pixmap = pixmap.scaledToHeight(height)
+            self.label_8.setPixmap(QPixmap(pixmap))
+            self.label_8.adjustSize()
+        else:
+            self.qImageViewer(f)
         
     def fitToWindow(self):
         fitToWindow = self.checkBox_2.isChecked()
@@ -589,7 +598,7 @@ class ElWindow(QMainWindow, form_class):
         if len(remark) != 0:
             new_tail = tail.replace(remark, new_remark)
         else:
-            new_tail = tail + ' ' + new_remark
+            new_tail = tail + '_' + new_remark
         path = os.path.join(Path,)
         newDir = pathlib.Path(head, new_tail)
         self.updateRemarkDB(str(newDir), new_remark, self.lineEdit_11.text())
@@ -791,6 +800,7 @@ class ElWindow(QMainWindow, form_class):
         return folderName
 
     def makeNewFileName(self, f, min_time):
+        original = f
         dt = datetime.fromtimestamp(min_time)
         y = dt.strftime("%Y%m%d_%H%M%S")
         p =self.checkReMatch(f)
@@ -818,6 +828,8 @@ class ElWindow(QMainWindow, form_class):
                 f = f[:m.start()] + f[m.end():]
                 if (f[0] == ' ' or f[0] == '_'): # file 명이 _로 시작하면 _ 제외
                     f = f[1:]
+                if f[0] == 'P':
+                    f = original
             new_f = y + '_' + f
             return new_f
         new_f = y + '_' + f

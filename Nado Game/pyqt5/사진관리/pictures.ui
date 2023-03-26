@@ -1066,7 +1066,7 @@
   <widget class="QPushButton" name="pushButton_7">
    <property name="geometry">
     <rect>
-     <x>810</x>
+     <x>790</x>
      <y>510</y>
      <width>93</width>
      <height>28</height>
@@ -1120,7 +1120,7 @@
    <widget class="QCheckBox" name="checkBox_2">
     <property name="geometry">
      <rect>
-      <x>270</x>
+      <x>220</x>
       <y>500</y>
       <width>121</width>
       <height>21</height>
@@ -1146,7 +1146,7 @@
    <widget class="QPushButton" name="pushButton_11">
     <property name="geometry">
      <rect>
-      <x>420</x>
+      <x>340</x>
       <y>500</y>
       <width>93</width>
       <height>28</height>
@@ -1154,6 +1154,19 @@
     </property>
     <property name="text">
      <string>Normal</string>
+    </property>
+   </widget>
+   <widget class="QCheckBox" name="checkBox_6">
+    <property name="geometry">
+     <rect>
+      <x>460</x>
+      <y>500</y>
+      <width>71</width>
+      <height>19</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Scaled</string>
     </property>
    </widget>
   </widget>
