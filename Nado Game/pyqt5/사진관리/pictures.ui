@@ -1066,7 +1066,7 @@
   <widget class="QPushButton" name="pushButton_7">
    <property name="geometry">
     <rect>
-     <x>790</x>
+     <x>810</x>
      <y>510</y>
      <width>93</width>
      <height>28</height>
@@ -1104,7 +1104,7 @@
      <bool>true</bool>
     </property>
     <property name="alignment">
-     <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignTop</set>
+     <set>Qt::AlignCenter</set>
     </property>
     <widget class="QWidget" name="scrollAreaWidgetContents_2">
      <property name="geometry">
@@ -1120,7 +1120,7 @@
    <widget class="QCheckBox" name="checkBox_2">
     <property name="geometry">
      <rect>
-      <x>230</x>
+      <x>270</x>
       <y>500</y>
       <width>121</width>
       <height>21</height>
@@ -1133,33 +1133,20 @@
    <widget class="QPushButton" name="pushButton_9">
     <property name="geometry">
      <rect>
-      <x>480</x>
+      <x>540</x>
       <y>500</y>
-      <width>93</width>
+      <width>141</width>
       <height>28</height>
      </rect>
     </property>
     <property name="text">
-     <string>Fit to Width</string>
-    </property>
-   </widget>
-   <widget class="QPushButton" name="pushButton_10">
-    <property name="geometry">
-     <rect>
-      <x>590</x>
-      <y>500</y>
-      <width>93</width>
-      <height>28</height>
-     </rect>
-    </property>
-    <property name="text">
-     <string>Fit to Height</string>
+     <string>Fit to Scaled Size</string>
     </property>
    </widget>
    <widget class="QPushButton" name="pushButton_11">
     <property name="geometry">
      <rect>
-      <x>370</x>
+      <x>420</x>
       <y>500</y>
       <width>93</width>
       <height>28</height>
