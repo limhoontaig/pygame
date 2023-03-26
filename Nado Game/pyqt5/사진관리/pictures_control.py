@@ -52,6 +52,7 @@ class ElWindow(QMainWindow, form_class):
         self.LE = LE
         self.TEMPFILE = TEMPFILE
         self.setupUi(self)
+        self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
 
         self.lineEdit.setText(LE[0])
         self.lineEdit_2.setText(LE[1])
@@ -63,11 +64,13 @@ class ElWindow(QMainWindow, form_class):
         self.checkBox_3.setCheckState(2)
         self.checkBox_4.setCheckState(2)
         self.checkBox_5.setCheckState(2)
+        self.checkBox_2.setChecked(2)
 
+        self.scaleFactor = 0.0
         self.label_8 = QLabel()#.setText('Image Viewer')
         #self.label_8.setBackgroundRole(QPalette.Base)
-        #self.label_8.setSizePolicy(QSizePolicy.Ignored, QSizePolicy.Ignored)
-        #self.label_8.setScaledContents(True)
+        self.label_8.setSizePolicy(QSizePolicy.Ignored, QSizePolicy.Ignored)
+        self.label_8.setScaledContents(True)
 
         #self.scrollArea.setBackgroundRole(QPalette.Dark)
         self.scrollArea.setWidget(self.label_8)
@@ -92,11 +95,12 @@ class ElWindow(QMainWindow, form_class):
         self.pushButton_13.clicked.connect(self.delAllOtherFiles) # Fit to Normal size 
         self.pushButton_16.clicked.connect(self.delSelectedItems) # delete select items
         self.pushButton_17.clicked.connect(self.delAllItems) # delete all tablewidget items
-        self.pushButton_18.clicked.connect(self.renameFolder) # Fit to Normal size 
+        self.pushButton_18.clicked.connect(self.renameFolder) # Fit to Normal size
         #self.pushButton_19.clicked.connect(self.selectSQL) # 검색조건에 따른 sql문 선택
         self.pushButton_20.clicked.connect(self.searchData) # 선택기간 DB 검색 
         self.tableWidget.cellClicked.connect(self.set_label)
         self.listWidget.itemClicked.connect(self.makePixmap)
+        self.checkBox_2.stateChanged.connect(self.fitToWindow)
         # self.lineEdit.textChanged.connect(self.enablePBCopyMove)
     
     def delAllItems(self):
@@ -172,6 +176,7 @@ class ElWindow(QMainWindow, form_class):
         self.lineEdit_11.setText(path)
         self.lineEdit_15.setText(str(row))
         self.qImageViewer(fileName)
+        self.enablePushButton()
         
     @pyqtSlot()
     def searchData(self):
@@ -303,31 +308,27 @@ class ElWindow(QMainWindow, form_class):
     def enablePushButton(self):
         self.pushButton_6.setEnabled(True) # Zoom in
         self.pushButton_7.setEnabled(True) # Zoom out
-        self.pushButton_8.setEnabled(True) # Fit to Label
-        self.pushButton_9.setEnabled(True) # Fit to width
-        self.pushButton_10.setEnabled(True) # Fit to Height 
+        #self.pushButton_8.setEnabled(True) # Fit to Label
+        #self.pushButton_9.setEnabled(True) # Fit to width
+        #self.pushButton_10.setEnabled(True) # Fit to Height 
         self.pushButton_11.setEnabled(True) # Fit to Normal size 
 
     def fitToWidth(self):
-        pixmap = self.makePixmap()
-        self.label_8.resize(pixmap.scaledToWidth(self.label_8.pixmap.size()))
-        pixmap = pixmap.scaledToWidth(660)
-        self.label_8.pixmap.setToWidth()
+        #pixmap = self.makePixmap()
+        #self.label_8.resize(pixmap.scaledToWidth(self.label_8.pixmap.size()))
+        #pixmap = pixmap.scaledToWidth(660)
+        #self.label_8.pixmap.setToWidth()
+        pass
 
     def fitToHeight(self):
-        pixmap = self.makePixmap()
-        self.label_8.resize(pixmap.scaledToHeight(self.label_8.pixmap.size()))
-        pixmap = pixmap.scaledToHeight(460)
+        #pixmap = self.makePixmap()
+        #self.label_8.resize(pixmap.scaledToHeight(self.label_8.pixmap.size()))
+        #pixmap = pixmap.scaledToHeight(460)
+        pass
 
     def normalSize(self):
         self.label_8.adjustSize()
-
-    def fitToWindow(self):
-        fitToWindow = True
-        self.label_8.setWidgetResizable(fitToWindow)
-        if not fitToWindow:
-            self.normalSize()
-        self.updateActions()
+        self.scaleFactor = 1.0
 
     def zoomIn(self):
         self.scaleImage(1.25)
@@ -338,8 +339,16 @@ class ElWindow(QMainWindow, form_class):
     def scaleImage(self, factor):
         self.scaleFactor *= factor
         self.label_8.resize(self.scaleFactor * self.label_8.pixmap().size())
-        self.pushButton_6.setEnabled(self.scaleFactor < 1.0)
-        self.pushButton_7.setEnabled(self.scaleFactor > 0.6)
+
+        self.adjustScrollBar(self.scrollArea.horizontalScrollBar(), factor)
+        self.adjustScrollBar(self.scrollArea.verticalScrollBar(), factor)
+        
+        self.pushButton_6.setEnabled(self.scaleFactor < 3.0)
+        self.pushButton_7.setEnabled(self.scaleFactor > 0.15)
+    
+    def adjustScrollBar(self, scrollBar, factor):
+        scrollBar.setValue(int(factor * scrollBar.value()
+                               + ((factor - 1) * scrollBar.pageStep() / 2)))
 
     def makePixmap(self):    
         file = self.listWidget.currentItem().text()
@@ -350,27 +359,50 @@ class ElWindow(QMainWindow, form_class):
         #return pixmap
 
     def qImageViewer(self, f):    
-        width = 660
-        height = 460
-        self.label_8.resize(width,height)
+        #width = 660
+        #height = 460
+        #self.label_8.resize(width,height)
         #image = QImage(f)
         #pixmap = QPixmap.fromImage(image)
-        pixmap = QPixmap(f)
+        if f:
+            pixmap = QPixmap(f)
+            if pixmap == 'Null':
+                QMessageBox.information(self, "Image Viewer", "Cannot Load %s." % f)
+                return
+            self.label_8.setPixmap(QPixmap(pixmap))
+            self.scaleFactor = 1.0
+            self.scrollArea.setVisible(True)
+            
+            if not self.checkBox_2.isChecked():
+                self.label_8.adjustSize()
+            
+        '''
+
         #self.label_8.setPixmap(pixmap)
 
-        '''
+        
         pixmap = QPixmap(f)
         if self.scaleDirection(width, height, pixmap) == 'width':
             pixmap = pixmap.scaledToWidth(width)
         else:
             pixmap = pixmap.scaledToHeight(height)
-        '''
+        
         #self.label_8.setPixmap(QPixmap(pixmap)) # label_8
         #pixmap = pixmap.scaledToWidth(width)
         #self.label_8.setPixmap(QPixmap(pixmap))
         self.label_8.setPixmap(QPixmap(pixmap))
         self.label_8.adjustSize()
         self.show()
+        '''
+    def fitToWindow(self):
+        fitToWindow = self.checkBox_2.isChecked()
+        self.disablePushButton()
+        print(fitToWindow)
+        self.scrollArea.setWidgetResizable(fitToWindow)
+        if not fitToWindow:
+            self.enablePushButton()
+            self.normalSize()
+        
     
     def scaleDirection(self, width, height, pixmap):
         W = pixmap.width() / width
