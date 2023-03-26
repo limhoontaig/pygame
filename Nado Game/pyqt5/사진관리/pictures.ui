@@ -504,14 +504,14 @@
     <widget class="QCheckBox" name="checkBox_2">
      <property name="geometry">
       <rect>
-       <x>380</x>
+       <x>310</x>
        <y>180</y>
-       <width>111</width>
+       <width>181</width>
        <height>21</height>
       </rect>
      </property>
      <property name="text">
-      <string>폴더 설명 추가</string>
+      <string>Fit to Window(Scroll Area)</string>
      </property>
     </widget>
     <widget class="QLineEdit" name="lineEdit_3">
