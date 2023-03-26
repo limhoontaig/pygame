@@ -68,13 +68,27 @@ class ElWindow(QMainWindow, form_class):
 
         self.scaleFactor = 0.0
         self.label_8 = QLabel()#.setText('Image Viewer')
-        #self.label_8.setBackgroundRole(QPalette.Base)
+        self.label_8.setBackgroundRole(QPalette.Base)
         self.label_8.setSizePolicy(QSizePolicy.Ignored, QSizePolicy.Ignored)
         self.label_8.setScaledContents(True)
 
-        #self.scrollArea.setBackgroundRole(QPalette.Dark)
+        self.scrollArea.setBackgroundRole(QPalette.Dark)
         self.scrollArea.setWidget(self.label_8)
         self.scrollArea.setVisible(True)
+
+        '''
+        self.scrollArea.verticalScrollBar().valueChanged.connect(
+            self.scrollAreaRight.verticalScrollBar().setValue)
+        self.scrollArea.horizontalScrollBar().valueChanged.connect(
+            self.scrollAreaRight.horizontalScrollBar().setValue)
+        '''
+        
+        self.scrollArea.mouseMoveEvent = self.mouseMoveEvent
+        self.scrollArea.mousePressEvent = self.mousePressEvent
+        self.scrollArea.mouseReleaseEvent = self.mouseReleaseEvent
+
+        self.label_8.setCursor(Qt.OpenHandCursor)
+
         '''
         self.scrollArea = QScrollArea()
         self.setCentralWidget(self.scrollArea)
@@ -87,7 +101,6 @@ class ElWindow(QMainWindow, form_class):
         self.pushButton_5.clicked.connect(self.list_files) 
         self.pushButton_6.clicked.connect(self.zoomIn) # Zoom in
         self.pushButton_7.clicked.connect(self.zoomOut) # Zoom out
-        self.pushButton_8.clicked.connect(self.list_files) # Fit to Label
         self.pushButton_9.clicked.connect(self.fitToWidth) # Fit to width
         self.pushButton_10.clicked.connect(self.list_files) # Fit to Height 
         self.pushButton_11.clicked.connect(self.normalSize) # Fit to Normal size 
@@ -102,6 +115,24 @@ class ElWindow(QMainWindow, form_class):
         self.listWidget.itemClicked.connect(self.makePixmap)
         self.checkBox_2.stateChanged.connect(self.fitToWindow)
         # self.lineEdit.textChanged.connect(self.enablePBCopyMove)
+
+
+    def mousePressEvent(self, event):
+        self.pressed = True
+        self.label_8.setCursor(Qt.ClosedHandCursor)
+        self.initialPosX = self.scrollArea.horizontalScrollBar().value() + event.pos().x()
+        self.initialPosY = self.scrollArea.verticalScrollBar().value() + event.pos().y()
+
+    def mouseReleaseEvent(self, event):
+        self.pressed = False
+        self.label_8.setCursor(Qt.OpenHandCursor)
+        self.initialPosX = self.scrollArea.horizontalScrollBar().value()
+        self.initialPosY = self.scrollArea.verticalScrollBar().value()
+
+    def mouseMoveEvent(self, event):
+        if self.pressed:
+            self.scrollArea.horizontalScrollBar().setValue(self.initialPosX - event.pos().x())
+            self.scrollArea.verticalScrollBar().setValue(self.initialPosY - event.pos().y())
     
     def delAllItems(self):
         rows = self.tableWidget.rowCount()
@@ -114,7 +145,6 @@ class ElWindow(QMainWindow, form_class):
             result = self.selectDB(fileName)
             filePath = result['pictureFileDestDir'] # dict format read data
             file = pathlib.Path(filePath, fileName)
-            print(fileName)
             self.deleteDB([fileName])
             try:
                 os.remove(file)
@@ -127,7 +157,6 @@ class ElWindow(QMainWindow, form_class):
                     pass
         try:
             self.removeDir()
-            #os.rmdir(srcPath)
         except:
             pass
         self.searchData()
@@ -149,11 +178,7 @@ class ElWindow(QMainWindow, form_class):
             self.deleteDB([fileName])
             os.remove(file)
         self.searchData()
-        '''    
-        print(currentQTableWidgetItem.row(),
-        currentQTableWidgetItem.column(),
-        currentQTableWidgetItem.text())
-        '''
+        
     def deleteDB(self, newFile):
         conn = self.connDB()
         cursor = conn.cursor(dictionary=True)
@@ -175,8 +200,11 @@ class ElWindow(QMainWindow, form_class):
         self.lineEdit_3.setText(file)
         self.lineEdit_11.setText(path)
         self.lineEdit_15.setText(str(row))
+        if self.checkBox_2.isChecked():
+            self.disablePushButton()
+        else:
+            self.enablePushButton()
         self.qImageViewer(fileName)
-        self.enablePushButton()
         
     @pyqtSlot()
     def searchData(self):
@@ -186,7 +214,6 @@ class ElWindow(QMainWindow, form_class):
         else:
             from_date = self.dateEdit.text()
             to_date = self.dateEdit_2.text()
-        # print(from_date, to_date)
         fileName, activityName = self.selectSQL()
         results = self.searchPeriod(from_date, to_date, fileName, activityName)
         data = []
@@ -300,7 +327,6 @@ class ElWindow(QMainWindow, form_class):
     def disablePushButton(self):
         self.pushButton_6.setDisabled(True) # Zoom in
         self.pushButton_7.setDisabled(True) # Zoom out
-        self.pushButton_8.setDisabled(True) # Fit to Label
         self.pushButton_9.setDisabled(True) # Fit to width
         self.pushButton_10.setDisabled(True) # Fit to Height 
         self.pushButton_11.setDisabled(True) # Fit to Normal size 
@@ -343,8 +369,8 @@ class ElWindow(QMainWindow, form_class):
         self.adjustScrollBar(self.scrollArea.horizontalScrollBar(), factor)
         self.adjustScrollBar(self.scrollArea.verticalScrollBar(), factor)
         
-        self.pushButton_6.setEnabled(self.scaleFactor < 3.0)
-        self.pushButton_7.setEnabled(self.scaleFactor > 0.15)
+        self.pushButton_6.setEnabled(self.scaleFactor < 2.0)
+        self.pushButton_7.setEnabled(self.scaleFactor > 0.1)
     
     def adjustScrollBar(self, scrollBar, factor):
         scrollBar.setValue(int(factor * scrollBar.value()
@@ -396,8 +422,8 @@ class ElWindow(QMainWindow, form_class):
         '''
     def fitToWindow(self):
         fitToWindow = self.checkBox_2.isChecked()
-        self.disablePushButton()
-        print(fitToWindow)
+        if fitToWindow:
+            self.disablePushButton()
         self.scrollArea.setWidgetResizable(fitToWindow)
         if not fitToWindow:
             self.enablePushButton()
@@ -496,7 +522,6 @@ class ElWindow(QMainWindow, form_class):
             if not exist:
                 self.insertDB(newFileName, str(destPath), originalFileName, srcPath, tt, remark, file_size)
             elif pathExist:
-                #print(pathExist['pictureFileOldName'])
                 pass
             else:
                 dupliExist = self.selectDupliDB(originalFileName, srcPath)
@@ -701,10 +726,8 @@ class ElWindow(QMainWindow, form_class):
         m = self.checkReMatchYMD(lastDir)
         if (m and len(lastDir) > m.end()):
             if (lastDir[m.end()] == ' ' or lastDir[m.end()] == '_' or lastDir[m.end()] == '-'):
-                print("'"+lastDir[m.end()+1:]+"'", 'lastDir[m.end()+1]', lastDir[m.end()+1])
                 return lastDir[m.end()+1:]
             else:
-                print('lastDir[m.end()]', lastDir[m.end()], "'"+lastDir[m.end():]+"'")
                 return lastDir[m.end():]
         else:
             return ""        
@@ -1076,7 +1099,6 @@ class ElWindow(QMainWindow, form_class):
         if sname == '원본 폴더':
             init_dir = self.LE[0]
             fname = pathlib.Path(QFileDialog.getExistingDirectory(self, '원본 사진 파일이 있는 디렉토리를 선택하세요', init_dir))
-            #print('add_file: ', fname)
             if len(str(fname)) != 0:
                 self.lineEdit.setText(str(fname))
             else:
