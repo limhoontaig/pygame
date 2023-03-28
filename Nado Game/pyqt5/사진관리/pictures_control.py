@@ -8,7 +8,7 @@ from PyQt5 import uic
 from PyQt5.QtGui import QImage, QPixmap, QPalette, QPainter, QBrush
 from PyQt5.QtPrintSupport import QPrintDialog, QPrinter
 from PyQt5.QtWidgets import QLabel, QSizePolicy, QScrollArea, QMessageBox, QMainWindow, QMenu, QAction, \
-    qApp, QFileDialog, QApplication, QTableWidget, QTableWidgetItem, QHeaderView
+    qApp, QFileDialog, QApplication, QTableWidget, QTableWidgetItem, QHeaderView, QCheckBox
 
 from datetime import datetime
 from datetime import date
@@ -294,6 +294,12 @@ class ElWindow(QMainWindow, form_class):
         rowCount = len(data)
         self.tableWidget.setRowCount(rowCount)
 
+        '''#self.table.setColumnWidth(2, 50)
+        ckbox = QCheckBox()
+        self.table.setCellWidget(0, 2, ckbox)
+        ckbox2 = QCheckBox('me')
+        self.table.setCellWidget(1, 2, ckbox2)
+        '''
         c = 0
         for list in data:
             self.tableWidget.setColumnCount(len(list))
