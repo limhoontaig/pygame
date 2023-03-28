@@ -192,9 +192,10 @@ class ElWindow(QMainWindow, form_class):
 
     def set_label(self, row, column):
         column = 0
-        file = (self.tableWidget.item(row, 1).text())
-        path = (self.tableWidget.item(row, 3).text())
-        remark = (self.tableWidget.item(row, 2).text())
+        file = (self.tableWidget.item(row, 2).text())
+        path = (self.tableWidget.item(row, 4).text())
+        print(path)
+        remark = (self.tableWidget.item(row, 3).text())
         fileName = str(pathlib.Path(path, file))
         self.lineEdit_13.setText(remark)
         self.lineEdit_14.setText(remark)
@@ -282,7 +283,7 @@ class ElWindow(QMainWindow, form_class):
     
     def set_tableWidget(self,data):
         
-        HEADERS = ['Number', 'File Name', 'Remark', 'Directory', 'Take Time', 'File Size']
+        HEADERS = ['C', 'Number', 'File Name', 'Remark', 'Directory', 'Take Time', 'File Size']
         self.tableWidget.setColumnCount(len(HEADERS))
         self.tableWidget.setAlternatingRowColors(True)
         self.tableWidget.setHorizontalHeaderLabels(HEADERS)#.split(";"))
@@ -293,22 +294,62 @@ class ElWindow(QMainWindow, form_class):
         '''
         rowCount = len(data)
         self.tableWidget.setRowCount(rowCount)
+        for idx, (number, fileName, remark, directory, takeTime, fileSize) in enumerate(data):
+            item = MyQTableWidgetItemCheckBox()
+            self.tableWidget.setItem(idx, 0, item)
+            chbox = MyCheckBox(item)
+            self.tableWidget.setCellWidget(idx, 0, chbox)
+            chbox.stateChanged.connect(self.__checkbox_change)
+            self.tableWidget.setItem(idx, 1, QTableWidgetItem(number))
+            self.tableWidget.setItem(idx, 2, QTableWidgetItem(fileName))
+            self.tableWidget.setItem(idx, 3, QTableWidgetItem(remark))
+            self.tableWidget.setItem(idx, 4, QTableWidgetItem(directory))
+            self.tableWidget.setItem(idx, 5, QTableWidgetItem(takeTime))
+            self.tableWidget.setItem(idx, 6, QTableWidgetItem(fileSize))
+        self.tableWidget.setSortingEnabled(False)
 
         '''#self.table.setColumnWidth(2, 50)
         ckbox = QCheckBox()
         self.table.setCellWidget(0, 2, ckbox)
         ckbox2 = QCheckBox('me')
         self.table.setCellWidget(1, 2, ckbox2)
-        '''
+        
         c = 0
         for list in data:
             self.tableWidget.setColumnCount(len(list))
             for i in list:
                 self.tableWidget.setItem(0, c, QTableWidgetItem(i))
                 c = c+1
+        '''
         self.tableWidget.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeToContents)
         self.tableWidget.resizeRowsToContents()
+        self.tableWidget.resizeColumnsToContents()
+        self.tableWidget.setColumnWidth(0, 15)
         self.tableWidget.horizontalHeader().setSectionResizeMode(QHeaderView.Interactive)
+
+        hheader = self.tableWidget.horizontalHeader()
+        hheader.sectionClicked.connect(self._horizontal_header_clicked)
+
+
+    def __checkbox_change(self, checkvalue):
+        # print("check change... ", checkvalue)
+        chbox = self.sender()  # signal을 보낸 MyCheckBox instance
+        print("checkbox sender row = ", chbox.get_row())
+
+    def _cellclicked(self, row, col):
+        print("_cellclicked... ", row, col)
+
+    def _horizontal_header_clicked(self, idx):
+        """
+        컬럼 헤더 click 시에만, 정렬하고, 다시 정렬기능 off 시킴
+         -- 정렬기능 on 시켜놓으면, 값 바뀌면 바로 자동으로 data 순서 정렬되어 바뀌어 헷갈린다..
+        :param idx -->  horizontalheader index; 0, 1, 2,...
+        :return:
+        """
+        # print("hedder2.. ", idx)
+        self.tableWidget.setSortingEnabled(True)  # 정렬기능 on
+        # time.sleep(0.2)
+        self.tableWidget.setSortingEnabled(False)  # 정렬기능 off
 
     def table_display(self):
         header = self.tableWidget.horizontalHeader()
@@ -411,8 +452,8 @@ class ElWindow(QMainWindow, form_class):
         width = 671
         height = 481
         row = self.tableWidget.currentRow()
-        file = self.tableWidget.item(row, 1).text()
-        path = self.tableWidget.item(row, 3).text()
+        file = self.tableWidget.item(row, 2).text()
+        path = self.tableWidget.item(row, 4).text()
         
         f = str(pathlib.Path(path, file))
         if self.checkBox_6.isChecked():
@@ -1137,6 +1178,44 @@ class ElWindow(QMainWindow, form_class):
         # self.addItemText = path + " " + f
         self.listWidget.addItem(str(pathlib.Path(path, f)))
         #self.listWidget.addItem(self.addItemText)
+
+class MyCheckBox(QCheckBox):
+    def __init__(self, item):
+        """
+        :param item: QTableWidgetItem instance
+        """
+        super().__init__()
+        self.item = item
+        self.mycheckvalue = 0   # 0 --> unchecked, 2 --> checked
+        self.stateChanged.connect(self.__checkbox_change)
+        self.stateChanged.connect(self.item.my_setdata)  # checked 여부로 정렬을 하기위한 data 저장
+
+    def __checkbox_change(self, checkvalue):
+        # print("myclass...check change... ", checkvalue)
+        self.mycheckvalue = checkvalue
+        print("checkbox row= ", self.get_row())
+
+    def get_row(self):
+        return self.item.row()
+
+
+class MyQTableWidgetItemCheckBox(QTableWidgetItem):
+    """
+    checkbox widget 과 같은 cell 에  item 으로 들어감.
+    checkbox 값 변화에 따라, 사용자정의 data를 기준으로 정렬 기능 구현함.
+    """
+    def __init__(self):
+        super().__init__()
+        self.setData(Qt.UserRole, 0)
+
+    def __lt__(self, other):
+        # print(type(self.data(Qt.UserRole)))
+        return self.data(Qt.UserRole) < other.data(Qt.UserRole)
+
+    def my_setdata(self, value):
+        # print("my setdata ", value)
+        self.setData(Qt.UserRole, value)
+        # print("row ", self.row())
 
 class QImageViewer(QMainWindow):
     def __init__(self):
