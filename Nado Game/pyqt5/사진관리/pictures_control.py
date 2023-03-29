@@ -23,6 +23,7 @@ import mysql
 import mysql.connector
 import math
 from threading import Event, Timer
+import cv2
 
 def resource_path(relative_path):
     base_path = getattr(sys, "_MAIPASS", os.path.dirname(os.path.abspath(__file__)))
@@ -47,6 +48,19 @@ TEMPFILE = 'TEMP_EXCEL_FileList.xlsx'
 ALLOW_GRAPHIC = ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.tif', 'tiff']
 ALLOW_MEDIA = ['.avi','.mov', '.mp4']
 ALLOW_EXTS = ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.tif', 'tiff', '.avi','.mov', '.mp4']
+
+class cvWindow():
+    def imShow(self, f):
+        print(f)
+        img = cv2.imread(f, cv2.IMREAD_COLOR)
+        if img is None:
+            print("Not Load the Image")
+            return
+        cv2.imshow('show', img)
+        cv2.waitKey(0)
+        cv2.destroyAllWindows()
+
+
 class ElWindow(QMainWindow, form_class):
     def __init__(self):
         super().__init__()
@@ -125,16 +139,19 @@ class ElWindow(QMainWindow, form_class):
             QMessageBox.about(self, "파일 선택 요망", "테이블 상의 파일을 선택하신 후 Slide Show가 가능합니다. 파일선택후 재실행 해주세요.")
             return
         for i in range(row, rows):
+            '''
             delay = 2
             self.fitToScaledSizeShow(i)
             Event.wait(delay)
+            '''
             #if 
             #self.set_label(i, 1)
-            #file = self.tableWidget.item(i, 2).text()
-            #path = self.tableWidget.item(i, 4).text()
-            #fileName = str(pathlib.Path(path, file))
+            file = self.tableWidget.item(i, 2).text()
+            path = self.tableWidget.item(i, 4).text()
+            fileName = str(pathlib.Path(path, file))
             #self.qImageViewer(fileName)
             #print(fileName)
+            cvWindow.imShow(self, fileName)
             #time.sleep(1)
 
     def mousePressEvent(self, event):
