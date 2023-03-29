@@ -22,6 +22,7 @@ import pandas as pd
 import mysql
 import mysql.connector
 import math
+from threading import Event, Timer
 
 def resource_path(relative_path):
     base_path = getattr(sys, "_MAIPASS", os.path.dirname(os.path.abspath(__file__)))
@@ -63,8 +64,8 @@ class ElWindow(QMainWindow, form_class):
         self.disablePBCopyMove()
         self.checkBox_3.setCheckState(2)
         self.checkBox_4.setCheckState(2)
-        self.checkBox_5.setCheckState(2)
-        self.checkBox_2.setChecked(2)
+        #self.checkBox_5.setCheckState(2)
+        self.checkBox_6.setChecked(2)
 
         self.scaleFactor = 0.0
         self.label_8 = QLabel()#.setText('Image Viewer')
@@ -102,7 +103,7 @@ class ElWindow(QMainWindow, form_class):
         self.pushButton_6.clicked.connect(self.zoomIn) # Zoom in
         self.pushButton_7.clicked.connect(self.zoomOut) # Zoom out
         self.pushButton_9.clicked.connect(self.fitToScaledSize) # Fit to Scaled Size
-        #self.pushButton_10.clicked.connect(self.list_files) # Fit to Height 
+        self.pushButton_8.clicked.connect(self.slideShow) # Slide Show 
         self.pushButton_11.clicked.connect(self.normalSize) # Fit to Normal size 
         self.pushButton_12.clicked.connect(self.delSelectedFile) # Fit to Normal size 
         self.pushButton_13.clicked.connect(self.delAllOtherFiles) # Fit to Normal size 
@@ -117,6 +118,24 @@ class ElWindow(QMainWindow, form_class):
         self.checkBox_6.stateChanged.connect(self.fitToScaledSize)
         # self.lineEdit.textChanged.connect(self.enablePBCopyMove)
 
+    def slideShow(self):
+        row = self.tableWidget.currentRow()
+        rows = self.tableWidget.rowCount()
+        if row == -1:
+            QMessageBox.about(self, "파일 선택 요망", "테이블 상의 파일을 선택하신 후 Slide Show가 가능합니다. 파일선택후 재실행 해주세요.")
+            return
+        for i in range(row, rows):
+            delay = 2
+            self.fitToScaledSizeShow(i)
+            Event.wait(delay)
+            #if 
+            #self.set_label(i, 1)
+            #file = self.tableWidget.item(i, 2).text()
+            #path = self.tableWidget.item(i, 4).text()
+            #fileName = str(pathlib.Path(path, file))
+            #self.qImageViewer(fileName)
+            #print(fileName)
+            #time.sleep(1)
 
     def mousePressEvent(self, event):
         self.pressed = True
@@ -191,12 +210,13 @@ class ElWindow(QMainWindow, form_class):
         return
 
     def set_label(self, row, column):
+        print('set_label(self, row, column): ', row, column)
         column = 0
         file = (self.tableWidget.item(row, 2).text())
         path = (self.tableWidget.item(row, 4).text())
-        print(path)
         remark = (self.tableWidget.item(row, 3).text())
         fileName = str(pathlib.Path(path, file))
+        print('set_label(self, row, column):', fileName)
         self.lineEdit_13.setText(remark)
         self.lineEdit_14.setText(remark)
         self.lineEdit_3.setText(file)
@@ -435,7 +455,8 @@ class ElWindow(QMainWindow, form_class):
         self.lineEdit_3.setText(self.get_remark(path))
         self.qImageViewer(file)
         
-    def qImageViewer(self, f):    
+    def qImageViewer(self, f):
+        print('qImageViewer fileName: ', f)
         if f:
             pixmap = QPixmap(f)
             if pixmap == 'Null':
@@ -449,9 +470,13 @@ class ElWindow(QMainWindow, form_class):
             
         
     def fitToScaledSize(self):
+        row = self.tableWidget.currentRow()
+        self.fitToScaledSizeShow(row)
+    
+    def fitToScaledSizeShow(self, row):
+        print('row', row)
         width = 671
         height = 481
-        row = self.tableWidget.currentRow()
         file = self.tableWidget.item(row, 2).text()
         path = self.tableWidget.item(row, 4).text()
         
@@ -464,8 +489,10 @@ class ElWindow(QMainWindow, form_class):
                 pixmap = pixmap.scaledToHeight(height)
             self.label_8.setPixmap(QPixmap(pixmap))
             self.label_8.adjustSize()
+            return
         else:
             self.qImageViewer(f)
+            return
         
     def fitToWindow(self):
         fitToWindow = self.checkBox_2.isChecked()
