@@ -517,14 +517,14 @@
     <widget class="QCheckBox" name="checkBox">
      <property name="geometry">
       <rect>
-       <x>520</x>
-       <y>190</y>
-       <width>131</width>
+       <x>120</x>
+       <y>720</y>
+       <width>121</width>
        <height>21</height>
       </rect>
      </property>
      <property name="text">
-      <string>하위폴더 불포함</string>
+      <string>Slide Show Stop</string>
      </property>
     </widget>
     <widget class="QLabel" name="label_21">
