@@ -153,15 +153,16 @@ class ElWindow(QMainWindow, form_class):
             file = self.tableWidget.item(i, 2).text()
             path = self.tableWidget.item(i, 4).text()
             fileName = str(pathlib.Path(path, file))
+            self.qImageViewer(fileName)
             # gif 처리
             if str(fileName).lower().endswith('.gif'):
                 gif = cv2.VideoCapture(fileName)
                 ret, frame = gif.read()  # ret=True if it finds a frame else False.
                 if ret:
-                    src = frame
+                    img = frame
             else:
                 img_array = np.fromfile(fileName, np.uint8)
-                src = cv2.imdecode(img_array, cv2.IMREAD_COLOR)
+                img = cv2.imdecode(img_array, cv2.IMREAD_COLOR)
 
 
             #img_array = np.fromfile(fileName, np.uint8)
@@ -170,21 +171,36 @@ class ElWindow(QMainWindow, form_class):
             if (src == None).all():
                 QMessageBox.about(self, "파일 오류", fileName+"가 오류입니다. 파일을 확인해 주세요.")
                 return
+            
+            h, w, c = img.shape
+            qImg = QImage(img.data, w, h, w*c, QImage.Format_RGB888)
+            pixmap = QPixmap.fromImage(qImg)
+            self.label_8.setPixmap(pixmap)
             '''
-            width, height, dim = src.shape
+            cv2.waitKey(100)
+
+
+
+
+
+
+
+            width, height, dim = img.shape
+
+            
             print(width, height, dim, fileName)
             if width > height:
                 fx_x = 640 / width
             else:
                 fx_x = 640 / height
         
-            dst = cv2.resize(src, dsize=(640, 480), interpolation=cv2.INTER_AREA)
-            dst2 = cv2.resize(src, dsize=(0, 0), fx=fx_x, fy=fx_x, interpolation=cv2.INTER_LINEAR)
+            dst = cv2.resize(img, dsize=(640, 480), interpolation=cv2.INTER_AREA)
+            dst2 = cv2.resize(img, dsize=(0, 0), fx=fx_x, fy=fx_x, interpolation=cv2.INTER_LINEAR)
 
             #cv2.imshow("src", src)
             #cv2.imshow("dst", dst)
             cv2.imshow("dst2", dst2)
-            cv2.waitKey(500)
+            cv2.waitKey(2500)
             cv2.destroyAllWindows()
 
 
@@ -192,6 +208,7 @@ class ElWindow(QMainWindow, form_class):
             #print(fileName)
             #cvWindow.imShow(self, fileName)
             #time.sleep(1)
+            
 
     def mousePressEvent(self, event):
         self.pressed = True
