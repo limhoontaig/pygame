@@ -19,6 +19,7 @@ import shutil
 from PIL import Image
 from PIL.ExifTags import TAGS
 import pandas as pd
+import numpy as np
 import mysql
 import mysql.connector
 import math
@@ -117,6 +118,7 @@ class ElWindow(QMainWindow, form_class):
         self.pushButton_6.clicked.connect(self.zoomIn) # Zoom in
         self.pushButton_7.clicked.connect(self.zoomOut) # Zoom out
         self.pushButton_9.clicked.connect(self.fitToScaledSize) # Fit to Scaled Size
+        #self.pushButton_10.clicked.connect(self.slideStop) # Slide stop
         self.pushButton_8.clicked.connect(self.slideShow) # Slide Show 
         self.pushButton_11.clicked.connect(self.normalSize) # Fit to Normal size 
         self.pushButton_12.clicked.connect(self.delSelectedFile) # Fit to Normal size 
@@ -139,19 +141,56 @@ class ElWindow(QMainWindow, form_class):
             QMessageBox.about(self, "파일 선택 요망", "테이블 상의 파일을 선택하신 후 Slide Show가 가능합니다. 파일선택후 재실행 해주세요.")
             return
         for i in range(row, rows):
+            if self.checkBox.isChecked():
+                break
             '''
             delay = 2
             self.fitToScaledSizeShow(i)
             Event.wait(delay)
             '''
-            #if 
+            #if  
             #self.set_label(i, 1)
             file = self.tableWidget.item(i, 2).text()
             path = self.tableWidget.item(i, 4).text()
             fileName = str(pathlib.Path(path, file))
+            # gif 처리
+            if str(fileName).lower().endswith('.gif'):
+                gif = cv2.VideoCapture(fileName)
+                ret, frame = gif.read()  # ret=True if it finds a frame else False.
+                if ret:
+                    src = frame
+            else:
+                img_array = np.fromfile(fileName, np.uint8)
+                src = cv2.imdecode(img_array, cv2.IMREAD_COLOR)
+
+
+            #img_array = np.fromfile(fileName, np.uint8)
+            #src = cv2.imdecode(img_array, cv2.IMREAD_COLOR)
+            '''
+            if (src == None).all():
+                QMessageBox.about(self, "파일 오류", fileName+"가 오류입니다. 파일을 확인해 주세요.")
+                return
+            '''
+            width, height, dim = src.shape
+            print(width, height, dim, fileName)
+            if width > height:
+                fx_x = 640 / width
+            else:
+                fx_x = 640 / height
+        
+            dst = cv2.resize(src, dsize=(640, 480), interpolation=cv2.INTER_AREA)
+            dst2 = cv2.resize(src, dsize=(0, 0), fx=fx_x, fy=fx_x, interpolation=cv2.INTER_LINEAR)
+
+            #cv2.imshow("src", src)
+            #cv2.imshow("dst", dst)
+            cv2.imshow("dst2", dst2)
+            cv2.waitKey(500)
+            cv2.destroyAllWindows()
+
+
             #self.qImageViewer(fileName)
             #print(fileName)
-            cvWindow.imShow(self, fileName)
+            #cvWindow.imShow(self, fileName)
             #time.sleep(1)
 
     def mousePressEvent(self, event):
