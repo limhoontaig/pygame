@@ -3,7 +3,7 @@ import os
 import stat
 import pathlib
 import pandas as pd
-from PyQt5.QtCore import Qt, pyqtSlot, QObject, pyqtSignal, QStringListModel, QDate
+from PyQt5.QtCore import Qt, pyqtSlot, QObject, pyqtSignal, QStringListModel, QDate, QSize
 from PyQt5 import uic
 from PyQt5.QtGui import QImage, QPixmap, QPalette, QPainter, QBrush
 from PyQt5.QtPrintSupport import QPrintDialog, QPrinter
@@ -58,7 +58,7 @@ class cvWindow():
             print("Not Load the Image")
             return
         cv2.imshow('show', img)
-        cv2.waitKey(0)
+        cv2.waitKey(10)
         cv2.destroyAllWindows()
 
 
@@ -92,23 +92,11 @@ class ElWindow(QMainWindow, form_class):
         self.scrollArea.setWidget(self.label_8)
         self.scrollArea.setVisible(True)
 
-        '''
-        self.scrollArea.verticalScrollBar().valueChanged.connect(
-            self.scrollAreaRight.verticalScrollBar().setValue)
-        self.scrollArea.horizontalScrollBar().valueChanged.connect(
-            self.scrollAreaRight.horizontalScrollBar().setValue)
-        '''
-        
         self.scrollArea.mouseMoveEvent = self.mouseMoveEvent
         self.scrollArea.mousePressEvent = self.mousePressEvent
         self.scrollArea.mouseReleaseEvent = self.mouseReleaseEvent
 
         self.label_8.setCursor(Qt.OpenHandCursor)
-
-        '''
-        self.scrollArea = QScrollArea()
-        self.setCentralWidget(self.scrollArea)
-        '''
 
         self.pushButton.clicked.connect(self.add_file)
         self.pushButton_2.clicked.connect(self.add_file)
@@ -141,19 +129,17 @@ class ElWindow(QMainWindow, form_class):
             QMessageBox.about(self, "파일 선택 요망", "테이블 상의 파일을 선택하신 후 Slide Show가 가능합니다. 파일선택후 재실행 해주세요.")
             return
         for i in range(row, rows):
+            self.tableWidget.setCurrentCell(i, 1)
             if self.checkBox.isChecked():
                 break
-            '''
-            delay = 2
-            self.fitToScaledSizeShow(i)
-            Event.wait(delay)
-            '''
             #if  
             #self.set_label(i, 1)
             file = self.tableWidget.item(i, 2).text()
             path = self.tableWidget.item(i, 4).text()
             fileName = str(pathlib.Path(path, file))
             self.qImageViewer(fileName)
+            # 별도의 창을 띄워 슬리이드 보이기 하려면 아래 주석을 해제 하면 됨
+            '''
             # gif 처리
             if str(fileName).lower().endswith('.gif'):
                 gif = cv2.VideoCapture(fileName)
@@ -163,52 +149,21 @@ class ElWindow(QMainWindow, form_class):
             else:
                 img_array = np.fromfile(fileName, np.uint8)
                 img = cv2.imdecode(img_array, cv2.IMREAD_COLOR)
-
-
-            #img_array = np.fromfile(fileName, np.uint8)
-            #src = cv2.imdecode(img_array, cv2.IMREAD_COLOR)
-            '''
-            if (src == None).all():
-                QMessageBox.about(self, "파일 오류", fileName+"가 오류입니다. 파일을 확인해 주세요.")
-                return
-            
-            h, w, c = img.shape
-            qImg = QImage(img.data, w, h, w*c, QImage.Format_RGB888)
-            pixmap = QPixmap.fromImage(qImg)
-            self.label_8.setPixmap(pixmap)
-            '''
-            cv2.waitKey(100)
-
-
-
-
-
-
-
+            #cv2.waitKey(100)
             width, height, dim = img.shape
-
-            
             print(width, height, dim, fileName)
             if width > height:
                 fx_x = 640 / width
             else:
                 fx_x = 640 / height
-        
-            dst = cv2.resize(img, dsize=(640, 480), interpolation=cv2.INTER_AREA)
+            #dst = cv2.resize(img, dsize=(640, 480), interpolation=cv2.INTER_AREA)
             dst2 = cv2.resize(img, dsize=(0, 0), fx=fx_x, fy=fx_x, interpolation=cv2.INTER_LINEAR)
-
             #cv2.imshow("src", src)
             #cv2.imshow("dst", dst)
-            cv2.imshow("dst2", dst2)
-            cv2.waitKey(2500)
-            cv2.destroyAllWindows()
-
-
-            #self.qImageViewer(fileName)
-            #print(fileName)
-            #cvWindow.imShow(self, fileName)
-            #time.sleep(1)
-            
+            #cv2.imshow("Image Slide Show", dst2)
+            '''
+            cv2.waitKey(1500)
+            #cv2.destroyAllWindows()
 
     def mousePressEvent(self, event):
         self.pressed = True
@@ -540,6 +495,15 @@ class ElWindow(QMainWindow, form_class):
             self.scrollArea.setVisible(True)
             if not self.checkBox_2.isChecked():
                 self.label_8.adjustSize()
+            if self.checkBox_6.isChecked():
+                width = 671
+                height = 481
+                if self.scaleDirection(width, height, pixmap) == 'width':
+                    pixmap = pixmap.scaledToWidth(width)
+                else:
+                    pixmap = pixmap.scaledToHeight(height)
+                self.label_8.setPixmap(QPixmap(pixmap))
+                self.label_8.adjustSize()
             
         
     def fitToScaledSize(self):
@@ -547,6 +511,7 @@ class ElWindow(QMainWindow, form_class):
         self.fitToScaledSizeShow(row)
     
     def fitToScaledSizeShow(self, row):
+        self.fitToWindow()
         print('row', row)
         width = 671
         height = 481
@@ -556,6 +521,7 @@ class ElWindow(QMainWindow, form_class):
         f = str(pathlib.Path(path, file))
         if self.checkBox_6.isChecked():
             pixmap = QPixmap(f)
+            
             if self.scaleDirection(width, height, pixmap) == 'width':
                 pixmap = pixmap.scaledToWidth(width)
             else:
@@ -624,6 +590,7 @@ class ElWindow(QMainWindow, form_class):
                     srcGFile.append([path, file])
                 else:
                     srcOFile.append([path, file])
+            cv2.waitKey(1)
         self.dispListWidget(srcGFile)
         self.dispListWidget_3(srcOFile)
         if sys._getframe(1).f_code.co_name == 'delAllOtherFiles':
@@ -944,6 +911,7 @@ class ElWindow(QMainWindow, form_class):
             else:# checker1.search(file):
                 y, ym, ymd, newFileName = self.folderNameFromTakeMinTime(path, file, [D0, D1, D2], remark)
                 folderName.append([path, y, ym, ymd, file, newFileName])
+            cv2.waitKey(10)
         return folderName
 
     def makeNewFileName(self, f, min_time):
@@ -1074,7 +1042,7 @@ class ElWindow(QMainWindow, form_class):
             if not self.selectDB(newFileName):
                 self.insertDB(newFileName, str(destPath), originalFileName, srcPath, takeTime, remark, fileSize)
                 C_files += 1
-                shutil.copy2(f, destFile) # 파일 복사 (파일 개정 시간 등 포함하여 복사를 위해 copy2 사용)pass
+                #shutil.copy2(f, destFile) # 파일 복사 (파일 개정 시간 등 포함하여 복사를 위해 copy2 사용)pass
                 self.disp_C_files(C_files)
                 self.listWidget_2.addItem(str(srcPath) +' ' + str(destPath) +' ' + originalFileName)
                 CFile.append([originalFileName, srcPath, destPath])
@@ -1089,6 +1057,7 @@ class ElWindow(QMainWindow, form_class):
                     self.disp_E_files(E_files)
                     self.listWidget_4.addItem(originalFileName + ' ' + str(srcPath) +' ' + str(destPath))
                     EFile.append([originalFileName, srcPath, destPath])
+            cv2.waitKey(10)
         self.removeTempFile()
         self.saveExcel(EFile, 'fileCopyExistingFiles.xlsx')
         self.saveExcel(CFile, 'fileCopyCopyedFiles.xlsx')
@@ -1153,9 +1122,11 @@ class ElWindow(QMainWindow, form_class):
                 self.lineEdit_9.setText(str(R_files))
                 self.listWidget_4.addItem(str(pathlib.Path(srcPath, oriFileName)))
                 Rfile.append([srcPath, destPath, oriFileName])
+            cv2.waitKey(10)
         try:
-            self.removeDir()
+            #self.removeDir()
             #os.rmdir(srcPath)
+            pass
         except:
             pass
         self.removeTempFile()
