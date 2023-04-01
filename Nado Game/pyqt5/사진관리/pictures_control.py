@@ -106,6 +106,7 @@ class ElWindow(QMainWindow, form_class):
         self.pushButton_6.clicked.connect(self.zoomIn) # Zoom in
         self.pushButton_7.clicked.connect(self.zoomOut) # Zoom out
         self.pushButton_9.clicked.connect(self.fitToScaledSize) # Fit to Scaled Size
+        self.pushButton_10.clicked.connect(self.listWidgetShow) # listWidget Slide Show
         #self.pushButton_10.clicked.connect(self.slideStop) # Slide stop
         self.pushButton_8.clicked.connect(self.slideShow) # Slide Show 
         self.pushButton_11.clicked.connect(self.normalSize) # Fit to Normal size 
@@ -139,7 +140,7 @@ class ElWindow(QMainWindow, form_class):
             fileName = str(pathlib.Path(path, file))
             self.qImageViewer(fileName)
             # 별도의 창을 띄워 슬리이드 보이기 하려면 아래 주석을 해제 하면 됨
-            '''
+            
             # gif 처리
             if str(fileName).lower().endswith('.gif'):
                 gif = cv2.VideoCapture(fileName)
@@ -153,17 +154,21 @@ class ElWindow(QMainWindow, form_class):
             width, height, dim = img.shape
             print(width, height, dim, fileName)
             if width > height:
-                fx_x = 640 / width
+                fx_x = 1040 / width
             else:
-                fx_x = 640 / height
+                fx_x = 1040 / height
             #dst = cv2.resize(img, dsize=(640, 480), interpolation=cv2.INTER_AREA)
             dst2 = cv2.resize(img, dsize=(0, 0), fx=fx_x, fy=fx_x, interpolation=cv2.INTER_LINEAR)
             #cv2.imshow("src", src)
             #cv2.imshow("dst", dst)
-            #cv2.imshow("Image Slide Show", dst2)
-            '''
+            cv2.imshow("Image Slide Show", dst2)
+            
             cv2.waitKey(1500)
-            #cv2.destroyAllWindows()
+            cv2.destroyAllWindows()
+            if i == rows-1:
+                self.tableWidget.setCurrentCell(0, 1)
+                row = 0
+                self.slideShow()
 
     def mousePressEvent(self, event):
         self.pressed = True
@@ -476,11 +481,53 @@ class ElWindow(QMainWindow, form_class):
     def adjustScrollBar(self, scrollBar, factor):
         scrollBar.setValue(int(factor * scrollBar.value()
                                + ((factor - 1) * scrollBar.pageStep() / 2)))
+        
+    def listWidgetShow(self):
+        row = self.listWidget.currentRow()
+        rows = self.listWidget.count()
+        for i in range (row, rows):
+            if self.checkBox_7.isChecked():
+                break
+            fileName = self.listWidget.currentItem().text()
+            self.lineEdit_17.setText(fileName)
+            self.qImageViewer(fileName)
+
+             # gif 처리
+            if str(fileName).lower().endswith('.gif'):
+                gif = cv2.VideoCapture(fileName)
+                ret, frame = gif.read()  # ret=True if it finds a frame else False.
+                if ret:
+                    img = frame
+            else:
+                img_array = np.fromfile(fileName, np.uint8)
+                img = cv2.imdecode(img_array, cv2.IMREAD_COLOR)
+            #cv2.waitKey(100)
+            width, height, dim = img.shape
+            print(width, height, dim, fileName)
+            if width > height:
+                fx_x = 640 / width
+            else:
+                fx_x = 640 / height
+            #dst = cv2.resize(img, dsize=(640, 480), interpolation=cv2.INTER_AREA)
+            dst2 = cv2.resize(img, dsize=(0, 0), fx=fx_x, fy=fx_x, interpolation=cv2.INTER_LINEAR)
+            #cv2.imshow("src", src)
+            #cv2.imshow("dst", dst)
+            cv2.imshow("Image Slide Show", dst2)
+            
+            cv2.waitKey(1500)
+            cv2.destroyAllWindows()
+
+            self.listWidget.setCurrentRow(i+1)
+            if i == rows-1:
+                self.listWidget.setCurrentRow(0)
+                self.listWidgetShow()
+
+
 
     def makePixmap(self):    
         file = self.listWidget.currentItem().text()
         path, f = os.path.split(file)
-        self.lineEdit_3.setText(self.get_remark(path))
+        self.lineEdit_17.setText(self.get_remark(path))
         self.qImageViewer(file)
         
     def qImageViewer(self, f):
@@ -507,8 +554,11 @@ class ElWindow(QMainWindow, form_class):
             
         
     def fitToScaledSize(self):
-        row = self.tableWidget.currentRow()
-        self.fitToScaledSizeShow(row)
+        if self.tableWidget.rowCount() == 0:
+            self.fitToWindow()
+        else:
+            row = self.tableWidget.currentRow()
+            self.fitToScaledSizeShow(row)
     
     def fitToScaledSizeShow(self, row):
         self.fitToWindow()

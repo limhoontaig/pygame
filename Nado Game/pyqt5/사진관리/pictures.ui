@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1382</width>
-    <height>799</height>
+    <width>1513</width>
+    <height>871</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -21,6 +21,13 @@
      <width>671</width>
      <height>771</height>
     </rect>
+   </property>
+   <property name="font">
+    <font>
+     <weight>50</weight>
+     <italic>false</italic>
+     <bold>false</bold>
+    </font>
    </property>
    <property name="tabShape">
     <enum>QTabWidget::Triangular</enum>
@@ -306,10 +313,96 @@
       <string>기타파일 전체 삭제</string>
      </property>
     </widget>
+    <widget class="QLabel" name="label_8">
+     <property name="geometry">
+      <rect>
+       <x>10</x>
+       <y>130</y>
+       <width>111</width>
+       <height>16</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>Slide File Name</string>
+     </property>
+    </widget>
+    <widget class="QLineEdit" name="lineEdit_17">
+     <property name="geometry">
+      <rect>
+       <x>120</x>
+       <y>130</y>
+       <width>531</width>
+       <height>21</height>
+      </rect>
+     </property>
+    </widget>
+    <widget class="QPushButton" name="pushButton_10">
+     <property name="geometry">
+      <rect>
+       <x>480</x>
+       <y>155</y>
+       <width>171</width>
+       <height>31</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>ListWidget Slide Show</string>
+     </property>
+    </widget>
+    <widget class="QCheckBox" name="checkBox_7">
+     <property name="geometry">
+      <rect>
+       <x>370</x>
+       <y>160</y>
+       <width>96</width>
+       <height>19</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>Show Stop</string>
+     </property>
+    </widget>
+    <widget class="QGroupBox" name="groupBox_2">
+     <property name="geometry">
+      <rect>
+       <x>0</x>
+       <y>-31</y>
+       <width>1381</width>
+       <height>801</height>
+      </rect>
+     </property>
+     <property name="title">
+      <string>GroupBox</string>
+     </property>
+    </widget>
+    <zorder>groupBox_2</zorder>
+    <zorder>lineEdit</zorder>
+    <zorder>pushButton</zorder>
+    <zorder>pushButton_2</zorder>
+    <zorder>pushButton_3</zorder>
+    <zorder>pushButton_4</zorder>
+    <zorder>comboBox</zorder>
+    <zorder>comboBox_2</zorder>
+    <zorder>lineEdit_2</zorder>
+    <zorder>listWidget</zorder>
+    <zorder>listWidget_2</zorder>
+    <zorder>listWidget_3</zorder>
+    <zorder>label_10</zorder>
+    <zorder>label_11</zorder>
+    <zorder>label_12</zorder>
+    <zorder>listWidget_4</zorder>
+    <zorder>label_13</zorder>
+    <zorder>pushButton_5</zorder>
+    <zorder>pushButton_12</zorder>
+    <zorder>pushButton_13</zorder>
+    <zorder>label_8</zorder>
+    <zorder>lineEdit_17</zorder>
+    <zorder>pushButton_10</zorder>
+    <zorder>checkBox_7</zorder>
    </widget>
    <widget class="QWidget" name="tab_2">
     <attribute name="title">
-     <string>폴더이름바꾸기</string>
+     <string>파일관리 및 사진 보기</string>
     </attribute>
     <widget class="QPushButton" name="pushButton_16">
      <property name="geometry">
