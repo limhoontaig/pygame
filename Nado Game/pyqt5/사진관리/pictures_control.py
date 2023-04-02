@@ -107,23 +107,25 @@ class ElWindow(QMainWindow, form_class):
         self.pushButton_7.clicked.connect(self.zoomOut) # Zoom out
         self.pushButton_9.clicked.connect(self.fitToScaledSize) # Fit to Scaled Size
         self.pushButton_10.clicked.connect(self.listWidgetShow) # listWidget Slide Show
-        #self.pushButton_10.clicked.connect(self.slideStop) # Slide stop
         self.pushButton_8.clicked.connect(self.slideShow) # Slide Show 
         self.pushButton_11.clicked.connect(self.normalSize) # Fit to Normal size 
         self.pushButton_12.clicked.connect(self.delSelectedFile) # Fit to Normal size 
         self.pushButton_13.clicked.connect(self.delAllOtherFiles) # Fit to Normal size 
+        self.pushButton_14.clicked.connect(self.showStop) # Slide Show Stop
+        self.pushButton_15.clicked.connect(self.showPause) # Slide Show Pause
         self.pushButton_16.clicked.connect(self.delSelectedItems) # delete select items
         self.pushButton_17.clicked.connect(self.delAllItems) # delete all tablewidget items
         self.pushButton_18.clicked.connect(self.renameFolder) # Fit to Normal size
-        #self.pushButton_19.clicked.connect(self.selectSQL) # 검색조건에 따른 sql문 선택
+        self.pushButton_19.clicked.connect(self.showResume) # Paused To Show Restart
         self.pushButton_20.clicked.connect(self.searchData) # 선택기간 DB 검색 
         self.tableWidget.cellClicked.connect(self.set_label)
         self.listWidget.itemClicked.connect(self.makePixmap)
         self.checkBox_2.stateChanged.connect(self.fitToWindow)
         self.checkBox_6.stateChanged.connect(self.fitToScaledSize)
-        # self.lineEdit.textChanged.connect(self.enablePBCopyMove)
 
     def slideShow(self):
+        if self.sender().text() == 'Start':
+            self.checkBox.setCheckState(0)
         row = self.tableWidget.currentRow()
         rows = self.tableWidget.rowCount()
         if row == -1:
@@ -133,8 +135,6 @@ class ElWindow(QMainWindow, form_class):
             self.tableWidget.setCurrentCell(i, 1)
             if self.checkBox.isChecked():
                 break
-            #if  
-            #self.set_label(i, 1)
             file = self.tableWidget.item(i, 2).text()
             path = self.tableWidget.item(i, 4).text()
             fileName = str(pathlib.Path(path, file))
@@ -150,9 +150,7 @@ class ElWindow(QMainWindow, form_class):
             else:
                 img_array = np.fromfile(fileName, np.uint8)
                 img = cv2.imdecode(img_array, cv2.IMREAD_COLOR)
-            #cv2.waitKey(100)
             width, height, dim = img.shape
-            print(width, height, dim, fileName)
             if width > height:
                 fx_x = 1040 / width
             else:
@@ -162,13 +160,25 @@ class ElWindow(QMainWindow, form_class):
             #cv2.imshow("src", src)
             #cv2.imshow("dst", dst)
             cv2.imshow("Image Slide Show", dst2)
-            
-            cv2.waitKey(1500)
+            if self.checkBox_8.checkState() == 2:
+                cv2.waitKey()
+            else:
+                cv2.waitKey(1500)
             cv2.destroyAllWindows()
             if i == rows-1:
                 self.tableWidget.setCurrentCell(0, 1)
                 row = 0
                 self.slideShow()
+
+    def showStop(self):
+        self.checkBox.setCheckState(2)
+
+    def showPause(self):
+        self.checkBox_8.setCheckState(2)
+    
+    def showResume(self):
+        self.checkBox_8.setCheckState(0)
+        self.slideShow()
 
     def mousePressEvent(self, event):
         self.pressed = True
@@ -243,13 +253,11 @@ class ElWindow(QMainWindow, form_class):
         return
 
     def set_label(self, row, column):
-        print('set_label(self, row, column): ', row, column)
         column = 0
         file = (self.tableWidget.item(row, 2).text())
         path = (self.tableWidget.item(row, 4).text())
         remark = (self.tableWidget.item(row, 3).text())
         fileName = str(pathlib.Path(path, file))
-        print('set_label(self, row, column):', fileName)
         self.lineEdit_13.setText(remark)
         self.lineEdit_14.setText(remark)
         self.lineEdit_3.setText(file)
@@ -387,10 +395,9 @@ class ElWindow(QMainWindow, form_class):
     def __checkbox_change(self, checkvalue):
         # print("check change... ", checkvalue)
         chbox = self.sender()  # signal을 보낸 MyCheckBox instance
-        print("checkbox sender row = ", chbox.get_row())
 
     def _cellclicked(self, row, col):
-        print("_cellclicked... ", row, col)
+        pass
 
     def _horizontal_header_clicked(self, idx):
         """
@@ -503,7 +510,6 @@ class ElWindow(QMainWindow, form_class):
                 img = cv2.imdecode(img_array, cv2.IMREAD_COLOR)
             #cv2.waitKey(100)
             width, height, dim = img.shape
-            print(width, height, dim, fileName)
             if width > height:
                 fx_x = 640 / width
             else:
@@ -531,7 +537,6 @@ class ElWindow(QMainWindow, form_class):
         self.qImageViewer(file)
         
     def qImageViewer(self, f):
-        print('qImageViewer fileName: ', f)
         if f:
             pixmap = QPixmap(f)
             if pixmap == 'Null':
@@ -562,7 +567,6 @@ class ElWindow(QMainWindow, form_class):
     
     def fitToScaledSizeShow(self, row):
         self.fitToWindow()
-        print('row', row)
         width = 671
         height = 481
         file = self.tableWidget.item(row, 2).text()
@@ -1314,7 +1318,7 @@ class MyCheckBox(QCheckBox):
     def __checkbox_change(self, checkvalue):
         # print("myclass...check change... ", checkvalue)
         self.mycheckvalue = checkvalue
-        print("checkbox row= ", self.get_row())
+        #print("checkbox row= ", self.get_row())
 
     def get_row(self):
         return self.item.row()
