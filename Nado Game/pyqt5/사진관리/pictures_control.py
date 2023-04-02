@@ -124,8 +124,10 @@ class ElWindow(QMainWindow, form_class):
         self.checkBox_6.stateChanged.connect(self.fitToScaledSize)
 
     def slideShow(self):
+        print(self.sender().text())
         if self.sender().text() == 'Start':
             self.checkBox.setCheckState(0)
+            
         row = self.tableWidget.currentRow()
         rows = self.tableWidget.rowCount()
         if row == -1:
@@ -148,8 +150,7 @@ class ElWindow(QMainWindow, form_class):
                 if ret:
                     img = frame
             else:
-                img_array = np.fromfile(fileName, np.uint8)
-                img = cv2.imdecode(img_array, cv2.IMREAD_COLOR)
+                img = self.imread(fileName)
             width, height, dim = img.shape
             if width > height:
                 fx_x = 1040 / width
@@ -169,6 +170,16 @@ class ElWindow(QMainWindow, form_class):
                 self.tableWidget.setCurrentCell(0, 1)
                 row = 0
                 self.slideShow()
+                
+    def imread(self, filename, flags=cv2.IMREAD_COLOR, dtype=np.uint8):
+        try:
+            n = np.fromfile(filename, dtype)
+            img = cv2.imdecode(n, flags)
+            return img
+        except Exception as e:
+            QMessageBox.about(self, "에러 경고", e + "에러가 발생하였습니다. 파일을 확인해 주세요.")
+            print(e)
+            return None
 
     def showStop(self):
         self.checkBox.setCheckState(2)
