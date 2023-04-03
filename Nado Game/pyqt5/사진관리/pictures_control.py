@@ -118,6 +118,7 @@ class ElWindow(QMainWindow, form_class):
         self.pushButton_18.clicked.connect(self.renameFolder) # Fit to Normal size
         self.pushButton_19.clicked.connect(self.showResume) # Paused To Show Restart
         self.pushButton_20.clicked.connect(self.searchData) # 선택기간 DB 검색 
+        self.pushButton_21.clicked.connect(self.cv2Show) # CV2 Show
         self.tableWidget.cellClicked.connect(self.set_label)
         self.listWidget.itemClicked.connect(self.makePixmap)
         self.checkBox_2.stateChanged.connect(self.fitToWindow)
@@ -134,6 +135,7 @@ class ElWindow(QMainWindow, form_class):
             QMessageBox.about(self, "파일 선택 요망", "테이블 상의 파일을 선택하신 후 Slide Show가 가능합니다. 파일선택후 재실행 해주세요.")
             return
         for i in range(row, rows):
+            t = 2500
             self.tableWidget.setCurrentCell(i, 1)
             if self.checkBox.isChecked():
                 break
@@ -142,34 +144,42 @@ class ElWindow(QMainWindow, form_class):
             fileName = str(pathlib.Path(path, file))
             self.qImageViewer(fileName)
             # 별도의 창을 띄워 슬리이드 보이기 하려면 아래 주석을 해제 하면 됨
-            
-            # gif 처리
-            if str(fileName).lower().endswith('.gif'):
-                gif = cv2.VideoCapture(fileName)
-                ret, frame = gif.read()  # ret=True if it finds a frame else False.
-                if ret:
-                    img = frame
+            if self.checkBox_9.isChecked():
+                # gif 처리
+                if str(fileName).lower().endswith('.gif'):
+                    gif = cv2.VideoCapture(fileName)
+                    ret, frame = gif.read()  # ret=True if it finds a frame else False.
+                    if ret:
+                        img = frame
+                else:
+                    img = self.imread(fileName)
+                width, height, dim = img.shape
+                if width > height:
+                    fx_x = 1040 / width
+                else:
+                    fx_x = 1040 / height
+                #dst = cv2.resize(img, dsize=(640, 480), interpolation=cv2.INTER_AREA)
+                dst2 = cv2.resize(img, dsize=(0, 0), fx=fx_x, fy=fx_x, interpolation=cv2.INTER_LINEAR)
+                #cv2.imshow("src", src)
+                #cv2.imshow("dst", dst)
+                cv2.imshow("Image Slide Show", dst2)
+                if self.checkBox_8.checkState() == 2:
+                    cv2.waitKey()
+                else:
+                    cv2.waitKey(t)
+                cv2.destroyAllWindows()
             else:
-                img = self.imread(fileName)
-            width, height, dim = img.shape
-            if width > height:
-                fx_x = 1040 / width
-            else:
-                fx_x = 1040 / height
-            #dst = cv2.resize(img, dsize=(640, 480), interpolation=cv2.INTER_AREA)
-            dst2 = cv2.resize(img, dsize=(0, 0), fx=fx_x, fy=fx_x, interpolation=cv2.INTER_LINEAR)
-            #cv2.imshow("src", src)
-            #cv2.imshow("dst", dst)
-            cv2.imshow("Image Slide Show", dst2)
-            if self.checkBox_8.checkState() == 2:
-                cv2.waitKey()
-            else:
-                cv2.waitKey(1500)
-            cv2.destroyAllWindows()
+                cv2.waitKey(t)
             if i == rows-1:
                 self.tableWidget.setCurrentCell(0, 1)
                 row = 0
                 self.slideShow()
+
+    def cv2Show(self):
+        if self.checkBox_9.isChecked():
+            self.checkBox_9.setCheckState(0)
+        else:
+            self.checkBox_9.setCheckState(2)
                 
     def imread(self, filename, flags=cv2.IMREAD_COLOR, dtype=np.uint8):
         try:
@@ -367,11 +377,14 @@ class ElWindow(QMainWindow, form_class):
         rowCount = len(data)
         self.tableWidget.setRowCount(rowCount)
         for idx, (number, fileName, remark, directory, takeTime, fileSize) in enumerate(data):
+            '''
             item = MyQTableWidgetItemCheckBox()
             self.tableWidget.setItem(idx, 0, item)
             chbox = MyCheckBox(item)
             self.tableWidget.setCellWidget(idx, 0, chbox)
             chbox.stateChanged.connect(self.__checkbox_change)
+            '''
+            self.tableWidget.setItem(idx, 0, QTableWidgetItem(""))
             self.tableWidget.setItem(idx, 1, QTableWidgetItem(number))
             self.tableWidget.setItem(idx, 2, QTableWidgetItem(fileName))
             self.tableWidget.setItem(idx, 3, QTableWidgetItem(remark))
