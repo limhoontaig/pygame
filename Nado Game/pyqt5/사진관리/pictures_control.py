@@ -142,6 +142,7 @@ class ElWindow(QMainWindow, form_class):
             file = self.tableWidget.item(i, 2).text()
             path = self.tableWidget.item(i, 4).text()
             fileName = str(pathlib.Path(path, file))
+            print('self.suffixVerifyShow(fileName): ', self.suffixVerifyShow(fileName))
             if self.suffixVerifyShow(fileName) == 'Graphic':
                 self.qImageViewer(fileName)
                 # 별도의 창을 띄워 슬리이드 보이기 하려면 아래 주석을 해제 하면 됨
@@ -180,14 +181,14 @@ class ElWindow(QMainWindow, form_class):
                 width = cap.get(cv2.CAP_PROP_FRAME_WIDTH)
                 height = cap.get(cv2.CAP_PROP_FRAME_HEIGHT)
 
-                #width = cap.get(cv2.CAP_PROP_FRAME_WIDTH)
-                #height = cap.get(cv2.CAP_PROP_FRAME_HEIGHT)
+                width = cap.get(cv2.CAP_PROP_FRAME_WIDTH)
+                height = cap.get(cv2.CAP_PROP_FRAME_HEIGHT)
 
                 if cap.isOpened():
-                    cap.set(cv2.CAP_PROP_FRAME_WIDTH, 300)
-                    cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 600)
+                    #cap.set(cv2.CAP_PROP_FRAME_WIDTH, 300)
+                    #cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 600)
                     fps = cap.get(cv2.CAP_PROP_FPS)
-                    delay = int(1000/(16*fps))
+                    delay = int(1000/(fps))
                     print("FPS: %f, Delay: %dms, WIDTH: %d, HEIGHT: %d " %(fps, delay, width, height))
                     while True:
                         ret, img = cap.read()
