@@ -142,38 +142,71 @@ class ElWindow(QMainWindow, form_class):
             file = self.tableWidget.item(i, 2).text()
             path = self.tableWidget.item(i, 4).text()
             fileName = str(pathlib.Path(path, file))
-            self.qImageViewer(fileName)
-            # 별도의 창을 띄워 슬리이드 보이기 하려면 아래 주석을 해제 하면 됨
-            if self.checkBox_9.isChecked():
-                # gif 처리
-                if str(fileName).lower().endswith('.gif'):
-                    gif = cv2.VideoCapture(fileName)
-                    ret, frame = gif.read()  # ret=True if it finds a frame else False.
-                    if ret:
-                        img = frame
-                else:
-                    img = self.imread(fileName)
-                width, height, dim = img.shape
-                if width > height:
-                    fx_x = 1040 / width
-                else:
-                    fx_x = 1040 / height
-                #dst = cv2.resize(img, dsize=(640, 480), interpolation=cv2.INTER_AREA)
-                dst2 = cv2.resize(img, dsize=(0, 0), fx=fx_x, fy=fx_x, interpolation=cv2.INTER_LINEAR)
-                #cv2.imshow("src", src)
-                #cv2.imshow("dst", dst)
-                cv2.imshow("Image Slide Show", dst2)
-                if self.checkBox_8.checkState() == 2:
-                    cv2.waitKey()
+            if self.suffixVerifyShow(fileName) == 'Graphic':
+                self.qImageViewer(fileName)
+                # 별도의 창을 띄워 슬리이드 보이기 하려면 아래 주석을 해제 하면 됨
+                if self.checkBox_9.isChecked():
+                    # gif 처리
+                    if str(fileName).lower().endswith('.gif'):
+                        gif = cv2.VideoCapture(fileName)
+                        ret, frame = gif.read()  # ret=True if it finds a frame else False.
+                        if ret:
+                            img = frame
+                    else:
+                        img = self.imread(fileName)
+                    width, height, dim = img.shape
+                    if width > height:
+                        fx_x = 1040 / width
+                    else:
+                        fx_x = 1040 / height
+                    #dst = cv2.resize(img, dsize=(640, 480), interpolation=cv2.INTER_AREA)
+                    dst2 = cv2.resize(img, dsize=(0, 0), fx=fx_x, fy=fx_x, interpolation=cv2.INTER_LINEAR)
+                    #cv2.imshow("src", src)
+                    #cv2.imshow("dst", dst)
+                    cv2.imshow("Image Slide Show", dst2)
+                    if self.checkBox_8.checkState() == 2:
+                        cv2.waitKey()
+                    else:
+                        cv2.waitKey(t)
+                    cv2.destroyAllWindows()
                 else:
                     cv2.waitKey(t)
-                cv2.destroyAllWindows()
+                if i == rows-1:
+                    self.tableWidget.setCurrentCell(0, 1)
+                    row = 0
+                    self.slideShow()
             else:
-                cv2.waitKey(t)
-            if i == rows-1:
-                self.tableWidget.setCurrentCell(0, 1)
-                row = 0
-                self.slideShow()
+                cap = cv2.VideoCapture(fileName)
+                width = cap.get(cv2.CAP_PROP_FRAME_WIDTH)
+                height = cap.get(cv2.CAP_PROP_FRAME_HEIGHT)
+
+                #width = cap.get(cv2.CAP_PROP_FRAME_WIDTH)
+                #height = cap.get(cv2.CAP_PROP_FRAME_HEIGHT)
+
+                if cap.isOpened():
+                    cap.set(cv2.CAP_PROP_FRAME_WIDTH, 300)
+                    cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 600)
+                    fps = cap.get(cv2.CAP_PROP_FPS)
+                    delay = int(1000/(16*fps))
+                    print("FPS: %f, Delay: %dms, WIDTH: %d, HEIGHT: %d " %(fps, delay, width, height))
+                    while True:
+                        ret, img = cap.read()
+                        if ret:
+                            cv2.imshow(fileName, img)
+                            cv2.waitKey(delay)
+                        else:
+                            break
+                cap.release()
+                cv2.destroyAllWindows()
+    
+    def suffixVerifyShow(self, f):
+        src = pathlib.Path(f)
+        if src.suffix.lower() in ALLOW_GRAPHIC:
+            return 'Graphic'
+        elif src.suffix.lower() in ALLOW_MEDIA:
+            return 'Media'
+        else:
+            return
 
     def cv2Show(self):
         if self.checkBox_9.isChecked():
@@ -295,6 +328,8 @@ class ElWindow(QMainWindow, form_class):
         
     @pyqtSlot()
     def searchData(self):
+        self.showStop()
+        cv2.waitKey(500)
         if self.checkBox_5.isChecked():
             from_date = '1970-01-01'
             to_date = QDate.currentDate().toString(Qt.ISODate)
