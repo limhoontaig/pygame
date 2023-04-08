@@ -8,7 +8,7 @@ from PyQt5 import uic
 from PyQt5.QtGui import QImage, QPixmap, QPalette, QPainter, QBrush
 from PyQt5.QtPrintSupport import QPrintDialog, QPrinter
 from PyQt5.QtWidgets import QLabel, QSizePolicy, QScrollArea, QMessageBox, QMainWindow, QMenu, QAction, \
-    qApp, QFileDialog, QApplication, QTableWidget, QTableWidgetItem, QHeaderView, QCheckBox
+    qApp, QFileDialog, QApplication, QTableWidget, QTableWidgetItem, QHeaderView, QCheckBox, QComboBox
 
 from datetime import datetime
 from datetime import date
@@ -74,6 +74,8 @@ class ElWindow(QMainWindow, form_class):
         self.lineEdit_2.setText(LE[1])
         issued = '프로그램 작성 : 임훈택 Rev 0 '+ yyyymmdd + ' Issued'
         self.label.setText(issued)
+        self.addComboBox_3()
+        self.addComboBox_4()
         
         self.disablePushButton()
         self.disablePBCopyMove()
@@ -124,6 +126,18 @@ class ElWindow(QMainWindow, form_class):
         self.checkBox_2.stateChanged.connect(self.fitToWindow)
         self.checkBox_6.stateChanged.connect(self.fitToScaledSize)
 
+        self.comboBox = QComboBox()
+
+    def addComboBox_3(self):
+        for i in range(10, 5000, 100):
+            self.comboBox_3.addItem(str(i))
+
+    def addComboBox_4(self):
+        speeds = [1/32, 1/16, 1/8, 1/4, 1/2, 1, 2, 4, 8, 16, 32]
+        for i in speeds:
+            self.comboBox_4.addItem(str(i))
+            self.comboBox_4.setCurrentText('1')
+
     def slideShow(self):
         print(self.sender().text())
         if self.sender().text() == 'Start':
@@ -135,9 +149,10 @@ class ElWindow(QMainWindow, form_class):
             QMessageBox.about(self, "파일 선택 요망", "테이블 상의 파일을 선택하신 후 Slide Show가 가능합니다. 파일선택후 재실행 해주세요.")
             return
         for i in range(row, rows):
-            t = 2500
+            t = int(self.comboBox_3.currentText())
             self.tableWidget.setCurrentCell(i, 1)
             if self.checkBox.isChecked():
+                cv2.destroyAllWindows()
                 break
             file = self.tableWidget.item(i, 2).text()
             path = self.tableWidget.item(i, 4).text()
@@ -160,16 +175,19 @@ class ElWindow(QMainWindow, form_class):
                         fx_x = 1040 / width
                     else:
                         fx_x = 1040 / height
+                    cv2.namedWindow('Image Slide Show')
+                    cv2.moveWindow('Image Slide Show', 100,100)
                     #dst = cv2.resize(img, dsize=(640, 480), interpolation=cv2.INTER_AREA)
                     dst2 = cv2.resize(img, dsize=(0, 0), fx=fx_x, fy=fx_x, interpolation=cv2.INTER_LINEAR)
                     #cv2.imshow("src", src)
                     #cv2.imshow("dst", dst)
                     cv2.imshow("Image Slide Show", dst2)
+
                     if self.checkBox_8.checkState() == 2:
                         cv2.waitKey()
                     else:
                         cv2.waitKey(t)
-                    cv2.destroyAllWindows()
+                    
                 else:
                     cv2.waitKey(t)
                 if i == rows-1:
@@ -177,28 +195,44 @@ class ElWindow(QMainWindow, form_class):
                     row = 0
                     self.slideShow()
             else:
+                cv2.destroyAllWindows()
                 cap = cv2.VideoCapture(fileName)
-                width = cap.get(cv2.CAP_PROP_FRAME_WIDTH)
-                height = cap.get(cv2.CAP_PROP_FRAME_HEIGHT)
+                #cap.set(cv2.CAP_PROP_FRAME_WIDTH, 300)
+                #cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 600)
+                totalFrame = cap.get(cv2.CAP_PROP_FRAME_COUNT)
+                percentFrame = int(totalFrame / 100)
 
-                width = cap.get(cv2.CAP_PROP_FRAME_WIDTH)
-                height = cap.get(cv2.CAP_PROP_FRAME_HEIGHT)
 
                 if cap.isOpened():
-                    #cap.set(cv2.CAP_PROP_FRAME_WIDTH, 300)
-                    #cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 600)
                     fps = cap.get(cv2.CAP_PROP_FPS)
-                    delay = int(1000/(fps))
-                    print("FPS: %f, Delay: %dms, WIDTH: %d, HEIGHT: %d " %(fps, delay, width, height))
-                    while True:
-                        ret, img = cap.read()
-                        if ret:
-                            cv2.imshow(fileName, img)
-                            cv2.waitKey(delay)
-                        else:
-                            break
+                    width = cap.get(cv2.CAP_PROP_FRAME_WIDTH)
+                    height = cap.get(cv2.CAP_PROP_FRAME_HEIGHT)
+                    ratio = 1440 / width
+                    #print("FPS: %f, Delay: %dms, WIDTH: %d, HEIGHT: %d " %(fps, width, height))
+                while cap.isOpened():
+                    ret, img = cap.read()
+                    if self.checkBox.isChecked():
+                        cap.release()
+                        cv2.destroyAllWindows()
+                        break
+                    if ret:
+                        speed = float(self.comboBox_4.currentText())
+                        delay = int(1000/(fps*speed))
+                        #resizeImg = cv2.resize(img, (round(width), round(height)))
+                        cv2.namedWindow('Image Slide Show')
+                        cv2.moveWindow('Image Slide Show', 100,100)
+                        resizeImg = cv2.resize(img, (int(width*ratio), int(height*ratio)))
+                        #cv2.imshow(fileName, resizeImg)
+                        cv2.imshow('Image Slide Show', resizeImg)
+                        cv2.waitKey(delay)
+                    else:
+                        break
                 cap.release()
                 cv2.destroyAllWindows()
+                if i == rows-1:
+                    self.tableWidget.setCurrentCell(0, 1)
+                    row = 0
+                    self.slideShow()
     
     def suffixVerifyShow(self, f):
         src = pathlib.Path(f)
@@ -1156,7 +1190,7 @@ class ElWindow(QMainWindow, form_class):
             if not self.selectDB(newFileName):
                 self.insertDB(newFileName, str(destPath), originalFileName, srcPath, takeTime, remark, fileSize)
                 C_files += 1
-                #shutil.copy2(f, destFile) # 파일 복사 (파일 개정 시간 등 포함하여 복사를 위해 copy2 사용)pass
+                shutil.copy2(f, destFile) # 파일 복사 (파일 개정 시간 등 포함하여 복사를 위해 copy2 사용)pass
                 self.disp_C_files(C_files)
                 self.listWidget_2.addItem(str(srcPath) +' ' + str(destPath) +' ' + originalFileName)
                 CFile.append([originalFileName, srcPath, destPath])
