@@ -3,6 +3,7 @@ import os
 import stat
 import pathlib
 import pandas as pd
+import qimage2ndarray 
 from PyQt5.QtCore import Qt, pyqtSlot, QObject, pyqtSignal, QStringListModel, QDate, QSize
 from PyQt5 import uic
 from PyQt5.QtGui import QImage, QPixmap, QPalette, QPainter, QBrush
@@ -76,6 +77,7 @@ class ElWindow(QMainWindow, form_class):
         self.label.setText(issued)
         self.addComboBox_3()
         self.addComboBox_4()
+        self.addComboBox_5()
         
         self.disablePushButton()
         self.disablePBCopyMove()
@@ -132,6 +134,10 @@ class ElWindow(QMainWindow, form_class):
         for i in range(10, 5000, 100):
             self.comboBox_3.addItem(str(i))
 
+    def addComboBox_5(self):
+        for i in range(1, 100):
+            self.comboBox_5.addItem(str(i))
+
     def addComboBox_4(self):
         speeds = [1/32, 1/16, 1/8, 1/4, 1/2, 1, 2, 4, 8, 16, 32]
         for i in speeds:
@@ -159,37 +165,7 @@ class ElWindow(QMainWindow, form_class):
             fileName = str(pathlib.Path(path, file))
             print('self.suffixVerifyShow(fileName): ', self.suffixVerifyShow(fileName))
             if self.suffixVerifyShow(fileName) == 'Graphic':
-                self.qImageViewer(fileName)
-                # 별도의 창을 띄워 슬리이드 보이기 하려면 아래 주석을 해제 하면 됨
-                if self.checkBox_9.isChecked():
-                    # gif 처리
-                    if str(fileName).lower().endswith('.gif'):
-                        gif = cv2.VideoCapture(fileName)
-                        ret, frame = gif.read()  # ret=True if it finds a frame else False.
-                        if ret:
-                            img = frame
-                    else:
-                        img = self.imread(fileName)
-                    width, height, dim = img.shape
-                    if width > height:
-                        fx_x = 1040 / width
-                    else:
-                        fx_x = 1040 / height
-                    cv2.namedWindow('Image Slide Show')
-                    cv2.moveWindow('Image Slide Show', 100,100)
-                    #dst = cv2.resize(img, dsize=(640, 480), interpolation=cv2.INTER_AREA)
-                    dst2 = cv2.resize(img, dsize=(0, 0), fx=fx_x, fy=fx_x, interpolation=cv2.INTER_LINEAR)
-                    #cv2.imshow("src", src)
-                    #cv2.imshow("dst", dst)
-                    cv2.imshow("Image Slide Show", dst2)
-
-                    if self.checkBox_8.checkState() == 2:
-                        cv2.waitKey()
-                    else:
-                        cv2.waitKey(t)
-                    
-                else:
-                    cv2.waitKey(t)
+                self.showGraphicFile(fileName, t)
                 if i == rows-1:
                     self.tableWidget.setCurrentCell(0, 1)
                     row = 0
@@ -201,39 +177,75 @@ class ElWindow(QMainWindow, form_class):
                 #cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 600)
                 totalFrame = cap.get(cv2.CAP_PROP_FRAME_COUNT)
                 percentFrame = int(totalFrame / 100)
-
-
-                if cap.isOpened():
-                    fps = cap.get(cv2.CAP_PROP_FPS)
-                    width = cap.get(cv2.CAP_PROP_FRAME_WIDTH)
-                    height = cap.get(cv2.CAP_PROP_FRAME_HEIGHT)
-                    ratio = 1440 / width
-                    #print("FPS: %f, Delay: %dms, WIDTH: %d, HEIGHT: %d " %(fps, width, height))
-                while cap.isOpened():
-                    ret, img = cap.read()
-                    if self.checkBox.isChecked():
-                        cap.release()
-                        cv2.destroyAllWindows()
-                        break
-                    if ret:
-                        speed = float(self.comboBox_4.currentText())
-                        delay = int(1000/(fps*speed))
-                        #resizeImg = cv2.resize(img, (round(width), round(height)))
-                        cv2.namedWindow('Image Slide Show')
-                        cv2.moveWindow('Image Slide Show', 100,100)
-                        resizeImg = cv2.resize(img, (int(width*ratio), int(height*ratio)))
-                        #cv2.imshow(fileName, resizeImg)
-                        cv2.imshow('Image Slide Show', resizeImg)
-                        cv2.waitKey(delay)
-                    else:
-                        break
-                cap.release()
-                cv2.destroyAllWindows()
+                self.showMediaFile(cap)
                 if i == rows-1:
                     self.tableWidget.setCurrentCell(0, 1)
                     row = 0
                     self.slideShow()
     
+    def showMediaFile(self, cap):
+        if cap.isOpened():
+            fps = cap.get(cv2.CAP_PROP_FPS)
+            width = cap.get(cv2.CAP_PROP_FRAME_WIDTH)
+            height = cap.get(cv2.CAP_PROP_FRAME_HEIGHT)
+            ratio = 1440 / width
+            #print("FPS: %f, Delay: %dms, WIDTH: %d, HEIGHT: %d " %(fps, width, height))
+        while cap.isOpened():
+            ret, img = cap.read()
+            if self.checkBox.isChecked():
+                cap.release()
+                cv2.destroyAllWindows()
+                break
+            if ret:
+                print('img.shape', img.shape)
+                self.qMediaViewer(img)
+                speed = float(self.comboBox_4.currentText())
+                delay = int(1000/(fps*speed))
+                #resizeImg = cv2.resize(img, (round(width), round(height)))
+                cv2.namedWindow('Image Slide Show')
+                cv2.moveWindow('Image Slide Show', 100,100)
+                resizeImg = cv2.resize(img, (int(width*ratio), int(height*ratio)))
+                #cv2.imshow(fileName, resizeImg)
+                cv2.imshow('Image Slide Show', resizeImg)
+                cv2.waitKey(delay)
+            else:
+                break
+        cap.release()
+        cv2.destroyAllWindows()
+
+    def showGraphicFile(self, fileName, t):
+        self.qImageViewer(fileName)
+        # 별도의 창을 띄워 슬리이드 보이기 하려면 아래 주석을 해제 하면 됨
+        if self.checkBox_9.isChecked():
+            # gif 처리
+            if str(fileName).lower().endswith('.gif'):
+                gif = cv2.VideoCapture(fileName)
+                ret, frame = gif.read()  # ret=True if it finds a frame else False.
+                if ret:
+                    img = frame
+            else:
+                img = self.imread(fileName)
+            width, height, dim = img.shape
+            if width > height:
+                fx_x = 1040 / width
+            else:
+                fx_x = 1040 / height
+            cv2.namedWindow('Image Slide Show')
+            cv2.moveWindow('Image Slide Show', 100,100)
+            #dst = cv2.resize(img, dsize=(640, 480), interpolation=cv2.INTER_AREA)
+            dst2 = cv2.resize(img, dsize=(0, 0), fx=fx_x, fy=fx_x, interpolation=cv2.INTER_LINEAR)
+            #cv2.imshow("src", src)
+            #cv2.imshow("dst", dst)
+            cv2.imshow("Image Slide Show", dst2)
+
+            if self.checkBox_8.checkState() == 2:
+                cv2.waitKey()
+            else:
+                cv2.waitKey(t)
+            
+        else:
+            cv2.waitKey(t)
+
     def suffixVerifyShow(self, f):
         src = pathlib.Path(f)
         if src.suffix.lower() in ALLOW_GRAPHIC:
@@ -651,7 +663,39 @@ class ElWindow(QMainWindow, form_class):
                 self.label_8.setPixmap(QPixmap(pixmap))
                 self.label_8.adjustSize()
             
+    def qMediaViewer(self, img):
+        #if img:
+        #pixmap = QPixmap(f)
+        if img == 'Null':
+            QMessageBox.information(self, "Image Viewer", "Cannot Load %s." % img)
+            return
+        #h, w, d = img.shape
+        #qimage = QImage(img.data, w, h, d*w, QImage.Format_RGB888)
         
+        qimage = qimage2ndarray.array2qimage(img, normalize=False)
+
+
+
+
+
+        pixmap = QPixmap(qimage)
+        self.label_8.setPixmap(QPixmap(pixmap))
+        self.scaleFactor = 1.0
+        self.scrollArea.setVisible(True)
+        if not self.checkBox_2.isChecked():
+            self.label_8.adjustSize()
+        
+        if self.checkBox_6.isChecked():
+            width = 671
+            height = 481
+            if self.scaleDirection(width, height, pixmap) == 'width':
+                pixmap = pixmap.scaledToWidth(width)
+            else:
+                pixmap = pixmap.scaledToHeight(height)
+            self.label_8.setPixmap(QPixmap(pixmap))
+            self.label_8.adjustSize()
+        
+
     def fitToScaledSize(self):
         if self.tableWidget.rowCount() == 0:
             self.fitToWindow()
