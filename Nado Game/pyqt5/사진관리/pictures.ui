@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1513</width>
+    <width>1386</width>
     <height>871</height>
    </rect>
   </property>
@@ -408,9 +408,9 @@
      <property name="geometry">
       <rect>
        <x>540</x>
-       <y>680</y>
+       <y>710</y>
        <width>111</width>
-       <height>51</height>
+       <height>21</height>
       </rect>
      </property>
      <property name="text">
@@ -434,9 +434,9 @@
      <property name="geometry">
       <rect>
        <x>360</x>
-       <y>680</y>
+       <y>710</y>
        <width>161</width>
-       <height>51</height>
+       <height>21</height>
       </rect>
      </property>
      <property name="text">
@@ -1061,6 +1061,19 @@
        <width>94</width>
        <height>22</height>
       </rect>
+     </property>
+    </widget>
+    <widget class="QPushButton" name="pushButton_22">
+     <property name="geometry">
+      <rect>
+       <x>370</x>
+       <y>680</y>
+       <width>111</width>
+       <height>23</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>Reverse Show</string>
      </property>
     </widget>
    </widget>

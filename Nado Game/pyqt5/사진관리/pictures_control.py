@@ -123,6 +123,7 @@ class ElWindow(QMainWindow, form_class):
         self.pushButton_19.clicked.connect(self.showResume) # Paused To Show Restart
         self.pushButton_20.clicked.connect(self.searchData) # 선택기간 DB 검색 
         self.pushButton_21.clicked.connect(self.cv2Show) # CV2 Show
+        self.pushButton_22.clicked.connect(self.slideShow) # Reverse Show
         self.tableWidget.cellClicked.connect(self.set_label)
         self.listWidget.itemClicked.connect(self.makePixmap)
         self.checkBox_2.stateChanged.connect(self.fitToWindow)
@@ -148,13 +149,20 @@ class ElWindow(QMainWindow, form_class):
         print(self.sender().text())
         if self.sender().text() == 'Start':
             self.checkBox.setCheckState(0)
+            row = self.tableWidget.currentRow()
+            rows = self.tableWidget.rowCount()
+        else:
+            self.checkBox.setCheckState(0)
+            row = self.tableWidget.currentRow()
+            rows = 0
             
-        row = self.tableWidget.currentRow()
-        rows = self.tableWidget.rowCount()
+        step = 1
+        if row > rows:
+            step = -1
         if row == -1:
             QMessageBox.about(self, "파일 선택 요망", "테이블 상의 파일을 선택하신 후 Slide Show가 가능합니다. 파일선택후 재실행 해주세요.")
             return
-        for i in range(row, rows):
+        for i in range(row, rows, step):
             t = int(self.comboBox_3.currentText())
             self.tableWidget.setCurrentCell(i, 1)
             if self.checkBox.isChecked():
@@ -239,12 +247,14 @@ class ElWindow(QMainWindow, form_class):
             cv2.imshow("Image Slide Show", dst2)
 
             if self.checkBox_8.checkState() == 2:
+                print(fileName)
                 cv2.waitKey()
             else:
                 cv2.waitKey(t)
             
         else:
             cv2.waitKey(t)
+            cv2.destroyAllWindows()
 
     def suffixVerifyShow(self, f):
         src = pathlib.Path(f)
