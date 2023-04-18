@@ -53,7 +53,7 @@ ALLOW_EXTS = ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.tif', 'tiff', '.avi','.
 
 class cvWindow():
     def imShow(self, f):
-        print(f)
+        #print(f)
         img = cv2.imread(f, cv2.IMREAD_COLOR)
         if img is None:
             print("Not Load the Image")
@@ -146,7 +146,7 @@ class ElWindow(QMainWindow, form_class):
             self.comboBox_4.setCurrentText('1')
 
     def slideShow(self):
-        print(self.sender().text())
+        #print(self.sender().text())
         if self.sender().text() == 'Start':
             self.checkBox.setCheckState(0)
             row = self.tableWidget.currentRow()
@@ -171,13 +171,18 @@ class ElWindow(QMainWindow, form_class):
             file = self.tableWidget.item(i, 2).text()
             path = self.tableWidget.item(i, 4).text()
             fileName = str(pathlib.Path(path, file))
-            print('self.suffixVerifyShow(fileName): ', self.suffixVerifyShow(fileName))
+            #print('self.suffixVerifyShow(fileName): ', self.suffixVerifyShow(fileName))
             if self.suffixVerifyShow(fileName) == 'Graphic':
                 self.showGraphicFile(fileName, t)
                 if i == rows-1:
                     self.tableWidget.setCurrentCell(0, 1)
                     row = 0
                     self.slideShow()
+                if i == 0:
+                    row = self.tableWidget.rowCount()
+                    self.tableWidget.setCurrentCell(row, 1)
+                    self.slideShow()
+                    
             else:
                 cv2.destroyAllWindows()
                 cap = cv2.VideoCapture(fileName)
@@ -189,6 +194,10 @@ class ElWindow(QMainWindow, form_class):
                 if i == rows-1:
                     self.tableWidget.setCurrentCell(0, 1)
                     row = 0
+                    self.slideShow()
+                if i == 0:
+                    row = self.tableWidget.rowCount()
+                    self.tableWidget.setCurrentCell(row, 1)
                     self.slideShow()
     
     def showMediaFile(self, cap):
@@ -205,7 +214,7 @@ class ElWindow(QMainWindow, form_class):
                 cv2.destroyAllWindows()
                 break
             if ret:
-                print('img.shape', img.shape)
+                #print('img.shape', img.shape)
                 self.qMediaViewer(img)
                 speed = float(self.comboBox_4.currentText())
                 delay = int(1000/(fps*speed))
@@ -247,7 +256,7 @@ class ElWindow(QMainWindow, form_class):
             cv2.imshow("Image Slide Show", dst2)
 
             if self.checkBox_8.checkState() == 2:
-                print(fileName)
+                #print(fileName)
                 cv2.waitKey()
             else:
                 cv2.waitKey(t)
