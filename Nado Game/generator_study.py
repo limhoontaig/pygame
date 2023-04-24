@@ -3,7 +3,18 @@ import os
 import psutil
 import random
 import time
+
 '''
+회사 pc generator
+시작 전 메모리 사용량: 34.78515625 MB
+종료 후 메모리 사용량: 34.77734375 MB
+총 소요된 시간: 102.735439 초
+
+회사 pc list
+시작 전 메모리 사용량: 34.96484375 MB
+종료 후 메모리 사용량: 305.5078125 MB
+총 소요된 시간: 98.292909 초
+
 notebook generator
 시작 전 메모리 사용량: 34.796875 MB
 종료 후 메모리 사용량: 34.75390625 MB
