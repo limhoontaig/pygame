@@ -686,7 +686,7 @@
     <widget class="QTableWidget" name="tableWidget">
      <property name="geometry">
       <rect>
-       <x>-10</x>
+       <x>0</x>
        <y>210</y>
        <width>661</width>
        <height>431</height>
