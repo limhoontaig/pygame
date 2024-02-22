@@ -295,11 +295,44 @@ class ElWindow(QMainWindow, form_class):
         """
         df = pd.read_excel(f1,skiprows=2)
         df.dropna(subset=['동', '호'],inplace=True)
+        df_w = df[['동', '호','할인종류','장애등급','할인요금']].copy()
+        #kindOfDiscount = df_w['할인종류'].unique()
+        """
+        한전제공 세대별 상세 감면자료 파일을 분석하여 복지할인(복지, 가족) 데이터를 
+        만들기 위한 프로세스입니다. 
+        xperp code comparasion table 상의 전기분야 
+        """
+        kindOfDiscount = ['대가족', '출산가구', '다자녀', '의료기기', '독립유공', '국가유공', '민주유공', '장애인', '사회복지', '기초생활', '기초주거', '차상위', '교육']
+        print(kindOfDiscount)
+        for kind in kindOfDiscount:
+            df_w.loc[df_w.할인종류.str.contains(kind), '장애등급'] = kind
+            #print(df_w)    
+        df_w.drop(['할인종류'], axis=1, inplace=True)
+        df_w = df_w.rename(columns={'장애등급': '할인종류'})
+        df_w.dropna(subset=['할인종류'], inplace=True)
+
+
+        """
         con = df[df['할인종류'].str.contains('200kWh이하감액')].index
         df.drop(con, inplace=True)
         con = df[df['할인종류'].str.contains('취약계층경감')].index
         df.drop(con, inplace=True)
+        con = df[df['할인종류'].str.contains('복지추가감액')].index
+        df.drop(con, inplace=True)
+        con = df[df['할인종류'].str.contains('요금동결할인')].index
+        df.drop(con, inplace=True)
+        con = df[df['할인종류'].str.contains('복지추가감액')].index
+        df.drop(con, inplace=True)
+        con = df[df['할인종류'].str.contains('기본에너지캐시백')].index
+        df.drop(con, inplace=True)
+        con = df[df['할인종류'].str.contains('차등에너지캐시백')].index
+
+        
+        df.drop(con, inplace=True)
         df_w = df[['동', '호','할인종류','할인요금']].copy()
+        """
+
+
         """
         # 동일한 종류의 할인이 중복 되었을 때 하나로 묶어 주는 기능 추가 함
         #df_final = df_1.groupby(['동','호', '할인종류']).sum()
@@ -340,13 +373,13 @@ class ElWindow(QMainWindow, form_class):
         # discount df 생성 (Template df(df_x)에 필수사용공제(df2) merge
         discount = pd.merge(df_x, df2[0], how = 'outer', on = ['동','호'])
         
-        # 사용량 보장공제를 한전금액(필수사용공제) Data로 Update
+        # 복지 추가 감액을 사용량 보장공제로 한전금액(필수사용공제) Data로 Update
         discount['사용량보장공제'] = discount['필수사용\n공제']
         
         # 사용량 보장공제 임시데이터 columns를 drop
         discount = discount.drop(['필수사용\n공제'],axis=1)
 
-        # 취약계층경감액를 한전금액(취약계층경감) Data로 Update
+        # 요금 동결 할인을 취약계층경감액으로 변환 한전금액(취약계층경감) Data로 Update
         discount['취약계층경감금액'] = discount['취약계층경감']
         
         # 취약계층경감액 임시데이터 columns를 drop
