@@ -512,7 +512,7 @@
      </font>
     </property>
     <property name="text">
-     <string>프로그램 작성 : 임훈택 Rev 1, 2023.03.16 Revised</string>
+     <string>프로그램 작성 : 임훈택 Rev 2, 2024.02.23 Revised</string>
     </property>
    </widget>
    <widget class="QPushButton" name="pushButton_5">
