@@ -434,7 +434,7 @@ class ElWindow(QMainWindow, form_class):
         #작업월을 파일이름에 넣기 위한 코드 (작업일 기준)
         now = datetime.now()
         dt1 = now.strftime("%Y")+now.strftime("%m")
-        dt1 = dt1+'ELEC_XPERP_Upload_J_K_R_S_T_U_columns.xlsx'
+        dt1 = dt1+'ELEC_XPERP_Upload_J_K_R_S_T_U_Z_columns.xlsx'
         file_name = f4+'/'+dt1
 
         #file save
