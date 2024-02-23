@@ -272,12 +272,12 @@
       <rect>
        <x>12</x>
        <y>33</y>
-       <width>71</width>
+       <width>121</width>
        <height>21</height>
       </rect>
      </property>
      <property name="text">
-      <string>사용량보장</string>
+      <string>필수사용/복지추가</string>
      </property>
     </widget>
     <widget class="QLabel" name="label_3">
@@ -329,49 +329,11 @@
       </rect>
      </property>
     </widget>
-    <widget class="QLineEdit" name="lineEdit_8">
-     <property name="geometry">
-      <rect>
-       <x>140</x>
-       <y>80</y>
-       <width>181</width>
-       <height>30</height>
-      </rect>
-     </property>
-    </widget>
-    <widget class="QLineEdit" name="lineEdit_9">
-     <property name="geometry">
-      <rect>
-       <x>140</x>
-       <y>120</y>
-       <width>181</width>
-       <height>31</height>
-      </rect>
-     </property>
-    </widget>
-    <widget class="QLabel" name="label_6">
-     <property name="geometry">
-      <rect>
-       <x>18</x>
-       <y>83</y>
-       <width>91</width>
-       <height>20</height>
-      </rect>
-     </property>
-     <property name="font">
-      <font>
-       <pointsize>10</pointsize>
-      </font>
-     </property>
-     <property name="text">
-      <string>복지추가금액</string>
-     </property>
-    </widget>
     <widget class="QLabel" name="label_7">
      <property name="geometry">
       <rect>
        <x>20</x>
-       <y>126</y>
+       <y>80</y>
        <width>111</width>
        <height>20</height>
       </rect>
@@ -384,15 +346,15 @@
       </font>
      </property>
      <property name="text">
-      <string>복지추가감액계</string>
+      <string>에너지캐시백</string>
      </property>
     </widget>
     <widget class="QLabel" name="label_8">
      <property name="geometry">
       <rect>
-       <x>670</x>
+       <x>449</x>
        <y>120</y>
-       <width>90</width>
+       <width>311</width>
        <height>31</height>
       </rect>
      </property>
@@ -404,7 +366,7 @@
       </font>
      </property>
      <property name="text">
-      <string>총 합 계</string>
+      <string>총 합 계 (가족 + 복지 + 요금동결)</string>
      </property>
      <property name="alignment">
       <set>Qt::AlignCenter</set>
@@ -427,7 +389,7 @@
       </font>
      </property>
      <property name="text">
-      <string>대가족+복지 계</string>
+      <string>가족 + 복지 계</string>
      </property>
     </widget>
     <widget class="QLineEdit" name="lineEdit_10">
@@ -459,8 +421,15 @@
        <height>31</height>
       </rect>
      </property>
+     <property name="font">
+      <font>
+       <pointsize>11</pointsize>
+       <weight>75</weight>
+       <bold>true</bold>
+      </font>
+     </property>
      <property name="text">
-      <string>취약계층경감</string>
+      <string>요금동결할인</string>
      </property>
     </widget>
     <widget class="QLineEdit" name="lineEdit_12">
@@ -473,24 +442,11 @@
       </rect>
      </property>
     </widget>
-    <widget class="QLabel" name="label_11">
-     <property name="geometry">
-      <rect>
-       <x>340</x>
-       <y>120</y>
-       <width>91</width>
-       <height>31</height>
-      </rect>
-     </property>
-     <property name="text">
-      <string>에너지캐시백</string>
-     </property>
-    </widget>
     <widget class="QLineEdit" name="lineEdit_13">
      <property name="geometry">
       <rect>
-       <x>440</x>
-       <y>120</y>
+       <x>140</x>
+       <y>80</y>
        <width>181</width>
        <height>31</height>
       </rect>
