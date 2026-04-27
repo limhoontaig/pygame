@@ -20,11 +20,11 @@ yyyymm = now.strftime("%Y")+now.strftime("%m")+'월'
 yyyy = now.strftime("%Y")
 
 LE =  [
-    'D:/과장/1 1 부과자료/'+yyyy+'년/'+yyyymm+'/한전부과자료',
-    'D:/과장/1 1 부과자료/'+yyyy+'년/'+yyyymm+'/한전부과자료',
-    'D:/과장/1 1 부과자료/'+yyyy+'년/Templates/Elec_Template_File_for_XPERP_upload.xlsx',
-    'D:/과장/1 1 부과자료/'+yyyy+'년/'+yyyymm+'/xperp_감면자료',
-    'D:/과장/1 1 부과자료/'+yyyy+'년/Templates/xperp_code_comparasion_table.xlsx'
+    'E:/1_과장/1 _부과/'+yyyy+'년/'+yyyymm+'/전기요금자료',
+    'E:/1_과장/1 _부과/'+yyyy+'년/'+yyyymm+'/전기요금자료',
+    'E:/1_과장/1 _부과/'+yyyy+'년/Templates/Elec_Template_File_for_XPERP_upload.xlsx',
+    'E:/1_과장/1 _부과/'+yyyy+'년/'+yyyymm+'/xperp_감면자료',
+    'E:/1_과장/1 _부과/'+yyyy+'년/Templates/xperp_code_comparasion_table.xlsx'
     ]
 
 class ElWidget(QDialog, form_class_1):
