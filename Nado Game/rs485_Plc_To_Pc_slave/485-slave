@@ -1,0 +1,101 @@
+import logging
+import time
+import csv
+from datetime import datetime
+from pymodbus.server import StartSerialServer
+from pymodbus.device import ModbusDeviceIdentification
+from pymodbus.datastore import ModbusSequentialDataBlock
+from pymodbus.datastore import ModbusSlaveContext, ModbusServerContext
+from threading import Thread
+
+# --- 설정부 ---
+PORT = 'COM3'
+BAUD = 9600
+SLAVE_ID = 1
+LOG_FILE = "plc_minutely_log.csv"
+AVG_FILE = "plc_hourly_avg.csv"
+DATA_COUNT = 40  # PLC에서 보내는 데이터 개수
+# --------------
+
+# 데이터 저장을 위한 임시 리스트
+hourly_buffer = []
+
+def logging_process(context):
+    """1분마다 데이터를 읽어 파일에 저장하고 평균을 계산하는 루틴"""
+    global hourly_buffer
+    
+    print("로깅 프로세스가 시작되었습니다. (1분 간격)")
+    
+    while True:
+        # 1. 현재 Modbus 서버 메모리(Holding Registers)에서 데이터 읽기
+        # slaves=1인 컨텍스트에서 hr(Holding Register) 0번부터 40개 읽기
+        slave_context = context[SLAVE_ID]
+        data = slave_context.getValues(3, 0, count=DATA_COUNT) # 3은 Holding Register 의미
+
+        timestamp = datetime.now()
+        timestamp_str = timestamp.strftime('%Y-%m-%d %H:%M:%S')
+
+        # 2. 1분 단위 로깅 저장
+        with open(LOG_FILE, mode='a', newline='') as f:
+            writer = csv.writer(f)
+            if f.tell() == 0:
+                writer.writerow(['Timestamp'] + [f'D{400+i}' for i in range(DATA_COUNT)])
+            writer.writerow([timestamp_str] + data)
+        
+        # 3. 평균값 계산을 위해 버퍼에 추가
+        hourly_buffer.append(data)
+        print(f"[{timestamp_str}] 1분 데이터 기록 완료 (현재 {len(hourly_buffer)}/60)")
+
+        # 4. 1시간(60분)이 되면 평균값 계산 및 저장
+        if len(hourly_buffer) >= 60:
+            calculate_and_save_average()
+            hourly_buffer = [] # 버퍼 초기화
+
+        # 다음 1분까지 대기 (60초)
+        time.sleep(60)
+
+def calculate_and_save_average():
+    """버퍼에 쌓인 60개 데이터의 항목별 평균 계산"""
+    if not hourly_buffer: return
+
+    num_samples = len(hourly_buffer)
+    avg_values = []
+    
+    # 각 인덱스별(D400~D439)로 평균 계산
+    for i in range(DATA_COUNT):
+        column_sum = sum(sample[i] for sample in hourly_buffer)
+        avg_values.append(round(column_sum / num_samples, 2))
+
+    timestamp_str = datetime.now().strftime('%Y-%m-%d %H:00:00')
+    
+    with open(AVG_FILE, mode='a', newline='') as f:
+        writer = csv.writer(f)
+        if f.tell() == 0:
+            writer.writerow(['Hour_Timestamp'] + [f'D{400+i}_Avg' for i in range(DATA_COUNT)])
+        writer.writerow([timestamp_str] + avg_values)
+    
+    print(f"--- {timestamp_str} 시간당 평균 데이터 저장 완료 ---")
+
+def run_server():
+    # 데이터 저장소 (40000번지부터 40개 이상 사용 가능하도록 100개 할당)
+    store = ModbusSlaveContext(
+        hr=ModbusSequentialDataBlock(0, [0] * 100)
+    )
+    context = ModbusServerContext(slaves={SLAVE_ID: store}, single=False)
+
+    # 로깅 스레드 시작
+    log_thread = Thread(target=logging_process, args=(context,), daemon=True)
+    log_thread.start()
+
+    # Modbus RTU Slave 서버 시작
+    StartSerialServer(
+        context=context,
+        port=PORT,
+        baudrate=BAUD,
+        parity='N',
+        stopbits=1,
+        bytesize=8
+    )
+
+if __name__ == "__main__":
+    run_server()
