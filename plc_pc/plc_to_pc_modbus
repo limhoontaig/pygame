@@ -6,14 +6,27 @@ import struct
 import time
 from datetime import datetime, timedelta
 from PyQt5.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, 
-                             QPushButton, QTableWidget, QTableWidgetItem, QLabel, QHBoxLayout)
-from PyQt5.QtCore import QTimer
+                             QPushButton, QTableWidget, QTableWidgetItem, QLabel, QHBoxLayout,
+                             QDateEdit, QTimeEdit, QComboBox, QGridLayout, QGroupBox, QSplitter)
+from PyQt5.QtCore import QTimer, QDate, QTime, Qt
 
 # 설정값
 COM_PORT = 'COM3'  # 장치 관리자에서 확인한 포트 번호로 변경하세요
 BAUD_RATE = 9600   # PLC의 통신 속도 설정과 반드시 일치해야 합니다 (예: 9600, 19200, 38400)
 NUM_WORDS = 20
 DB_NAME = "plc_data.db"
+
+# ==========================================
+# 컬럼 라벨 정의 (D100 ~ D119)
+# ==========================================
+# D100-D101: 실내온도, 외기온도 (2개)
+# D102-D119: 변압기1-5 (전압, 전류, 전력, 온도 × 5대 = 18개)
+COLUMN_LABELS = ["시간", "실내온도", "외기온도",
+                 "변압기1전압", "변압기1전류", "변압기1전력", "변압기1온도",
+                 "변압기2전압", "변압기2전류", "변압기2전력", "변압기2온도",
+                 "변압기3전압", "변압기3전류", "변압기3전력", "변압기3온도",
+                 "변압기4전압", "변압기4전류", "변압기4전력", "변압기4온도",
+                 "변압기5전압", "변압기5전류", "변압기5전력", "변압기5온도"]
 
 #=========================================
 # TCP/IP 설정 (PLC가 Master로 데이터를 전송하는 경우)
@@ -173,23 +186,85 @@ class MainWindow(QMainWindow):
         main_widget.setLayout(layout)
         self.setCentralWidget(main_widget)
         
-        # 상단 컨트롤 영역
-        top_layout = QHBoxLayout()
-        self.info_label = QLabel("DB에 저장된 1시간 평균 데이터입니다.")
-        self.refresh_btn = QPushButton("데이터 새로고침")
+        # ==========================================
+        # 상단: 날짜/시간 선택 영역
+        # ==========================================
+        search_group = QGroupBox("데이터 검색")
+        search_layout = QGridLayout()
+        
+        # 시작 날짜
+        search_layout.addWidget(QLabel("시작 날짜:"), 0, 0)
+        self.start_date = QDateEdit()
+        self.start_date.setCalendarPopup(True)
+        self.start_date.setDate(QDate.currentDate())
+        search_layout.addWidget(self.start_date, 0, 1)
+        
+        # 시작 시간
+        search_layout.addWidget(QLabel("시작 시간:"), 0, 2)
+        self.start_time = QTimeEdit()
+        self.start_time.setTime(QTime(0, 0, 0))
+        search_layout.addWidget(self.start_time, 0, 3)
+        
+        # 종료 날짜
+        search_layout.addWidget(QLabel("종료 날짜:"), 1, 0)
+        self.end_date = QDateEdit()
+        self.end_date.setCalendarPopup(True)
+        self.end_date.setDate(QDate.currentDate())
+        search_layout.addWidget(self.end_date, 1, 1)
+        
+        # 종료 시간
+        search_layout.addWidget(QLabel("종료 시간:"), 1, 2)
+        self.end_time = QTimeEdit()
+        self.end_time.setTime(QTime(23, 59, 59))
+        search_layout.addWidget(self.end_time, 1, 3)
+        
+        # 검색 버튼
+        self.search_btn = QPushButton("검색")
+        self.search_btn.clicked.connect(self.search_data)
+        search_layout.addWidget(self.search_btn, 0, 4, 1, 2)
+        
+        # 새로고침 버튼
+        self.refresh_btn = QPushButton("전체 데이터 새로고침")
         self.refresh_btn.clicked.connect(self.load_data)
+        search_layout.addWidget(self.refresh_btn, 1, 4, 1, 2)
         
-        top_layout.addWidget(self.info_label)
-        top_layout.addStretch()
-        top_layout.addWidget(self.refresh_btn)
-        layout.addLayout(top_layout)
+        search_group.setLayout(search_layout)
+        layout.addWidget(search_group)
         
-        # 데이터 테이블 (그리드)
-        self.table = QTableWidget()
-        self.table.setColumnCount(NUM_WORDS + 1)
-        headers = ["시간"] + [f"D{100+i}" for i in range(NUM_WORDS)]
-        self.table.setHorizontalHeaderLabels(headers)
-        layout.addWidget(self.table)
+        # ==========================================
+        # 하단: 좌우 분할 화면 (원데이터 + 평균데이터)
+        # ==========================================
+        splitter = QSplitter(Qt.Horizontal)
+        
+        # ----- 왼쪽: 원데이터 테이블 -----
+        raw_group = QGroupBox("1분 원데이터 (raw_data)")
+        raw_layout = QVBoxLayout()
+        self.raw_label = QLabel("원데이터: 0개")
+        raw_layout.addWidget(self.raw_label)
+        self.raw_table = QTableWidget()
+        self.raw_table.setColumnCount(NUM_WORDS + 1)
+        self.raw_table.setHorizontalHeaderLabels(COLUMN_LABELS)
+        raw_layout.addWidget(self.raw_table)
+        raw_group.setLayout(raw_layout)
+        splitter.addWidget(raw_group)
+        
+        # ----- 오른쪽: 평균데이터 테이블 -----
+        avg_group = QGroupBox("1시간 평균 (hourly_avg)")
+        avg_layout = QVBoxLayout()
+        self.avg_label = QLabel("평균데이터: 0개")
+        avg_layout.addWidget(self.avg_label)
+        self.avg_table = QTableWidget()
+        self.avg_table.setColumnCount(NUM_WORDS + 1)
+        self.avg_table.setHorizontalHeaderLabels(COLUMN_LABELS)
+        avg_layout.addWidget(self.avg_table)
+        avg_group.setLayout(avg_layout)
+        splitter.addWidget(avg_group)
+        
+        layout.addWidget(splitter)
+        
+        # 정보 라벨
+        self.info_label = QLabel("데이터를 선택하세요.")
+        layout.addWidget(self.info_label)
         
         # 주기적 작업 설정 (스케줄러 역할)
         self.timer = QTimer(self)
@@ -200,20 +275,85 @@ class MainWindow(QMainWindow):
         # 초기 데이터 로드
         self.load_data()
 
-    def load_data(self):
-        """DB에서 hourly_avg 데이터를 읽어와 테이블에 표시"""
+    def search_data(self):
+        """날짜/시간 범위로 데이터 검색 (두 테이블에 동시 표시)"""
+        # 시작 날짜/시간
+        start_date = self.start_date.date().toString("yyyy-MM-dd")
+        start_time = self.start_time.time().toString("HH:mm:ss")
+        start_datetime = f"{start_date} {start_time}"
+        
+        # 종료 날짜/시간
+        end_date = self.end_date.date().toString("yyyy-MM-dd")
+        end_time = self.end_time.time().toString("HH:mm:ss")
+        end_datetime = f"{end_date} {end_time}"
+        
         conn = sqlite3.connect(DB_NAME)
         c = conn.cursor()
-        c.execute("SELECT * FROM hourly_avg ORDER BY timestamp DESC LIMIT 100")
-        rows = c.fetchall()
+        
+        # ----- 원데이터 조회 -----
+        c.execute("SELECT * FROM raw_data WHERE timestamp BETWEEN ? AND ? ORDER BY timestamp DESC LIMIT 500", 
+                  (start_datetime, end_datetime))
+        raw_rows = c.fetchall()
+        
+        # ----- 평균데이터 조회 -----
+        c.execute("SELECT * FROM hourly_avg WHERE timestamp BETWEEN ? AND ? ORDER BY timestamp DESC LIMIT 500", 
+                  (start_datetime, end_datetime))
+        avg_rows = c.fetchall()
+        
         conn.close()
         
-        self.table.setRowCount(len(rows))
-        for row_idx, row_data in enumerate(rows):
+        # ----- 원데이터 테이블 표시 -----
+        self.raw_table.setRowCount(len(raw_rows))
+        for row_idx, row_data in enumerate(raw_rows):
             for col_idx, value in enumerate(row_data):
-                # 소수점 2자리까지만 표시
                 display_val = f"{value:.2f}" if isinstance(value, float) else str(value)
-                self.table.setItem(row_idx, col_idx, QTableWidgetItem(display_val))
+                self.raw_table.setItem(row_idx, col_idx, QTableWidgetItem(display_val))
+        
+        # ----- 평균데이터 테이블 표시 -----
+        self.avg_table.setRowCount(len(avg_rows))
+        for row_idx, row_data in enumerate(avg_rows):
+            for col_idx, value in enumerate(row_data):
+                display_val = f"{value:.2f}" if isinstance(value, float) else str(value)
+                self.avg_table.setItem(row_idx, col_idx, QTableWidgetItem(display_val))
+        
+        # ----- 라벨 업데이트 -----
+        self.raw_label.setText(f"원데이터: {len(raw_rows)}개")
+        self.avg_label.setText(f"평균데이터: {len(avg_rows)}개")
+        self.info_label.setText(f"검색 결과 (기간: {start_datetime} ~ {end_datetime})")
+
+    def load_data(self):
+        """DB에서 전체 데이터를 읽어와 두 테이블에 표시"""
+        conn = sqlite3.connect(DB_NAME)
+        c = conn.cursor()
+        
+        # 원데이터 최신 100개
+        c.execute("SELECT * FROM raw_data ORDER BY timestamp DESC LIMIT 100")
+        raw_rows = c.fetchall()
+        
+        # 평균데이터 최신 100개
+        c.execute("SELECT * FROM hourly_avg ORDER BY timestamp DESC LIMIT 100")
+        avg_rows = c.fetchall()
+        
+        conn.close()
+        
+        # ----- 원데이터 테이블 표시 -----
+        self.raw_table.setRowCount(len(raw_rows))
+        for row_idx, row_data in enumerate(raw_rows):
+            for col_idx, value in enumerate(row_data):
+                display_val = f"{value:.2f}" if isinstance(value, float) else str(value)
+                self.raw_table.setItem(row_idx, col_idx, QTableWidgetItem(display_val))
+        
+        # ----- 평균데이터 테이블 표시 -----
+        self.avg_table.setRowCount(len(avg_rows))
+        for row_idx, row_data in enumerate(avg_rows):
+            for col_idx, value in enumerate(row_data):
+                display_val = f"{value:.2f}" if isinstance(value, float) else str(value)
+                self.avg_table.setItem(row_idx, col_idx, QTableWidgetItem(display_val))
+        
+        # ----- 라벨 업데이트 -----
+        self.raw_label.setText(f"원데이터: {len(raw_rows)}개")
+        self.avg_label.setText(f"평균데이터: {len(avg_rows)}개")
+        self.info_label.setText("전체 데이터 (최신 100개씩)")
 
     def check_and_calculate_avg(self):
         """매시간 정각이 지났는지 확인하고 평균 계산 함수 호출"""
@@ -221,7 +361,7 @@ class MainWindow(QMainWindow):
         if current_hour != self.last_calc_hour:
             calculate_hourly_avg()
             self.last_calc_hour = current_hour
-            self.load_data() # 계산 후 화면 갱신
+            self.load_data()  # 계산 후 화면 갱신 (두 테이블 동시)
 
 if __name__ == "__main__":
     # 1. DB 초기화
