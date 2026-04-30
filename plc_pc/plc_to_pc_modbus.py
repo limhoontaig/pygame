@@ -10,11 +10,66 @@ from PyQt5.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout,
                              QDateEdit, QTimeEdit, QComboBox, QGridLayout, QGroupBox, QSplitter)
 from PyQt5.QtCore import QTimer, QDate, QTime, Qt
 
-# 설정값
-COM_PORT = 'COM3'  # 장치 관리자에서 확인한 포트 번호로 변경하세요
-BAUD_RATE = 9600   # PLC의 통신 속도 설정과 반드시 일치해야 합니다 (예: 9600, 19200, 38400)
-NUM_WORDS = 20
+# ==========================================
+# Modbus RTU RS-485 통신 설정
+# ==========================================
+# [통신 구조]
+# PLC (마스터) → RS-485 → PC (슬레이브)
+# - PLC가 주기적으로 데이터를 PC로 전송
+# - PC는 스레이브 번호 5번으로 설정되어 수신 대기
+# - 수신된 데이터는 SQLite DB에 저장
+# ==========================================
+
+COM_PORT = 'COM3'      # 장치 관리자에서 확인한 포트 번호로 변경하세요
+BAUD_RATE = 9600       # PLC의 통신 속도 설정과 반드시 일치해야 합니다 (예: 9600, 19200, 38400)
+PARITY = serial.PARITY_NONE  # 패리티: None, Even, Odd
+STOP_BITS = 1          # 스톱 비트: 1 또는 2
+BYTE_SIZE = 8          # 데이터 비트: 8
+
+NUM_WORDS = 20         # D100 ~ D119 (20개)
 DB_NAME = "plc_data.db"
+
+# ==========================================
+# PC 슬레이브 설정 (PLC가 데이터를 보내는 대상)
+# ==========================================
+# PLC에서 이 번호로 데이터를 보내면 PC가 수신합니다.
+# PLC 프로그램에서 스레이브 5번으로 설정하세요.
+MY_SLAVE_ID = 5
+
+# ==========================================
+# Modbus RTU CRC16 계산 함수
+# ==========================================
+def calculate_crc(data):
+    """Modbus RTU CRC-16 (CRC-16/MODBUS) 계산"""
+    crc = 0xFFFF
+    for byte in data:
+        crc ^= byte
+        for _ in range(8):
+            if crc & 0x0001:
+                crc = (crc >> 1) ^ 0xA001
+            else:
+                crc >>= 1
+    # LSB first (little-endian)
+    return struct.pack('<H', crc)
+
+def verify_crc(data):
+    """수신 데이터의 CRC 검증"""
+    if len(data) < 4:
+        return False
+    received_crc = struct.unpack('<H', data[-2:])[0]
+    calculated_crc = calculate_crc(data[:-2])
+    return received_crc == struct.unpack('<H', calculated_crc)[0]
+
+# ==========================================
+# Modbus RTU 기능 코드 정의
+# ==========================================
+FUNC_READ_COILS = 0x01           # 읽기: 코일
+FUNC_READ_DISCRETE = 0x02        # 읽기: 디스크리트 입력
+FUNC_READ_HOLDING = 0x03         # 읽기: 홀딩 레지스터
+FUNC_READ_INPUT = 0x04           # 읽기: 입력 레지스터
+FUNC_WRITE_SINGLE = 0x06         # 쓰기: 단일 레지스터
+FUNC_WRITE_MULTI = 0x10           # 쓰기: 다중 레지스터
+FUNC_READ_WRITE = 0x17            # 읽기/쓰기 다중 레지스터
 
 # ==========================================
 # 컬럼 라벨 정의 (D100 ~ D119)
@@ -128,40 +183,82 @@ def tcp_server_thread():
 '''
 
 # ==========================================
-# 2. 통신 수신부 (RS-485 시리얼 수신)
+# 2. Modbus RTU 스레이브 수신 (PLC → PC)
+# ==========================================
+# [동작 설명]
+# - PLC (마스터)가 주기적으로 데이터를 전송
+# - PC (슬레이브)는 스레이브 번호 5번으로 수신 대기
+# - 수신된 데이터: [스레이브5][기능코드0x03][데이터40바이트][CRC2]
+# - 데이터는 SQLite DB에 저장
 # ==========================================
 def serial_receive_thread():
     try:
-        # 시리얼 포트 열기
         ser = serial.Serial(
             port=COM_PORT,
             baudrate=BAUD_RATE,
-            bytesize=serial.EIGHTBITS,
-            parity=serial.PARITY_NONE,
-            stopbits=serial.STOPBITS_ONE,
-            timeout=1  # 1초 타임아웃 (무한 대기 방지)
+            bytesize=BYTE_SIZE,
+            parity=PARITY,
+            stopbits=STOP_BITS,
+            timeout=0.5  # 수신 타임아웃
         )
-        print(f"RS-485 포트 열림 성공: {COM_PORT} ({BAUD_RATE}bps)")
+        print(f"Modbus RTU 포트 열림: {COM_PORT} ({BAUD_RATE}bps, 8N1)")
+        print(f"수신 대기 중인 슬레이브 번호: {MY_SLAVE_ID}")
     except Exception as e:
         print(f"시리얼 포트 연결 실패: {e}")
         return
 
     while True:
         try:
-            # 수신 버퍼에 40바이트(20워드) 이상의 데이터가 쌓였는지 확인
-            if ser.in_waiting >= 40:
-                # 40바이트 읽기
-                data = ser.read(40)
+            # 가변 길이 수신 (최소 5바이트: 슬레이브1 + 기능코드1 + 데이터2 + CRC2)
+            # 20워드 데이터 = 40바이트 + overhead 4 = 44바이트
+            if ser.in_waiting >= 5:
+                # 버퍼에서 읽을 수 있는 만큼 읽기
+                data = ser.read(ser.in_waiting)
                 
-                if len(data) == 40:
-                    # 수신된 바이트 데이터를 정수 배열로 변환
-                    # LS 산전은 기본적으로 Little-endian(<)을 주로 사용합니다. 
-                    # 만약 값이 이상하게 나오면 '>20h' (Big-endian)로 바꿔보세요.
-                    values = struct.unpack('<20h', data) 
+                # 최소 프레임 크기 확인
+                if len(data) < 5:
+                    continue
+                    
+                # CRC 검증
+                if not verify_crc(data):
+                    print(f"CRC 오류: 수신 데이터={data.hex()}")
+                    continue
+                
+                # 프레임 파싱
+                slave_address = data[0]
+                function_code = data[1]
+                
+                # 내 슬레이브 번호만 처리
+                if slave_address != MY_SLAVE_ID:
+                    print(f"스레이브 {slave_address} 데이터 무시 (내 번호: {MY_SLAVE_ID})")
+                    continue
+                
+                # 기능 코드별 처리
+                if function_code == FUNC_READ_HOLDING:  # 0x03
+                    # 읽기 응답: [슬레이브][기능코드][바이트수][데이터...][CRC]
+                    byte_count = data[2]
+                    raw_data = data[3:3+byte_count]
+                    
+                    # 데이터 파싱 (레지스터 값)
+                    values = struct.unpack(f'<{byte_count//2}h', raw_data)
                     insert_raw_data(values)
+                    
+                elif function_code == FUNC_WRITE_SINGLE:  # 0x06
+                    # 단일 레지스터 쓰기 응답
+                    register_addr = struct.unpack('>H', data[2:4])[0]
+                    value = struct.unpack('>H', data[4:6])[0]
+                    print(f"레지스터 D{register_addr}에 {value} 쓰기 완료")
+                    
+                elif function_code == FUNC_WRITE_MULTI:  # 0x10
+                    # 다중 레지스터 쓰기 응답
+                    register_addr = struct.unpack('>H', data[2:4])[0]
+                    register_count = struct.unpack('>H', data[4:6])[0]
+                    print(f"레지스터 D{register_addr}부터 {register_count}개 쓰기 완료")
+                    
+                else:
+                    print(f"지원하지 않는 기능 코드: 0x{function_code:02X}")
             
-            # CPU 과부하 방지를 위한 짧은 대기
-            time.sleep(0.05)
+            time.sleep(0.01)
             
         except Exception as e:
             print(f"통신 에러 발생: {e}")
@@ -170,9 +267,107 @@ def serial_receive_thread():
     ser.close()
 
 
+# ==========================================
+# 3. Modbus RTU 마스터 기능 (PC → PLC 쓰기)
+# ==========================================
+class ModbusMaster:
+    """Modbus RTU 마스터 (PLC에 데이터 쓰기)"""
+    
+    def __init__(self, port=COM_PORT, baudrate=BAUD_RATE):
+        self.ser = serial.Serial(
+            port=port,
+            baudrate=baudrate,
+            bytesize=BYTE_SIZE,
+            parity=PARITY,
+            stopbits=STOP_BITS,
+            timeout=1.0
+        )
+    
+    def write_single_register(self, slave_id, register_addr, value):
+        """단일 레지스터 쓰기 (기능코드 0x06)"""
+        # 프레임: [슬레이브][기능코드][레지스터H][레지스터L][값H][값L][CRC]
+        frame = struct.pack('>BBHHH', 
+                           slave_id,           # 스레이브 번호
+                           FUNC_WRITE_SINGLE,  # 기능코드 0x06
+                           register_addr,      # 레지스터 주소 (D100 = 100)
+                           value,              # 쓸 값
+                           0)                  # 더미 (CRC 계산 후 교체)
+        
+        # CRC 계산
+        crc = calculate_crc(frame[:-2])  # 마지막 2바이트 제외
+        frame = frame[:-2] + crc
+        
+        # 전송
+        self.ser.write(frame)
+        
+        # 응답 수신
+        response = self.ser.read(8)
+        if len(response) >= 5 and verify_crc(response):
+            print(f"D{register_addr} ← {value} (스레이브 {slave_id})")
+            return True
+        return False
+    
+    def write_multiple_registers(self, slave_id, start_addr, values):
+        """다중 레지스터 쓰기 (기능코드 0x10)"""
+        register_count = len(values)
+        byte_count = register_count * 2
+        
+        # PDU 구성
+        pdu = struct.pack('>BBHHB', 
+                         slave_id,
+                         FUNC_WRITE_MULTI,  # 0x10
+                         start_addr,
+                         register_count,
+                         byte_count)
+        
+        # 데이터 추가
+        data_bytes = struct.pack(f'<{register_count}h', *values)
+        frame = pdu + data_bytes
+        
+        # CRC 계산
+        crc = calculate_crc(frame)
+        frame = frame + crc
+        
+        # 전송
+        self.ser.write(frame)
+        
+        # 응답 수신 (최소 8바이트)
+        response = self.ser.read(8)
+        if len(response) >= 8 and verify_crc(response):
+            print(f"D{start_addr}부터 {register_count}개 쓰기 완료 (스레이브 {slave_id})")
+            return True
+        return False
+    
+    def read_holding_registers(self, slave_id, start_addr, count):
+        """홀딩 레지스터 읽기 (기능코드 0x03)"""
+        # 프레임: [슬레이브][기능코드][시작주소H][시작주소L][개수H][개수L][CRC]
+        frame = struct.pack('>BBHHH', 
+                           slave_id,
+                           FUNC_READ_HOLDING,  # 0x03
+                           start_addr,
+                           count,
+                           0)
+        
+        crc = calculate_crc(frame[:-2])
+        frame = frame[:-2] + crc
+        
+        self.ser.write(frame)
+        
+        # 응답: [슬레이브][기능코드][바이트수][데이터...][CRC]
+        response = self.ser.read(5 + count * 2)
+        
+        if len(response) >= 5 and verify_crc(response):
+            byte_count = response[2]
+            data = response[3:3+byte_count]
+            return struct.unpack(f'<{byte_count//2}h', data)
+        return None
+    
+    def close(self):
+        self.ser.close()
+
 
 # ==========================================
-# 3. GUI 화면 구성 (PyQt5)
+# 4. GUI 화면 구성 (PyQt5)
 # ==========================================
 class MainWindow(QMainWindow):
     def __init__(self):
