@@ -1,3 +1,5 @@
+#cd c:\pygame\plc_pc; pyinstaller --onefile --windowed --name "PLC_Modbus_RTU" plc_to_pc_modbus.py
+
 import sys
 import serial
 import threading
