@@ -1,0 +1,181 @@
+import sys
+import socket
+import threading
+import sqlite3
+import struct
+import time
+from datetime import datetime, timedelta
+from PyQt5.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, 
+                             QPushButton, QTableWidget, QTableWidgetItem, QLabel, QHBoxLayout)
+from PyQt5.QtCore import QTimer
+
+# 설정값
+DB_NAME = "plc_data.db"
+TCP_IP = "0.0.0.0"  # 모든 IP에서 수신 대기 (PC의 IP)
+TCP_PORT = 5020     # PLC에서 데이터를 전송할 포트 번호
+NUM_WORDS = 20      # D100 ~ D119 (20개)
+
+# ==========================================
+# 1. 데이터베이스 관리 (SQLite)
+# ==========================================
+def init_db():
+    conn = sqlite3.connect(DB_NAME)
+    c = conn.cursor()
+    
+    # D100 ~ D119 컬럼 생성 문자열 (d100 REAL, d101 REAL ...)
+    columns = ", ".join([f"d{100+i} REAL" for i in range(NUM_WORDS)])
+    
+    # 원데이터 테이블 생성 (1분 주기)
+    c.execute(f"CREATE TABLE IF NOT EXISTS raw_data (timestamp DATETIME, {columns})")
+    # 1시간 평균 데이터 테이블 생성
+    c.execute(f"CREATE TABLE IF NOT EXISTS hourly_avg (timestamp DATETIME, {columns})")
+    
+    conn.commit()
+    conn.close()
+
+def insert_raw_data(values):
+    conn = sqlite3.connect(DB_NAME)
+    c = conn.cursor()
+    now = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    
+    placeholders = ", ".join(["?"] * NUM_WORDS)
+    c.execute(f"INSERT INTO raw_data (timestamp, {', '.join([f'd{100+i}' for i in range(NUM_WORDS)])}) VALUES (?, {placeholders})", [now] + list(values))
+    
+    conn.commit()
+    conn.close()
+    print(f"[{now}] 원데이터 저장 완료: {values}")
+
+def calculate_hourly_avg():
+    conn = sqlite3.connect(DB_NAME)
+    c = conn.cursor()
+    
+    # 1시간 전 시간 계산
+    now = datetime.now()
+    last_hour_start = (now - timedelta(hours=1)).replace(minute=0, second=0, microsecond=0)
+    last_hour_end = last_hour_start.replace(minute=59, second=59)
+    
+    # 해당 시간대의 평균값 계산 쿼리
+    avg_columns = ", ".join([f"AVG(d{100+i})" for i in range(NUM_WORDS)])
+    query = f"SELECT {avg_columns} FROM raw_data WHERE timestamp BETWEEN ? AND ?"
+    
+    c.execute(query, (last_hour_start.strftime('%Y-%m-%d %H:%M:%S'), last_hour_end.strftime('%Y-%m-%d %H:%M:%S')))
+    result = c.fetchone()
+    
+    # 데이터가 존재하고 첫번째 값이 None이 아닐 때만 저장
+    if result and result[0] is not None:
+        target_time = last_hour_start.strftime('%Y-%m-%d %H:00:00')
+        placeholders = ", ".join(["?"] * NUM_WORDS)
+        insert_query = f"INSERT INTO hourly_avg (timestamp, {', '.join([f'd{100+i}' for i in range(NUM_WORDS)])}) VALUES (?, {placeholders})"
+        c.execute(insert_query, [target_time] + list(result))
+        conn.commit()
+        print(f"[{target_time}] 1시간 평균 데이터 산출 및 저장 완료")
+        
+    conn.close()
+
+# ==========================================
+# 2. 통신 수신부 (TCP Server - PLC가 Master)
+# ==========================================
+def tcp_server_thread():
+    server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    server_socket.bind((TCP_IP, TCP_PORT))
+    server_socket.listen(1)
+    print(f"TCP 서버 대기 중... (포트: {TCP_PORT})")
+    
+    while True:
+        try:
+            conn, addr = server_socket.accept()
+            print(f"PLC 연결됨: {addr}")
+            while True:
+                # 20워드 = 40바이트 수신 대기
+                data = conn.recv(40)
+                if not data:
+                    break
+                
+                # 수신된 바이트 데이터를 정수 배열로 변환 (Big-endian 가정: '>20h')
+                # PLC의 엔디안 설정에 따라 '<20h' (Little-endian)로 변경해야 할 수 있습니다.
+                if len(data) == 40:
+                    values = struct.unpack('>20h', data) 
+                    insert_raw_data(values)
+        except Exception as e:
+            print(f"통신 에러: {e}")
+        finally:
+            conn.close()
+
+# ==========================================
+# 3. GUI 화면 구성 (PyQt5)
+# ==========================================
+class MainWindow(QMainWindow):
+    def __init__(self):
+        super().__init__()
+        self.setWindowTitle("미니 SCADA - 1시간 평균 데이터 조회")
+        self.resize(1000, 600)
+        
+        # 메인 위젯 및 레이아웃
+        main_widget = QWidget()
+        layout = QVBoxLayout()
+        main_widget.setLayout(layout)
+        self.setCentralWidget(main_widget)
+        
+        # 상단 컨트롤 영역
+        top_layout = QHBoxLayout()
+        self.info_label = QLabel("DB에 저장된 1시간 평균 데이터입니다.")
+        self.refresh_btn = QPushButton("데이터 새로고침")
+        self.refresh_btn.clicked.connect(self.load_data)
+        
+        top_layout.addWidget(self.info_label)
+        top_layout.addStretch()
+        top_layout.addWidget(self.refresh_btn)
+        layout.addLayout(top_layout)
+        
+        # 데이터 테이블 (그리드)
+        self.table = QTableWidget()
+        self.table.setColumnCount(NUM_WORDS + 1)
+        headers = ["시간"] + [f"D{100+i}" for i in range(NUM_WORDS)]
+        self.table.setHorizontalHeaderLabels(headers)
+        layout.addWidget(self.table)
+        
+        # 주기적 작업 설정 (스케줄러 역할)
+        self.timer = QTimer(self)
+        self.timer.timeout.connect(self.check_and_calculate_avg)
+        self.timer.start(60000) # 1분마다 체크
+        self.last_calc_hour = datetime.now().hour
+        
+        # 초기 데이터 로드
+        self.load_data()
+
+    def load_data(self):
+        """DB에서 hourly_avg 데이터를 읽어와 테이블에 표시"""
+        conn = sqlite3.connect(DB_NAME)
+        c = conn.cursor()
+        c.execute("SELECT * FROM hourly_avg ORDER BY timestamp DESC LIMIT 100")
+        rows = c.fetchall()
+        conn.close()
+        
+        self.table.setRowCount(len(rows))
+        for row_idx, row_data in enumerate(rows):
+            for col_idx, value in enumerate(row_data):
+                # 소수점 2자리까지만 표시
+                display_val = f"{value:.2f}" if isinstance(value, float) else str(value)
+                self.table.setItem(row_idx, col_idx, QTableWidgetItem(display_val))
+
+    def check_and_calculate_avg(self):
+        """매시간 정각이 지났는지 확인하고 평균 계산 함수 호출"""
+        current_hour = datetime.now().hour
+        if current_hour != self.last_calc_hour:
+            calculate_hourly_avg()
+            self.last_calc_hour = current_hour
+            self.load_data() # 계산 후 화면 갱신
+
+if __name__ == "__main__":
+    # 1. DB 초기화
+    init_db()
+    
+    # 2. 통신 스레드 시작 (백그라운드에서 계속 실행)
+    tcp_thread = threading.Thread(target=tcp_server_thread, daemon=True)
+    tcp_thread.start()
+    
+    # 3. GUI 앱 실행
+    app = QApplication(sys.argv)
+    window = MainWindow()
+    window.show()
+    sys.exit(app.exec_())
