@@ -28,7 +28,7 @@ PARITY = serial.PARITY_NONE  # 패리티: None, Even, Odd
 STOP_BITS = 1          # 스톱 비트: 1 또는 2
 BYTE_SIZE = 8          # 데이터 비트: 8
 
-NUM_WORDS = 14         # D100 ~ D113 (14개)
+NUM_WORDS = 20         # D100 ~ D119 (20개)
 DB_NAME = "plc_data.db"
 
 # ==========================================
@@ -74,14 +74,16 @@ FUNC_WRITE_MULTI = 0x10           # 쓰기: 다중 레지스터
 FUNC_READ_WRITE = 0x17            # 읽기/쓰기 다중 레지스터
 
 # ==========================================
-# 컬럼 라벨 정의 (D100 ~ D113)
+# 컬럼 라벨 정의 (D100 ~ D119)
 # ==========================================
 # D100-D101: 실내온도, 외기온도 (2개)
 # D102-D119: 변압기1-5 (전압, 전류, 전력, 온도 × 5대 = 18개)
 COLUMN_LABELS = ["시간", "실내온도", "외기온도",
                  "변압기1전압", "변압기1전류", "변압기1전력", "변압기1온도",
                  "변압기2전압", "변압기2전류", "변압기2전력", "변압기2온도",
-                 "변압기3전압", "변압기3전류", "변압기3전력", "변압기3온도"]
+                 "변압기3전압", "변압기3전류", "변압기3전력", "변압기3온도",
+                 "변압기4전압", "변압기4전류", "변압기4전력", "변압기4온도",
+                 "변압기5전압", "변압기5전류", "변압기5전력", "변압기5온도"]
 
 #=========================================
 # TCP/IP 설정 (PLC가 Master로 데이터를 전송하는 경우)
@@ -90,7 +92,7 @@ COLUMN_LABELS = ["시간", "실내온도", "외기온도",
 #
 # TCP_IP = "0.0.0.0"  # 모든 IP에서 수신 대기 (PC의 IP)
 # TCP_PORT = 5020     # PLC에서 데이터를 전송할 포트 번호
-# NUM_WORDS = 14      # D100 ~ D113 (14개)
+# NUM_WORDS = 20      # D100 ~ D119 (20개)
 #=========================================
 
 # ==========================================
@@ -100,8 +102,8 @@ def init_db():
     conn = sqlite3.connect(DB_NAME)
     c = conn.cursor()
     
-    # D100 ~ D113 컬럼 생성 문자열 (d100 INTEGER, d101 INTEGER ...)
-    columns = ", ".join([f"{COLUMN_LABELS[i]} INTEGER" for i in range(NUM_WORDS)])
+    # D100 ~ D119 컬럼 생성 문자열 (d100 REAL, d101 REAL ...)
+    columns = ", ".join([f"d{100+i} REAL" for i in range(NUM_WORDS)])
     
     # 원데이터 테이블 생성 (1분 주기)
     c.execute(f"CREATE TABLE IF NOT EXISTS raw_data (timestamp DATETIME, {columns})")
@@ -117,7 +119,7 @@ def insert_raw_data(values):
     now = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
     
     placeholders = ", ".join(["?"] * NUM_WORDS)
-    c.execute(f"INSERT INTO raw_data (timestamp, {', '.join([f'{COLUMN_LABELS[i]}' for i in range(NUM_WORDS)])}) VALUES (?, {placeholders})", [now] + list(values))
+    c.execute(f"INSERT INTO raw_data (timestamp, {', '.join([f'd{100+i}' for i in range(NUM_WORDS)])}) VALUES (?, {placeholders})", [now] + list(values))
     
     conn.commit()
     conn.close()
@@ -133,7 +135,7 @@ def calculate_hourly_avg():
     last_hour_end = last_hour_start.replace(minute=59, second=59)
     
     # 해당 시간대의 평균값 계산 쿼리
-    avg_columns = ", ".join([f"AVG({COLUMN_LABELS[i]})" for i in range(NUM_WORDS)])
+    avg_columns = ", ".join([f"AVG(d{100+i})" for i in range(NUM_WORDS)])
     query = f"SELECT {avg_columns} FROM raw_data WHERE timestamp BETWEEN ? AND ?"
     
     c.execute(query, (last_hour_start.strftime('%Y-%m-%d %H:%M:%S'), last_hour_end.strftime('%Y-%m-%d %H:%M:%S')))
@@ -143,7 +145,7 @@ def calculate_hourly_avg():
     if result and result[0] is not None:
         target_time = last_hour_start.strftime('%Y-%m-%d %H:00:00')
         placeholders = ", ".join(["?"] * NUM_WORDS)
-        insert_query = f"INSERT INTO hourly_avg (timestamp, {', '.join([f'{COLUMN_LABELS[i]}' for i in range(NUM_WORDS)])}) VALUES (?, {placeholders})"
+        insert_query = f"INSERT INTO hourly_avg (timestamp, {', '.join([f'd{100+i}' for i in range(NUM_WORDS)])}) VALUES (?, {placeholders})"
         c.execute(insert_query, [target_time] + list(result))
         conn.commit()
         print(f"[{target_time}] 1시간 평균 데이터 산출 및 저장 완료")
