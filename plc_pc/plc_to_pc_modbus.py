@@ -22,8 +22,8 @@ from PyQt5.QtCore import QTimer, QDate, QTime, Qt
 # - 수신된 데이터는 SQLite DB에 저장
 # ==========================================
 
-COM_PORT = 'COM3'      # 장치 관리자에서 확인한 포트 번호로 변경하세요
-BAUD_RATE = 9600       # PLC의 통신 속도 설정과 반드시 일치해야 합니다 (예: 9600, 19200, 38400)
+COM_PORT = 'COM6'      # 장치 관리자에서 확인한 포트 번호로 변경하세요
+BAUD_RATE = 19200       # PLC의 통신 속도 설정과 반드시 일치해야 합니다 (예: 9600, 19200, 38400)
 PARITY = serial.PARITY_NONE  # 패리티: None, Even, Odd
 STOP_BITS = 1          # 스톱 비트: 1 또는 2
 BYTE_SIZE = 8          # 데이터 비트: 8
@@ -78,8 +78,7 @@ FUNC_READ_WRITE = 0x17            # 읽기/쓰기 다중 레지스터
 # ==========================================
 # D100-D101: 실내온도, 외기온도 (2개)
 # D102-D119: 변압기1-5 (전압, 전류, 전력, 온도 × 5대 = 18개)
-COLUMN_LABELS = ["시간", "실내온도", "외기온도",
-                 "변압기1전압", "변압기1전류", "변압기1전력", "변압기1온도",
+COLUMN_LABELS = ["시간", "실내온도", "외기온도", "변압기1전압", "변압기1전류", "변압기1전력", "변압기1온도",
                  "변압기2전압", "변압기2전류", "변압기2전력", "변압기2온도",
                  "변압기3전압", "변압기3전류", "변압기3전력", "변압기3온도"]
 
@@ -151,37 +150,6 @@ def calculate_hourly_avg():
     conn.close()
 
 
-'''
-# ==========================================
-# 2. 통신 수신부 (TCP Server - PLC가 Master)
-# ==========================================
-def tcp_server_thread():
-    server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    server_socket.bind((TCP_IP, TCP_PORT))
-    server_socket.listen(1)
-    print(f"TCP 서버 대기 중... (포트: {TCP_PORT})")
-    
-    while True:
-        try:
-            conn, addr = server_socket.accept()
-            print(f"PLC 연결됨: {addr}")
-            while True:
-                # 20워드 = 40바이트 수신 대기
-                data = conn.recv(40)
-                if not data:
-                    break
-                
-                # 수신된 바이트 데이터를 정수 배열로 변환 (Big-endian 가정: '>20h')
-                # PLC의 엔디안 설정에 따라 '<20h' (Little-endian)로 변경해야 할 수 있습니다.
-                if len(data) == 40:
-                    values = struct.unpack('>20h', data) 
-                    insert_raw_data(values)
-        except Exception as e:
-            print(f"통신 에러: {e}")
-        finally:
-            conn.close()
-'''
-
 # ==========================================
 # 2. Modbus RTU 스레이브 수신 (PLC → PC)
 # ==========================================
@@ -199,71 +167,70 @@ def serial_receive_thread():
             bytesize=BYTE_SIZE,
             parity=PARITY,
             stopbits=STOP_BITS,
-            timeout=0.5  # 수신 타임아웃
+            timeout=0.05  # 짧은 타임아웃으로 패킷 분리 유도
         )
         print(f"Modbus RTU 포트 열림: {COM_PORT} ({BAUD_RATE}bps, 8N1)")
-        print(f"수신 대기 중인 슬레이브 번호: {MY_SLAVE_ID}")
     except Exception as e:
         print(f"시리얼 포트 연결 실패: {e}")
         return
 
+    buffer = b""  # 수신 잔여 데이터를 저장할 버퍼
+
     while True:
         try:
-            # 가변 길이 수신 (최소 5바이트: 슬레이브1 + 기능코드1 + 데이터2 + CRC2)
-            # 20워드 데이터 = 40바이트 + overhead 4 = 44바이트
-            if ser.in_waiting >= 5:
-                # 버퍼에서 읽을 수 있는 만큼 읽기
-                data = ser.read(ser.in_waiting)
+            if ser.in_waiting > 0:
+                # 1. 일단 읽을 수 있는 만큼 읽어 버퍼에 추가
+                buffer += ser.read(ser.in_waiting)
                 
-                # 최소 프레임 크기 확인
-                if len(data) < 5:
-                    continue
+                # 2. 버퍼에 데이터가 있고, 최소 프레임 길이(Slave+Func+Len+Data+CRC = 최소 5~8바이트) 이상일 때 루프
+                while len(buffer) >= 5:
+                    # 2-1. 내 슬레이브 번호(5)가 나올 때까지 앞부분 버림 (동기화)
+                    if buffer[0] != MY_SLAVE_ID:
+                        buffer = buffer[1:]
+                        continue
                     
-                # CRC 검증
-                if not verify_crc(data):
-                    print(f"CRC 오류: 수신 데이터={data.hex()}")
-                    continue
-                
-                # 프레임 파싱
-                slave_address = data[0]
-                function_code = data[1]
-                
-                # 내 슬레이브 번호만 처리
-                if slave_address != MY_SLAVE_ID:
-                    print(f"스레이브 {slave_address} 데이터 무시 (내 번호: {MY_SLAVE_ID})")
-                    continue
-                
-                # 기능 코드별 처리
-                if function_code == FUNC_READ_HOLDING:  # 0x03
-                    # 읽기 응답: [슬레이브][기능코드][바이트수][데이터...][CRC]
-                    byte_count = data[2]
-                    raw_data = data[3:3+byte_count]
+                    # 2-2. 기능 코드 확인 (0x03: Read Holding, 0x10: Write Multi 등)
+                    func_code = buffer[1]
                     
-                    # 데이터 파싱 (레지스터 값)
-                    values = struct.unpack(f'<{byte_count//2}h', raw_data)
-                    insert_raw_data(values)
+                    # 수신 패킷 길이를 예측 (기능 코드에 따라 다름)
+                    if func_code == 0x03:
+                        if len(buffer) < 3: break # 데이터 길이 바이트 대기
+                        expected_len = buffer[2] + 5 # [ID][Func][Len] + [Data] + [CRC2]
+                    elif func_code == 0x10:
+                        expected_len = 8 # Write Multi 응답은 항상 8바이트
+                    elif func_code == 0x06:
+                        expected_len = 8 # Write Single 응답은 항상 8바이트
+                    else:
+                        # 알 수 없는 기능코드면 1바이트 버리고 다시 찾기
+                        buffer = buffer[1:]
+                        continue
+
+                    # 2-3. 전체 패킷이 아직 다 안 들어왔으면 다음 읽기 대기
+                    if len(buffer) < expected_len:
+                        break
                     
-                elif function_code == FUNC_WRITE_SINGLE:  # 0x06
-                    # 단일 레지스터 쓰기 응답
-                    register_addr = struct.unpack('>H', data[2:4])[0]
-                    value = struct.unpack('>H', data[4:6])[0]
-                    print(f"레지스터 D{register_addr}에 {value} 쓰기 완료")
+                    # 2-4. 완성된 패킷 추출 및 검증
+                    packet = buffer[:expected_len]
+                    buffer = buffer[expected_len:] # 버퍼에서 패킷 제거
                     
-                elif function_code == FUNC_WRITE_MULTI:  # 0x10
-                    # 다중 레지스터 쓰기 응답
-                    register_addr = struct.unpack('>H', data[2:4])[0]
-                    register_count = struct.unpack('>H', data[4:6])[0]
-                    print(f"레지스터 D{register_addr}부터 {register_count}개 쓰기 완료")
-                    
-                else:
-                    print(f"지원하지 않는 기능 코드: 0x{function_code:02X}")
-            
-            time.sleep(0.01)
+                    if verify_crc(packet):
+                        # 정상 패킷 처리
+                        if func_code == FUNC_READ_HOLDING:
+                            byte_count = packet[2]
+                            raw_data = packet[3:3+byte_count]
+                            # 데이터 파싱 (리틀 엔디안 방식 주의: PLC 설정 확인 필요)
+                            # PLC가 대중적으로 사용하는 Big Endian이면 '>h' 사용
+                            values = struct.unpack(f'>{byte_count//2}h', raw_data)
+                            insert_raw_data(values)
+                            print(f"데이터 수신 성공: {values}")
+                    else:
+                        print(f"CRC 오류 패킷 폐기: {packet.hex()}")
+
+            time.sleep(0.01) # CPU 부하 방지
             
         except Exception as e:
             print(f"통신 에러 발생: {e}")
-            break
-
+            time.sleep(1) # 에러 시 잠시 대기 후 재시도
     ser.close()
 
 
