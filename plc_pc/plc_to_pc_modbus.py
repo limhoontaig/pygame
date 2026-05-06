@@ -55,12 +55,26 @@ def calculate_crc(data):
     return struct.pack('<H', crc)
 
 def verify_crc(data):
-    """수신 데이터의 CRC 검증"""
+    """수신 데이터의 CRC 검증 (바이트 순서 교차 대응)"""
     if len(data) < 4:
         return False
-    received_crc = struct.unpack('<H', data[-2:])[0]
-    calculated_crc = calculate_crc(data[:-2])
-    return received_crc == struct.unpack('<H', calculated_crc)[0]
+    
+    # 1. 데이터 본문과 수신된 CRC 분리
+    body = data[:-2]
+    received_crc = data[-2:] # 28 07 형태
+    
+    # 2. 직접 계산한 CRC (표준 방식)
+    calc_crc_bytes = calculate_crc(body) # 결과가 07 28 형태라고 가정
+    
+    # 3. 표준 방식(received_crc) 또는 바이트가 반전된 방식 모두 체크
+    if received_crc == calc_crc_bytes:
+        return True
+    
+    # 만약 반전되어 들어온다면 (28 07 <-> 07 28)
+    if received_crc == calc_crc_bytes[::-1]:
+        return True
+        
+    return False
 
 # ==========================================
 # Modbus RTU 기능 코드 정의
