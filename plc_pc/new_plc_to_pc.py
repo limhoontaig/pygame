@@ -22,10 +22,10 @@ DB_NAME = "plc_logging.db"
 # 컬럼 라벨 정의 (D900 ~ D915)
 # 사용하시는 환경에 맞게 이름을 수정하세요.
 # COLUMN_LABELS = ["시간"] + [f"D{900+i}" for i in range(NUM_WORDS)]
-COLUMN_LABELS = ["시간", "실내온도", "외기온도", "SF 운전시간", "EF 운전시간",       
-                 "변압기1전압", "변압기1전류", "변압기1전력", "변압기1온도",
-                 "변압기2전압", "변압기2전류", "변압기2전력", "변압기2온도",
-                 "변압기3전압", "변압기3전류", "변압기3전력", "변압기3온도"]
+COLUMN_LABELS = ["날짜", "시간", "실내온도", "외기온도", "SF 운전시간", "EF 운전시간",       
+                 "TR1 V", "TR1 A", "TR1 kW", "TR1 온도",
+                 "TR2 V", "TR2 A", "TR2 kW", "TR2 온도",
+                 "TR3 V", "TR3 A", "TR3 kW", "TR3 온도"]
 
 # ==========================================
 # 2. 유틸리티 함수 (CRC 및 DB)
@@ -55,9 +55,9 @@ def init_db():
     conn = sqlite3.connect(DB_NAME)
     c = conn.cursor()
     # D900~D915 컬럼 생성
-    cols = ", ".join([f"D{900+i} REAL" for i in range(NUM_WORDS)])
-    c.execute(f"CREATE TABLE IF NOT EXISTS raw_data (timestamp DATETIME, {cols})")
-    c.execute(f"CREATE TABLE IF NOT EXISTS hourly_avg (timestamp DATETIME, {cols})")
+    cols = ", ".join([f"{COLUMN_LABELS[i+2]} REAL" for i in range(NUM_WORDS)])
+    c.execute(f"CREATE TABLE IF NOT EXISTS raw_data (log_date TEXT, log_time TEXT, {cols})")
+    c.execute(f"CREATE TABLE IF NOT EXISTS hourly_avg (log_date TEXT, log_time TEXT, {cols})")
     conn.commit()
     conn.close()
 
@@ -67,12 +67,29 @@ def insert_raw_data(values):
         conn = sqlite3.connect(DB_NAME)
         c = conn.cursor()
         now = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        log_date = datetime.now().strftime('%Y-%m-%d')
+        log_time = datetime.now().strftime('%H:%M:%S')
+        
+        # 데이터별 배율 조정 (예: D900-D903 온도 및 환기팬 운전시간 이므로 10으로 나눔)
+        # D907, D911, D915는 변압기 온도이므로 10으로 나눔, 나머지는 그대로 저장
+        # 리스트 컴프리헨션을 사용하여 가공합니다.
+        adjusted_values = []
+        for i, v in enumerate(values):
+            if i < 4: # D900-D903은 온도 및 환기팬 운전시간이므로 10으로 나눔
+                adjusted_values.append(v / 10.0)
+            elif i in [7, 11, 15]: # D907, D911, D915는 변압기 온도이므로 10으로 나눔
+                adjusted_values.append(v / 10.0)
+            else: # 나머지 데이터는 일단 그대로 저장 (필요시 추가 수정)
+                adjusted_values.append(float(v))
+
         placeholders = ", ".join(["?"] * NUM_WORDS)
-        col_names = ", ".join([f"D{900+i}" for i in range(NUM_WORDS)])
-        c.execute(f"INSERT INTO raw_data (timestamp, {col_names}) VALUES (?, {placeholders})", [now] + list(values))
+        col_names = ", ".join([f"{COLUMN_LABELS[i+2]}" for i in range(NUM_WORDS)])
+        
+        query = f"INSERT INTO raw_data (log_date, log_time, {col_names}) VALUES (?, ?, {placeholders})"
+        c.execute(query, [log_date, log_time] + adjusted_values)
+        
         conn.commit()
         conn.close()
-        print(f"[{now}] 데이터 저장 성공: {values}")
     except Exception as e:
         print(f"DB 저장 오류: {e}")
 
@@ -134,17 +151,17 @@ def calculate_hourly_avg():
     start_str = last_hour.strftime('%Y-%m-%d %H:00:00')
     end_str = last_hour.strftime('%Y-%m-%d %H:59:59')
 
-    col_names = ", ".join([f"D{900+i}" for i in range(NUM_WORDS)])
-    avg_select = ", ".join([f"AVG(D{900+i})" for i in range(NUM_WORDS)])
+    col_names = ", ".join([f"{COLUMN_LABELS[i+2]}" for i in range(NUM_WORDS)])
+    avg_select = ", ".join([f"AVG({COLUMN_LABELS[i+2]})" for i in range(NUM_WORDS)])
     
-    c.execute(f"SELECT {avg_select} FROM raw_data WHERE timestamp BETWEEN ? AND ?", (start_str, end_str))
+    c.execute(f"SELECT {avg_select} FROM raw_data WHERE log_date = ? AND log_time BETWEEN ? AND ?", (last_hour.strftime('%Y-%m-%d'), last_hour.strftime('%H:%M:%S'), (last_hour + timedelta(hours=1) - timedelta(seconds=1)).strftime('%H:%M:%S')))
     result = c.fetchone()
 
     if result and result[0] is not None:
         placeholders = ", ".join(["?"] * NUM_WORDS)
-        c.execute(f"INSERT INTO hourly_avg (timestamp, {col_names}) VALUES (?, {placeholders})", [start_str] + list(result))
+        c.execute(f"INSERT INTO hourly_avg (log_date, log_time, {col_names}) VALUES (?, ?, {placeholders})", [last_hour.strftime('%Y-%m-%d'), last_hour.strftime('%H:%M:%S')] + list(result))
         conn.commit()
-        print(f"[{start_str}] 시간당 평균 저장 완료")
+        print(f"[{last_hour.strftime('%Y-%m-%d %H:%M:%S')}] 시간당 평균 저장 완료")
     conn.close()
 
 # ==========================================
@@ -199,11 +216,11 @@ class SCADAWindow(QMainWindow):
         c = conn.cursor()
         
         # Raw Data 최신 50개
-        c.execute("SELECT * FROM raw_data WHERE timestamp LIKE ? ORDER BY timestamp DESC LIMIT 50", (f"{date_str}%",))
+        c.execute("SELECT * FROM raw_data WHERE log_date = ? ORDER BY log_time DESC LIMIT 50", (date_str,))
         self.display_table(self.raw_table, c.fetchall())
 
         # Average Data
-        c.execute("SELECT * FROM hourly_avg WHERE timestamp LIKE ? ORDER BY timestamp DESC", (f"{date_str}%",))
+        c.execute("SELECT * FROM hourly_avg WHERE log_date = ? ORDER BY log_time DESC", (date_str,))
         self.display_table(self.avg_table, c.fetchall())
         conn.close()
 
