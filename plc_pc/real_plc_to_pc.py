@@ -257,7 +257,7 @@ class SCADAWindow(QMainWindow):
             print(f"조회 오류 발생: {e}")
             print("기존 DB 파일과 새로운 코드의 구조가 맞지 않습니다. 'plc_logging_real.db' 파일을 삭제하고 다시 실행하세요.")
         
-        conn.close())
+        conn.close()
 
     def display_table(self, table, rows):
         table.setRowCount(len(rows))
