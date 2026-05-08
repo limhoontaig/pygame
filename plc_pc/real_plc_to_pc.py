@@ -174,10 +174,19 @@ def calculate_hourly_avg():
     result = c.fetchone()
 
     if result and result[0] is not None:
+        # [수정 부분] 결과값을 소수점 첫째 자리까지 반올림
+        # round(값, 1) -> 소수점 첫째 자리까지 남김
+        rounded_result = [round(val, 1) for val in result]
+        
+        target_date = last_hour.strftime('%Y-%m-%d')
         placeholders = ", ".join(["?"] * NUM_WORDS)
+        col_names = ", ".join([f"D{900+i}" for i in range(NUM_WORDS)])
+
         insert_query = f"INSERT INTO hourly_avg (log_date, log_time, {col_names}) VALUES (?, ?, {placeholders})"
-        c.execute(insert_query, [target_date, f"{target_hour}:00:00"] + list(result))
+        # rounded_result를 저장함
+        c.execute(insert_query, [target_date, f"{last_hour.strftime('%H')}:00:00"] + rounded_result)
         conn.commit()
+
     conn.close()
 
 # ==========================================
