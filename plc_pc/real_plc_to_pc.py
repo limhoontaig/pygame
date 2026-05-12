@@ -153,7 +153,12 @@ def serial_receive_thread():
                             values = struct.unpack(f'>16h', raw_values)
                             insert_raw_data(values)
                         else:
-                            print(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), " CRC 오류 발생")
+                            # CRC 오류 발생 시 HEX 값 출력
+                            # ' '.join(...)을 사용하면 05 10 00... 처럼 바이트 사이에 공백을 넣어 가독성이 좋아집니다.
+                            hex_data = ' '.join([f'{b:02X}' for b in packet])
+                            print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] CRC 오류 발생!")
+                            print(f"수신된 HEX 데이터: {hex_data}")
+                            # 필요하다면 파일로 로그를 남길 수도 있습니다.
                     else:
                         buffer = buffer[1:] # 알 수 없는 기능코드 버림
             time.sleep(0.01)
