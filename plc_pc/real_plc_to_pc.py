@@ -4,11 +4,19 @@ import threading
 import sqlite3
 import struct
 import time
+import pandas as pd
 from datetime import datetime, timedelta
+
+# QStackedWidget이 여기서 누락되어 에러가 났던 것입니다. 추가했습니다.
 from PyQt5.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, 
-                             QPushButton, QTableWidget, QTableWidgetItem, QLabel, QHBoxLayout,
-                             QDateEdit, QTimeEdit, QGroupBox, QSplitter, QGridLayout)
+                             QPushButton, QTableWidget, QTableWidgetItem, QLabel, QHBoxLayout, 
+                             QDateEdit, QTimeEdit, QComboBox, QGridLayout, QGroupBox, QSplitter,
+                             QStackedWidget)
 from PyQt5.QtCore import QTimer, QDate, QTime, Qt
+
+import matplotlib.pyplot as plt
+from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
+from matplotlib.figure import Figure
 
 # ==========================================
 # 1. 통신 및 데이터 설정 (PLC D900~D915 대응)
@@ -272,6 +280,168 @@ class SCADAWindow(QMainWindow):
             calculate_hourly_avg()
             self.last_hour = curr_hour
         self.load_data()
+
+# ==========================================
+# 2. 메인 윈도우 클래스
+# ==========================================
+
+
+class SCADAWindow(QMainWindow):
+    def __init__(self):
+        super().__init__()
+        self.initUI()
+        self.timer = QTimer(self)
+        self.timer.timeout.connect(self.auto_refresh)
+        self.timer.start(10000) # 10초마다 갱신
+        self.last_hour = datetime.now().hour
+
+    def initUI(self):
+        self.setWindowTitle("변전실 데이터 모니터링 시스템")
+        self.resize(1200, 850)
+        
+        central_widget = QWidget()
+        self.setCentralWidget(central_widget)
+        main_layout = QVBoxLayout(central_widget)
+
+        # 상단 공통 제어 바
+        top_ctrl = QGroupBox("조회 설정")
+        top_layout = QHBoxLayout(top_ctrl)
+        
+        self.qdate = QDateEdit(QDate.currentDate())
+        self.qdate.setCalendarPopup(True)
+        top_layout.addWidget(QLabel("날짜 선택:"))
+        top_layout.addWidget(self.qdate)
+        
+        self.btn_show_table = QPushButton("데이터 표 보기")
+        self.btn_show_graph = QPushButton("분석 그래프 보기")
+        top_layout.addWidget(self.btn_show_table)
+        top_layout.addWidget(self.btn_show_graph)
+        main_layout.addWidget(top_ctrl)
+
+        # 화면 전환용 스택 위젯
+        self.stack = QStackedWidget()
+        main_layout.addWidget(self.stack)
+
+        # --- 페이지 1: 데이터 테이블 (검색 화면) ---
+        self.page_table = QWidget()
+        table_layout = QVBoxLayout(self.page_table)
+        splitter = QSplitter(Qt.Vertical)
+        
+        self.raw_table = QTableWidget()
+        self.raw_table.setColumnCount(len(COLUMN_LABELS))
+        self.raw_table.setHorizontalHeaderLabels(COLUMN_LABELS)
+        
+        self.avg_table = QTableWidget()
+        self.avg_table.setColumnCount(len(COLUMN_LABELS))
+        self.avg_table.setHorizontalHeaderLabels(COLUMN_LABELS)
+
+        splitter.addWidget(QLabel("● 실시간 로그 (1분 단위)"))
+        splitter.addWidget(self.raw_table)
+        splitter.addWidget(QLabel("● 시간별 평균 데이터"))
+        splitter.addWidget(self.avg_table)
+        table_layout.addWidget(splitter)
+        self.stack.addWidget(self.page_table)
+
+        # --- 페이지 2: 그래프 분석 화면 ---
+        self.page_graph = QWidget()
+        graph_layout = QVBoxLayout(self.page_graph)
+        
+        graph_ctrl = QHBoxLayout()
+        self.data_selector = QComboBox()
+        self.data_selector.addItems([f"D{900+i}" for i in range(NUM_WORDS)])
+        self.period_selector = QComboBox()
+        self.period_selector.addItems(["일간 (실시간)", "주간 (평균)", "월간 (평균)"])
+        
+        graph_ctrl.addWidget(QLabel("분석 항목:"))
+        graph_ctrl.addWidget(self.data_selector)
+        graph_ctrl.addWidget(QLabel("기간:"))
+        graph_ctrl.addWidget(self.period_selector)
+        graph_layout.addLayout(graph_ctrl)
+
+        self.canvas = FigureCanvas(Figure(figsize=(8, 5)))
+        self.ax = self.canvas.figure.add_subplot(111)
+        graph_layout.addWidget(self.canvas)
+        self.stack.addWidget(self.page_graph)
+
+        # 버튼 이벤트 연결
+        self.btn_show_table.clicked.connect(lambda: self.stack.setCurrentIndex(0))
+        self.btn_show_graph.clicked.connect(lambda: self.stack.setCurrentIndex(1))
+        
+        # 설정 변경 시 자동 업데이트
+        self.qdate.dateChanged.connect(self.auto_refresh)
+        self.data_selector.currentIndexChanged.connect(self.update_graph)
+        self.period_selector.currentIndexChanged.connect(self.update_graph)
+
+        self.load_data()
+
+    def load_data(self):
+        date_str = self.qdate.date().toString("yyyy-MM-dd")
+        conn = sqlite3.connect(DB_NAME)
+        c = conn.cursor()
+        try:
+            c.execute("SELECT * FROM raw_data WHERE log_date = ? ORDER BY log_time DESC LIMIT 50", (date_str,))
+            self.display_table(self.raw_table, c.fetchall())
+            c.execute("SELECT * FROM hourly_avg WHERE log_date = ? ORDER BY log_time DESC", (date_str,))
+            self.display_table(self.avg_table, c.fetchall())
+        except Exception as e:
+            print(f"조회 오류: {e}")
+        conn.close()
+
+    def update_graph(self):
+        if self.stack.currentIndex() != 1: return
+        
+        target_col = self.data_selector.currentText()
+        period = self.period_selector.currentText()
+        selected_date = self.qdate.date().toPyDate()
+
+        conn = sqlite3.connect(DB_NAME)
+        if "일간" in period:
+            query = f"SELECT log_time, {target_col} FROM raw_data WHERE log_date = ? ORDER BY log_time ASC"
+            params = (selected_date.strftime('%Y-%m-%d'),)
+        else:
+            days = 7 if "주간" in period else 30
+            start_date = selected_date - timedelta(days=days)
+            query = f"""SELECT log_date || ' ' || SUBSTR(log_time,1,5) as dt, {target_col} 
+                        FROM hourly_avg WHERE log_date BETWEEN ? AND ? ORDER BY log_date, log_time"""
+            params = (start_date.strftime('%Y-%m-%d'), selected_date.strftime('%Y-%m-%d'))
+
+        df = pd.read_sql_query(query, conn, params=params)
+        conn.close()
+
+        self.ax.clear()
+        if not df.empty:
+            x_col = 'log_time' if "일간" in period else 'dt'
+            self.ax.plot(df[x_col], df[target_col], marker='o', markersize=2, color='blue', linestyle='-')
+            
+            # --- X축 눈금 최적화 부분 ---
+            import matplotlib.ticker as ticker
+            
+            # 전체 데이터 중 약 10개 내외의 눈금만 표시하도록 설정
+            # MaxNLocator는 데이터 양에 맞춰 적절한 간격으로 최대 10개의 라벨을 선택합니다.
+            self.ax.xaxis.set_major_locator(ticker.MaxNLocator(nbins=10))
+            
+            # 만약 월간(30일) 데이터에서 정확히 3일 간격을 선호하신다면 아래와 같이 수동 설정도 가능합니다.
+            # ticks = df[x_col].values
+            # self.ax.set_xticks(ticks[::len(ticks)//10 if len(ticks) > 10 else 1])
+            
+            self.ax.set_title(f"{target_col} {period} 추이")
+            self.ax.grid(True, linestyle='--', alpha=0.7)
+            self.canvas.figure.autofmt_xdate() # 날짜 기울여서 표시
+        else:
+            self.ax.text(0.5, 0.5, "데이터가 없습니다.", ha='center')
+        
+        self.canvas.draw()
+
+    def display_table(self, table, rows):
+        table.setRowCount(len(rows))
+        for r_idx, row in enumerate(rows):
+            for c_idx, val in enumerate(row):
+                txt = f"{val:.1f}" if isinstance(val, float) else str(val)
+                table.setItem(r_idx, c_idx, QTableWidgetItem(txt))
+
+    def auto_refresh(self):
+        self.load_data()
+        self.update_graph()
 
 # ==========================================
 # 메인 실행
