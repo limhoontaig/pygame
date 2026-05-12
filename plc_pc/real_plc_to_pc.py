@@ -156,6 +156,9 @@ def serial_receive_thread():
                             # CRC 오류 발생 시 HEX 값 출력
                             # ' '.join(...)을 사용하면 05 10 00... 처럼 바이트 사이에 공백을 넣어 가독성이 좋아집니다.
                             hex_data = ' '.join([f'{b:02X}' for b in packet])
+                            with open("comm_error_log.txt", "a") as f:
+                                f.write(f"[{datetime.now()}] CRC Error: {hex_data}\n")
+                            print(f"CRC 오류 데이터 로그 저장됨: {hex_data}")
                             print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] CRC 오류 발생!")
                             print(f"수신된 HEX 데이터: {hex_data}")
                             # 필요하다면 파일로 로그를 남길 수도 있습니다.
