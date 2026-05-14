@@ -148,8 +148,6 @@ def serial_receive_thread():
                         buffer = buffer[expected_len:]
                         
                         if verify_crc(packet):
-                            hex_data = ' '.join([f'{b:02X}' for b in packet])
-                            print(f"CRC OK 수신된 HEX 데이터: {hex_data}")
                             # 데이터 파싱 (D900~D915) - Big Endian(>h)으로 읽음
                             raw_values = packet[7:39] # 데이터 시작 위치
                             values = struct.unpack(f'>16h', raw_values)
@@ -175,37 +173,43 @@ def serial_receive_thread():
 # 4. 시간당 평균 계산 로직
 # ==========================================
 def calculate_hourly_avg():
-    conn = sqlite3.connect(DB_NAME)
-    c = conn.cursor()
-    
-    now = datetime.now()
-    last_hour = (now - timedelta(hours=1))
-    target_date = last_hour.strftime('%Y-%m-%d')
-    target_hour = last_hour.strftime('%H')
-    
-    avg_select = ", ".join([f"AVG(D{900+i})" for i in range(NUM_WORDS)])
-    col_names = ", ".join([f"D{900+i}" for i in range(NUM_WORDS)])
-    
-    # log_date와 log_time(시간대)으로 필터링
-    query = f"SELECT {avg_select} FROM raw_data WHERE log_date = ? AND log_time LIKE ?"
-    c.execute(query, (target_date, f"{target_hour}:%"))
-    result = c.fetchone()
+    print("평균 계산 함수 시작됨!") # 이 메시지가 출력되는지 확인하세요
 
-    if result and result[0] is not None:
-        # [수정 부분] 결과값을 소수점 첫째 자리까지 반올림
-        # round(값, 1) -> 소수점 첫째 자리까지 남김
-        rounded_result = [round(val, 1) for val in result]
+    try:
+        conn = sqlite3.connect(DB_NAME, timeout=30) # 잠금 대기 시간 늘림
+        conn.execute("PRAGMA journal_mode = WAL") # WAL 모드로 변경하여 동시 읽기/쓰기 허용 
+        c = conn.cursor()
         
+        now = datetime.now()
+        last_hour = (now - timedelta(hours=1))
         target_date = last_hour.strftime('%Y-%m-%d')
-        placeholders = ", ".join(["?"] * NUM_WORDS)
+        target_hour = last_hour.strftime('%H')
+        
+        avg_select = ", ".join([f"AVG(D{900+i})" for i in range(NUM_WORDS)])
         col_names = ", ".join([f"D{900+i}" for i in range(NUM_WORDS)])
+        
+        # log_date와 log_time(시간대)으로 필터링
+        query = f"SELECT {avg_select} FROM raw_data WHERE log_date = ? AND log_time LIKE ?"
+        c.execute(query, (target_date, f"{target_hour}:%"))
+        result = c.fetchone()
 
-        insert_query = f"INSERT INTO hourly_avg (log_date, log_time, {col_names}) VALUES (?, ?, {placeholders})"
-        # rounded_result를 저장함
-        c.execute(insert_query, [target_date, f"{last_hour.strftime('%H')}:00:00"] + rounded_result)
-        conn.commit()
+        if result and result[0] is not None:
+            # [수정 부분] 결과값을 소수점 첫째 자리까지 반올림
+            # round(값, 1) -> 소수점 첫째 자리까지 남김
+            rounded_result = [round(val, 1) for val in result]
+            
+            target_date = last_hour.strftime('%Y-%m-%d')
+            placeholders = ", ".join(["?"] * NUM_WORDS)
+            col_names = ", ".join([f"D{900+i}" for i in range(NUM_WORDS)])
 
-    conn.close()
+            insert_query = f"INSERT INTO hourly_avg (log_date, log_time, {col_names}) VALUES (?, ?, {placeholders})"
+            # rounded_result를 저장함
+            c.execute(insert_query, [target_date, f"{last_hour.strftime('%H')}:00:00"] + rounded_result)
+            conn.commit()
+    except sqlite3.OperationalError as e:
+            print(f"DB 잠김 오류 발생: {e}") # 여기서 에러를 잡아낼 수 있습니다.
+    finally:
+        conn.close()
 
 # ==========================================
 # 5. GUI 클래스 (PyQt5)
