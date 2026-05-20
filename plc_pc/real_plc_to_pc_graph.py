@@ -20,7 +20,7 @@ plt.rcParams['font.family'] = 'Malgun Gothic'
 plt.rcParams['axes.unicode_minus'] = False
 
 # ==========================================
-# 1. 통신 및 데이터 설정 (주파수를 전력 앞으로 배치 -> 총 50개 워드)
+# 1. 통신 및 데이터 설정 (총 50개 워드)
 # ==========================================
 COM_PORT = 'COM3'         
 BAUD_RATE = 19200         
@@ -28,14 +28,14 @@ MY_SLAVE_ID = 5
 NUM_WORDS = 50            # 32비트 전력량이 2워드를 차지하므로 총 50워드 유지
 DB_NAME = "plc_logging_real.db"
 
-# 데이터 레이블 (주파수를 KEP_P_kW 앞으로 이동 완료)
+# 데이터 레이블 (주파수가 KEP_P_kW 앞에 배치된 형태 유지)
 DATA_LABELS = [
     "실내온도", "외기온도", "SF운전시간", "EF운전시간",
     "KEP_A_R", "KEP_A_S", "KEP_A_T", 
     "KEP_V_R", "KEP_V_S", "KEP_V_T", "KEP_V_R_S", "KEP_V_S_T", "KEP_V_T_R", 
-    "KEP_frequency",  # <-- 요청하신 대로 KEP_P_kW 앞으로 배치 (인덱스 13번)
-    "KEP_P_kW",       # (인덱스 14번)
-    "KEP_P_mWh",      # 32비트 Int 처리 (인덱스 15번)
+    "KEP_frequency",  
+    "KEP_P_kW",       
+    "KEP_P_mWh",      # 32비트 Int 처리
     "Tr1_A_R", "Tr1_A_S", "Tr1_A_T", "Tr1_V_R", "Tr1_V_S", "Tr1_V_T", "Tr1_V_R_S", "Tr1_V_S_T", "Tr1_V_T_R", "Tr1_P_kW", "Tr1_Temp",
     "Tr2_A_R", "Tr2_A_S", "Tr2_A_T", "Tr2_V_R", "Tr2_V_S", "Tr2_V_T", "Tr2_V_R_S", "Tr2_V_S_T", "Tr2_V_T_R", "Tr2_P_kW", "Tr2_Temp",
     "Tr3_A_R", "Tr3_A_S", "Tr3_A_T", "Tr3_V_R", "Tr3_V_S", "Tr3_V_T", "Tr3_V_R_S", "Tr3_V_S_T", "Tr3_V_T_R", "Tr3_P_kW", "Tr3_Temp"
@@ -77,7 +77,7 @@ def init_db():
     conn.close()
 
 def insert_raw_data(values):
-    """위치 변경 및 32비트 조합이 완료된 49개 값을 가공하여 저장"""
+    """[혁신 보완] 인덱스 번호 대신 Label명(이름) 기준으로 소수점 자동 연산 분기 처리"""
     if len(values) < len(DATA_LABELS):
         return
         
@@ -89,24 +89,27 @@ def insert_raw_data(values):
         l_date = now.strftime('%Y-%m-%d')
         l_time = now.strftime('%H:%M:%S')
         
+        # 10으로 나누어야 하는 필드 이름 집합 정의
+        DIV_BY_10 = {
+            "실내온도", "외기온도", "SF운전시간", "EF운전시간",             
+            "Tr1_Temp", "Tr2_Temp", "Tr3_Temp"
+        }
+        
+        # 100으로 나누어야 하는 필드 이름 집합 정의
+        DIV_BY_100 = {
+            "KEP_A_R", "KEP_A_S", "KEP_A_T", "KEP_frequency", "KEP_V_R", "KEP_V_S", "KEP_V_T", "KEP_V_R_S", "KEP_V_S_T", "KEP_V_T_R", 
+            "KEP_P_mWh"
+        }
+        
         adjusted_values = []
-        for i, v in enumerate(values):
-            # 1. 10으로 나누는 항목 (0~6번 필드 + 위치 이동한 13번 주파수 필드 포함)
-            if i in [0, 1, 2, 3, 4, 5, 6, 13]:  # 주파수 인덱스가 13번으로 변경됨
-                adjusted_values.append(v / 10.0)
-            # 변압기 온도 피드백 (인덱스 유지: 27, 38, 49번)
-            elif i in [27, 38, 49]:         
-                adjusted_values.append(v / 10.0)
-                
-            # 2. 100으로 나누는 항목
-            elif i in [7, 8, 9, 10, 11, 12]:   # KEP_V 계열 전압
-                adjusted_values.append(v / 100.0)
-            elif i == 15:                     # KEP_P_mWh (32비트 전력량 인덱스가 15번이 됨)
-                adjusted_values.append(v / 100.0)
-                
-            # 3. 정수 형태 유지 (KEP_P_kW는 14번 정수형태 유지)
+        # 이름(label)과 값(val)을 매핑하여 순회 처리
+        for label, val in zip(DATA_LABELS, values):
+            if label in DIV_BY_10:
+                adjusted_values.append(val / 10.0)
+            elif label in DIV_BY_100:
+                adjusted_values.append(val / 100.0)
             else:
-                adjusted_values.append(float(v))
+                adjusted_values.append(float(val)) # 나머지는 정수 형태 그대로 실수 변환 유지
 
         placeholders = ", ".join(["?"] * len(adjusted_values))
         col_names = ", ".join([f'"{name}"' for name in DATA_LABELS])
@@ -115,7 +118,7 @@ def insert_raw_data(values):
         c.execute(query, [l_date, l_time] + adjusted_values)
         conn.commit()
         conn.close()
-        print(f"[{l_date} {l_time}] DB 저장 성공 (주파수 정렬 완료)")
+        print(f"[{l_date} {l_time}] DB 저장 성공 (Label명 기반 스마트 스케일링 완료)")
     except Exception as e:
         print(f"DB 저장 오류: {e}")
 
@@ -209,9 +212,7 @@ def serial_receive_thread():
                         if verify_crc(packet):
                             raw_values = packet[7:7+(NUM_WORDS * 2)]
                             
-                            # [구조 매핑 개편]
-                            # 15개 항목 (실내온도~KEP_P_kW까지 15개의 16비트 정수) + 32비트 전력량(i) + 나머지 33개(33h)
-                            # 형식 문자열 기호 설명: >15h (15개 short) + i (1개 int) + 33h (33개 short) = 총 49개 데이터 반환
+                            # 15개 항목(Short) + 32비트 전력량(i) + 나머지 33개(Short) 구조 해체
                             values = struct.unpack('>15h i 33h', raw_values)
                             insert_raw_data(values)
                             
@@ -238,7 +239,7 @@ class SCADAWindow(QMainWindow):
         self.last_hour = datetime.now().hour
 
     def initUI(self):
-        self.setWindowTitle("변전실 데이터 통합 모니터링 시스템 (주파수 재정렬 버전)")
+        self.setWindowTitle("변전실 데이터 통합 모니터링 시스템 (유지보수 고도화 버전)")
         self.resize(1400, 900)
         
         central_widget = QWidget()
@@ -318,25 +319,6 @@ class SCADAWindow(QMainWindow):
         self.period_selector.currentIndexChanged.connect(self.update_graph)
 
         self.load_data()
-
-    def load_data(self):
-        date_str = self.qdate.date().toString("yyyy-MM-dd")
-        calculate_daily_extremes(date_str)
-        
-        conn = sqlite3.connect(DB_NAME)
-        c = conn.cursor()
-        try:
-            c.execute("SELECT * FROM raw_data WHERE log_date = ? ORDER BY log_time DESC LIMIT 50", (date_str,))
-            self.display_table(self.raw_table, c.fetchall())
-            
-            c.execute("SELECT * FROM hourly_avg WHERE log_date = ? ORDER BY log_time DESC", (date_str,))
-            self.display_table(self.avg_table, c.fetchall())
-            
-            c.execute("SELECT * FROM daily_extremes WHERE log_date = ? ORDER BY extreme_type DESC", (date_str,))
-            self.display_table(self.extreme_table, c.fetchall(), is_extreme=True)
-        except Exception as e:
-            print(f"조회 오류: {e}")
-        conn.close()
 
     def update_graph(self):
         if self.stack.currentIndex() != 1: return
