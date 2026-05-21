@@ -97,8 +97,7 @@ def insert_raw_data(values):
         
         # 100으로 나누어야 하는 필드 이름 집합 정의
         DIV_BY_100 = {
-            "KEP_A_R", "KEP_A_S", "KEP_A_T", "KEP_frequency", "KEP_V_R", "KEP_V_S", "KEP_V_T", "KEP_V_R_S", "KEP_V_S_T", "KEP_V_T_R", 
-            "KEP_P_mWh"
+            "KEP_A_R", "KEP_A_S", "KEP_A_T", "KEP_frequency", "KEP_V_R", "KEP_V_S", "KEP_V_T", "KEP_V_R_S", "KEP_V_S_T", "KEP_V_T_R"
         }
         
         adjusted_values = []
@@ -223,8 +222,8 @@ def serial_receive_thread():
                             u_word2 = word_2 if word_2 >= 0 else word_2 + 65536
                             
                             # 💡 현장 계측기 값과 상하위 워드 순서 확인용 수식 (반전 필요시 아래 주석 체인지)
-                            dint_mwh = (u_word1 << 16) + u_word2
-                            # dint_mwh = (u_word2 << 16) + u_word1
+                            # dint_mwh = (u_word1 << 16) + u_word2
+                            dint_mwh = (u_word2 << 16) + u_word1
                             
                             if dint_mwh & 0x80000000:
                                 dint_mwh -= 0x100000000
@@ -340,6 +339,28 @@ class SCADAWindow(QMainWindow):
         self.period_selector.currentIndexChanged.connect(self.update_graph)
 
         self.load_data()
+
+    def load_data(self):
+        date_str = self.qdate.date().toString("yyyy-MM-dd")
+        
+        # 로드 시점에 당일 최고/최저 실시간 자동 분석 계산 실행
+        calculate_daily_extremes(date_str)
+        
+        conn = sqlite3.connect(DB_NAME)
+        c = conn.cursor()
+        try:
+            c.execute("SELECT * FROM raw_data WHERE log_date = ? ORDER BY log_time DESC LIMIT 50", (date_str,))
+            self.display_table(self.raw_table, c.fetchall())
+            
+            c.execute("SELECT * FROM hourly_avg WHERE log_date = ? ORDER BY log_time DESC", (date_str,))
+            self.display_table(self.avg_table, c.fetchall())
+            
+            c.execute("SELECT * FROM daily_extremes WHERE log_date = ? ORDER BY extreme_type DESC", (date_str,))
+            self.display_table(self.extreme_table, c.fetchall(), is_extreme=True)
+        except Exception as e:
+            print(f"조회 오류: {e}")
+        conn.close()
+
 
     def update_graph(self):
         if self.stack.currentIndex() != 1: return
