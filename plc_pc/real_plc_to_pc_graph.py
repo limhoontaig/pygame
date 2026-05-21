@@ -179,7 +179,7 @@ def calculate_daily_extremes(target_date):
         conn.close()
 
 # ==========================================
-# 4. 정밀 시리얼 수신 엔진
+# 4. 정밀 시리얼 수신 엔진 (DINT 직접 조립 처리)
 # ==========================================
 def serial_receive_thread():
     try:
@@ -212,10 +212,31 @@ def serial_receive_thread():
                         if verify_crc(packet):
                             raw_values = packet[7:7+(NUM_WORDS * 2)]
                             
-                            # 15개 항목(Short) + 32비트 전력량(i) + 나머지 33개(Short) 구조 해체
-                            values = struct.unpack('>15h i 33h', raw_values)
-                            insert_raw_data(values)
+                            # 50개 워드를 각각 안전하게 가져옵니다.
+                            raw_words = struct.unpack(f'>{NUM_WORDS}h', raw_values)
                             
+                            # KEP_P_mWh 가 위치한 D915, D916 자리 추출
+                            word_1 = raw_words[15]   
+                            word_2 = raw_words[16]   
+                            
+                            u_word1 = word_1 if word_1 >= 0 else word_1 + 65536
+                            u_word2 = word_2 if word_2 >= 0 else word_2 + 65536
+                            
+                            # 💡 현장 계측기 값과 상하위 워드 순서 확인용 수식 (반전 필요시 아래 주석 체인지)
+                            dint_mwh = (u_word1 << 16) + u_word2
+                            # dint_mwh = (u_word2 << 16) + u_word1
+                            
+                            if dint_mwh & 0x80000000:
+                                dint_mwh -= 0x100000000
+                                
+                            # 2개의 16비트 워드를 1개의 32비트 결합 데이터로 팩킹 후 리스트 재구성
+                            values = (
+                                list(raw_words[:15]) +    
+                                [dint_mwh] +              
+                                list(raw_words[17:])      
+                            )
+                            
+                            insert_raw_data(values)
                             buffer = buffer[expected_len:] 
                         else:
                             buffer = buffer[1:]
