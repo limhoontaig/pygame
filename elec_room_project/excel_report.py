@@ -5,7 +5,7 @@ import zipfile
 import re
 from datetime import datetime, timedelta
 import openpyxl
-from db_manager import DB_NAME, DATA_LABELS
+from db_manager import DB_NAME, DATA_LABELS, METER_FIELDS, create_manual_meter_table
 
 def clean_external_links_physically(file_path):
     """
@@ -109,15 +109,12 @@ def generate_excel_report(selected_date):
     # =========================================================================
     # 💡 [파트 2 완벽 반영] 2. 사용 전력량 현황 자동 데이터 치환 (21행 및 22행 영역)
     # =========================================================================
-    # [A] 21행 일간 전력량용 데이터 가져오기 (daily_extremes 테이블 이용)
-    # daily_extremes 테이블의 KEP_P_kWh 컬럼 인덱스 찾기
     day_min_val = "-"
     day_max_val = "-"
     if "KEP_P_kWh" in columns_extreme:
         day_min_val = extremes_dict.get(("MIN", "KEP_P_kWh"), "-")
         day_max_val = extremes_dict.get(("MAX", "KEP_P_kWh"), "-")
     
-    # 데이터가 비어있을 경우를 대비한 상호 백업 쿼리 가동 (안전장치)
     if day_min_val == "-" or day_max_val == "-":
         c.execute('SELECT MIN(KEP_P_kWh), MAX(KEP_P_kWh) FROM raw_data WHERE log_date = ?', (selected_date,))
         res_raw = c.fetchone()
@@ -125,8 +122,6 @@ def generate_excel_report(selected_date):
             if day_min_val == "-" and res_raw[0] is not None: day_min_val = round(res_raw[0], 1)
             if day_max_val == "-" and res_raw[1] is not None: day_max_val = round(res_raw[1], 1)
 
-    # [B] 22행 월간 전력량용 데이터 가져오기
-    # 월시작 누적 전력량 추적 (당월 1일부터 당일까지 중 최초로 기록된 로깅 데이터)
     start_of_month = f"{dt.year}-{dt.month:02d}-01"
     c.execute('''
         SELECT KEP_P_kWh FROM raw_data 
@@ -136,29 +131,18 @@ def generate_excel_report(selected_date):
     month_start_res = c.fetchone()
     month_start_val = round(month_start_res[0], 1) if month_start_res and month_start_res[0] is not None else "-"
 
-    # 4) 21행과 22행 전용 정밀 사격 제어 루프
     for row_idx in [21, 22]:
         for cell in ws_summary[row_idx]:
             if cell.value and isinstance(cell.value, str):
                 text_clean = cell.value.strip().replace(" ", "")
-                
-                # 21행 일간 전력량 치환 정밀 매핑 (min / max 식별자 매칭)
                 if row_idx == 21:
-                    if 'min("KEP_P_kWh")' in text_clean:
-                        cell.value = day_min_val     # C21 셀 안착
-                    elif 'max("KEP_P_kWh")' in text_clean:
-                        cell.value = day_max_val     # E21 셀 안착
-                    elif 'E21-C21' in text_clean:
-                        cell.value = "=E21-C21"       # G21 일간 전력 사용량 공식 입력
-                
-                # 22행 월간 전력량 치환 정밀 매핑 (start / end 식별자 매칭)
+                    if 'min("KEP_P_kWh")' in text_clean: cell.value = day_min_val
+                    elif 'max("KEP_P_kWh")' in text_clean: cell.value = day_max_val
+                    elif 'E21-C21' in text_clean: cell.value = "=E21-C21"
                 elif row_idx == 22:
-                    if 'start("KEP_P_kWh")' in text_clean:
-                        cell.value = month_start_val  # C22 셀 안착
-                    elif 'end("KEP_P_kWh")' in text_clean:
-                        cell.value = day_max_val      # E22 셀 안착 (당일 최대 누적치가 곧 최종 누적값)
-                    elif 'E22-C22' in text_clean:
-                        cell.value = "=E22-C22"       # G22 월간 전력 사용량 공식 입력
+                    if 'start("KEP_P_kWh")' in text_clean: cell.value = month_start_val
+                    elif 'end("KEP_P_kWh")' in text_clean: cell.value = day_max_val
+                    elif 'E22-C22' in text_clean: cell.value = "=E22-C22"
 
     # =========================================================================
     # [파트 3] 한전 메인 적산 사용량 하단 요약 테이블 연동 구역 (26행 이하)
@@ -167,13 +151,59 @@ def generate_excel_report(selected_date):
     prev_mwh = day_min_val if day_min_val != "-" else "-"
     diff_mwh = round(today_mwh - prev_mwh, 1) if today_mwh != "-" and prev_mwh != "-" else "-"
 
-    for row in ws_summary.iter_rows(min_row=26):
+    for row in ws_summary.iter_rows(min_row=26, max_row=30): # 루프 범위 안전 제한
         for cell in row:
             if cell.value and isinstance(cell.value, str):
                 val_strip = cell.value.strip()
                 if val_strip == "1469.79": cell.value = today_mwh
                 elif val_strip == "1464.06": cell.value = prev_mwh
                 elif val_strip == "5.7300000000000182": cell.value = diff_mwh
+
+    # =========================================================================
+    # 🆕 [파트 3-2] 수동 검침(manual_meter_logs) 데이터 연동 구역 (C27 ~ J35 범위)
+    # =========================================================================
+    create_manual_meter_table() # 테이블 검증
+    
+    # 전일 및 전월 동기 날짜 계산
+    prev_day = (dt - timedelta(days=1)).strftime('%Y-%m-%d')
+    try:
+        # 한 달 전 같은 날짜 계산 (예: 5월 22일 -> 4월 22일)
+        prev_month_dt = dt.replace(month=dt.month - 1) if dt.month > 1 else dt.replace(year=dt.year - 1, month=12)
+        prev_month = prev_month_dt.strftime('%Y-%m-%d')
+    except ValueError:
+        # 말일 유효성 예외 처리 (예: 3월 31일의 한달 전은 2월 28일/29일)
+        prev_month = (dt.replace(day=1) - timedelta(days=1)).strftime('%Y-%m-%d')
+
+    # 금일, 전일, 전월 데이터 로드
+    meter_data = {}
+    for label, target_d in [("금일", selected_date), ("전일", prev_day), ("전월", prev_month)]:
+        fields_str = ", ".join(METER_FIELDS)
+        c.execute(f'SELECT {fields_str} FROM manual_meter_logs WHERE log_date = ?', (target_d,))
+        res = c.fetchone()
+        
+        # 필드별 데이터 매핑 (데이터가 없으면 빈 문자열 또는 수식 유지를 위해 None)
+        if res:
+            meter_data[label] = {field: res[idx] for idx, field in enumerate(METER_FIELDS)}
+        else:
+            meter_data[label] = {field: None for field in METER_FIELDS}
+
+    # C27부터 J35 영역 스캔 및 매칭 치환
+    for row in ws_summary.iter_rows(min_row=27, max_row=35, min_col=3, max_col=10):
+        for cell in row:
+            if cell.value and isinstance(cell.value, str):
+                val_strip = cell.value.strip().replace(" ", "")
+                
+                # 패턴 매칭 예시: "금일("main_active")" 또는 "전일("ind_max")"
+                # 따옴표 유무에 유연하게 대처하기 위해 정규식(re) 활용
+                match = re.match(r'(금일|전일|전월)\(["\']?([a-zA-Z0-9_]+)["\']?\)', val_strip)
+                if match:
+                    time_type = match.group(1)   # 금일 / 전일 / 전월
+                    field_name = match.group(2)  # main_active 등
+                    
+                    if field_name in METER_FIELDS:
+                        db_val = meter_data[time_type][field_name]
+                        # DB 값이 존재하면 실수형(float)으로 입력, 없으면 공백 처리
+                        cell.value = float(db_val) if db_val is not None else ""
 
     # =========================================================================
     # [파트 4] 상세내역 시트 - 시간별 데이터 완벽 주입 (상/하단 24시간 입력 제어)
@@ -217,7 +247,7 @@ def generate_excel_report(selected_date):
     
     # 엑셀 파일 내부 외부 수식 관계 물리적 청소 기능 호출
     clean_external_links_physically(output_file)
-    print(f"[업데이트 완료] 21행 일간 및 22행 월간 전력량 연동 성공: {output_file}")
+    print(f"[업데이트 완료] 전력량 및 수동 검침 연동 성공: {output_file}")
 
 if __name__ == "__main__":
     generate_excel_report("2026-05-21")
