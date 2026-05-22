@@ -8,6 +8,8 @@ from PyQt5.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout,
                              QPushButton, QTableWidget, QTableWidgetItem, QLabel, QHBoxLayout, 
                              QDateEdit, QComboBox, QGroupBox, QSplitter, QStackedWidget, QMessageBox)
 from PyQt5.QtCore import QTimer, QDate, Qt
+# main.py 상단에 추가할 내용 (QFormLayout 추가)
+from PyQt5.QtWidgets import QDialog, QLabel, QLineEdit, QGridLayout, QDateEdit, QDialogButtonBox, QGroupBox, QFormLayout
 
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
@@ -20,6 +22,122 @@ import excel_report
 
 plt.rcParams['font.family'] = 'Malgun Gothic'
 plt.rcParams['axes.unicode_minus'] = False
+
+class ManualMeterInputDialog(QDialog):
+    """독립된 3개 계량장치의 11개 지침을 날짜별로 통합 입력/수정하는 팝업 창"""
+    def __init__(self, default_date_str, parent=None):
+        super().__init__(parent)
+        self.setWindowTitle("독립 계량장치 일일 지침 수동 입력/수정")
+        self.resize(550, 450)
+        
+        main_layout = QVBoxLayout()
+        
+        # 1. 날짜 선택 영역
+        date_layout = QHBoxLayout()
+        date_layout.addWidget(QLabel("<b>검침 대상 일자:</b>"))
+        self.date_edit = QDateEdit()
+        self.date_edit.setCalendarPopup(True)
+        self.date_edit.setDate(QDate.fromString(default_date_str, "yyyy-MM-dd"))
+        self.date_edit.dateChanged.connect(self.load_date_data) # 날짜 바꾸면 즉시 기존 데이터 로드
+        date_layout.addWidget(self.date_edit)
+        date_layout.addStretch()
+        main_layout.addLayout(date_layout)
+        
+        # 2. 3대 장치 입력 폼 구성 (입력 필드 딕셔너리 정렬)
+        self.inputs = {}
+        grid = QGridLayout()
+        
+        # [그룹 1] 한전 메인 데이터
+        group_main = QGroupBox("한전 메인 계량기")
+        layout_main = QFormLayout()
+        self.inputs["main_active"] = QLineEdit()
+        self.inputs["main_reactive"] = QLineEdit()
+        layout_main.addRow("메인 유효 전력량 (4번):", self.inputs["main_active"])
+        layout_main.addRow("메인 무효 전력량 (5번):", self.inputs["main_reactive"])
+        group_main.setLayout(layout_main)
+        grid.addWidget(group_main, 0, 0)
+        
+        # [그룹 2] 산업용 전력 데이터
+        group_ind = QGroupBox("산업용 (급수/정화조)")
+        layout_ind = QFormLayout()
+        self.inputs["ind_mid"] = QLineEdit()
+        self.inputs["ind_max"] = QLineEdit()
+        self.inputs["ind_light"] = QLineEdit()
+        layout_ind.addRow("산업용 유효 중간 (13번):", self.inputs["ind_mid"])
+        layout_ind.addRow("산업용 유효 최대 (14번):", self.inputs["ind_max"])
+        layout_ind.addRow("산업용 유효 경부하 (15번):", self.inputs["ind_light"])
+        group_ind.setLayout(layout_ind)
+        grid.addWidget(group_ind, 0, 1)
+        
+        # [그룹 3] 가로등 전력 데이터
+        group_street = QGroupBox("가로등 (LV10)")
+        layout_street = QFormLayout()
+        self.inputs["street_mid"] = QLineEdit()
+        self.inputs["street_max"] = QLineEdit()
+        self.inputs["street_light"] = QLineEdit()
+        layout_street.addRow("가로등 유효 중간 (13번):", self.inputs["street_mid"])
+        layout_street.addRow("가로등 유효 최대 (14번):", self.inputs["street_max"])
+        layout_street.addRow("가로등 유효 경부하 (15번):", self.inputs["street_light"])
+        group_street.setLayout(layout_street)
+        grid.addWidget(group_street, 1, 0)
+        
+        # [그룹 4] 지열 시스템 데이터
+        group_geo = QGroupBox("지열 시스템 지침")
+        layout_geo = QFormLayout()
+        self.inputs["geo_1"] = QLineEdit()
+        self.inputs["geo_2"] = QLineEdit()
+        self.inputs["geo_3"] = QLineEdit()
+        layout_geo.addRow("지열 1호기 지침:", self.inputs["geo_1"])
+        layout_geo.addRow("지열 2호기 지침:", self.inputs["geo_2"])
+        layout_geo.addRow("지열 3호기 지침:", self.inputs["geo_3"])
+        group_geo.setLayout(layout_geo)
+        grid.addWidget(group_geo, 1, 1)
+        
+        main_layout.addLayout(grid)
+        
+        # 안내 문구
+        lbl_info = QLabel("※ 숫자를 입력하면 실시간 저장/수정되며, 공백으로 두면 빈 데이터로 처리됩니다.")
+        lbl_info.setStyleSheet("color: blue; font-size: 11px;")
+        main_layout.addWidget(lbl_info)
+        
+        # 3. 저장 및 취소 버튼
+        buttons = QDialogButtonBox(QDialogButtonBox.Save | QDialogButtonBox.Cancel)
+        buttons.accepted.connect(self.validate_and_accept)
+        buttons.rejected.connect(self.reject)
+        main_layout.addWidget(buttons)
+        
+        self.setLayout(main_layout)
+        
+        # 최초 실행 시 현재 설정된 날짜 데이터 로딩 가동
+        self.load_date_data()
+        
+    def load_date_data(self):
+        """날짜가 변경될 때마다 DB를 뒤져 해당 일자의 기존 수치를 양식에 표기합니다."""
+        date_str = self.date_edit.date().toString("yyyy-MM-dd")
+        # db_manager의 조회 함수 호출
+        current_data = db_manager.get_manual_meter_data(date_str)
+        
+        for field, value in current_data.items():
+            self.inputs[field].setText(value)
+            
+    def validate_and_accept(self):
+        """입력된 값들이 정상적인 숫자 포맷인지 최종 무결성 검사를 수행합니다."""
+        for field, edit in self.inputs.items():
+            text = edit.text().strip()
+            if text:
+                try:
+                    float(text)
+                except ValueError:
+                    QMessageBox.warning(self, "포맷 오류", "지침 입력 값은 순수 숫자(또는 소수점)만 입력 가능합니다.")
+                    edit.setFocus()
+                    return
+        self.accept()
+
+    def get_final_inputs(self):
+        """저장 승인 시 가공된 날짜 및 11개 필드 딕셔너리를 메인 윈도우로 반환합니다."""
+        date_str = self.date_edit.date().toString("yyyy-MM-dd")
+        data_dict = {field: edit.text().strip() for field, edit in self.inputs.items()}
+        return date_str, data_dict
 
 class SCADAWindow(QMainWindow):
     def __init__(self):
@@ -51,9 +169,16 @@ class SCADAWindow(QMainWindow):
         self.btn_export_excel = QPushButton("엑셀 운영일지 출력")
         self.btn_export_excel.setStyleSheet("background-color: #27ae60; color: white; font-weight: bold;")
         
+        # SCADAWindow 클래스의 initUI 또는 버튼 레이아웃 배치 구역에 추가
+        self.btn_meter_input = QPushButton("전력량 입력") # 요청하신 버튼명 지정
+        self.btn_meter_input.setStyleSheet("background-color: #2196F3; color: white; font-weight: bold; min-height: 35px;")
+        self.btn_meter_input.clicked.connect(self.click_open_meter_popup)
+        
         top_layout.addWidget(self.btn_show_table)
         top_layout.addWidget(self.btn_show_graph)
         top_layout.addWidget(self.btn_export_excel)
+        # 🛠️ 수정한 부분: hbox 대신 top_layout 레이아웃 변수명을 정확하게 매칭
+        top_layout.addWidget(self.btn_meter_input)    
         main_layout.addWidget(top_ctrl)
 
         self.stack = QStackedWidget()
@@ -199,6 +324,30 @@ class SCADAWindow(QMainWindow):
             self.last_hour = curr_hour
         self.load_data()
         self.update_graph()
+
+    def click_open_meter_popup(self):
+        """'전력량 입력' 버튼 터치 시 수동 검침 통합 팝업을 기동하는 슬롯 함수"""
+        # 현재 화면 캘린더에 지정되어 있는 날짜를 기본값으로 토스
+        current_view_date = self.qdate.date().toString("yyyy-MM-dd")
+        
+        dialog = ManualMeterInputDialog(current_view_date, self)
+        if dialog.exec_() == QDialog.Accepted:
+            save_date, final_data = dialog.get_final_inputs()
+            try:
+                # db_manager에 설계한 통합 저장 로직 원격 작동
+                db_manager.save_manual_meter_data(save_date, final_data)
+                
+                QMessageBox.information(
+                    self, "입력 및 수정 완료", 
+                    f"[{save_date}] 일자의 독립 계량기 11개 필드 지침 데이터가\nDB(manual_meter_logs)에 안전하게 반영되었습니다."
+                )
+                
+                # 필요 시 메인 화면 테이블 리프레시 가동
+                if hasattr(self, 'refresh_data'):
+                    self.refresh_data()
+                    
+            except Exception as e:
+                QMessageBox.critical(self, "저장 실패", f"DB 수동 데이터 업데이트 프로세스 중 오류 발생:\n{e}")
 
 if __name__ == "__main__":
     db_manager.init_db()
