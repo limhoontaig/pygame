@@ -39,8 +39,8 @@ def clean_external_links_physically(file_path):
 
 def generate_excel_report(selected_date):
     """
-    22행의 start("KEP_P_kWh"), end("KEP_P_kWh") 서식을 정확히 매칭하여 
-    실측 데이터를 주입하고 테이블 헤더(24, 25행)를 원본 그대로 보존하는 핵심 엔진입니다.
+    21행의 일간 전력량 서식(min/max)과 22행의 월간 전력량 서식(start/end)을 
+    DB 실측 통계 데이터로 매핑하고, 수식이 정상 작동하도록 주입하는 핵심 엔진입니다.
     """
     BASE_DIR = os.path.dirname(os.path.abspath(__file__))
     template_file = os.path.join(BASE_DIR, "template_전기실_운영일지.xlsx")
@@ -53,18 +53,18 @@ def generate_excel_report(selected_date):
     shutil.copy(template_file, output_file)
     wb = openpyxl.load_workbook(output_file, data_only=False)
     
-    # 오픈픽셀 자체 링크 버그 예방책 마련
+    # 오픈픽셀 자체 유령 링크 버그 예방책 마련
     if hasattr(wb, 'external_link_refs'): wb.external_link_refs = []
     if hasattr(wb, '_external_links'): wb._external_links = []
 
     dt = datetime.strptime(selected_date, "%Y-%m-%d")
     date_str_formatted = f"{dt.year}년 {dt.month:02d}월 {dt.day:02d}일"
     
-    # 시트 명칭 동적 보정 및 할당
+    # 시트 명칭 동적 보정 및 할당 ("전력설비_운전현황" 또는 "전력설비_운영현황" 지원)
     ws_summary = None
     ws_detail = None
     for sheet in wb.worksheets:
-        if "운영현황" in sheet.title or "운전현황" in sheet.title:
+        if "운전현황" in sheet.title or "운영현황" in sheet.title:
             ws_summary = sheet
             sheet.title = f"{selected_date}_전력설비_운전현황"
         elif "상세내역" in sheet.title:
@@ -106,11 +106,27 @@ def generate_excel_report(selected_date):
                     label = cell.value.split('"')[1].strip() if '"' in cell.value else cell.value.replace("min(", "").replace(")", "").strip()
                     cell.value = extremes_dict.get(("MIN", label), "-")
 
-        
     # =========================================================================
-    # 💡 [파트 2 수정 완료] 22행 고정 정밀 타격 및 영문 식별자 매핑 처리
+    # 💡 [파트 2 완벽 반영] 2. 사용 전력량 현황 자동 데이터 치환 (21행 및 22행 영역)
     # =========================================================================
-    # 1) 월시작 누적 전력량 추적 (당월 1일부터 선택일까지 데이터 중 최초 누적값)
+    # [A] 21행 일간 전력량용 데이터 가져오기 (daily_extremes 테이블 이용)
+    # daily_extremes 테이블의 KEP_P_kWh 컬럼 인덱스 찾기
+    day_min_val = "-"
+    day_max_val = "-"
+    if "KEP_P_kWh" in columns_extreme:
+        day_min_val = extremes_dict.get(("MIN", "KEP_P_kWh"), "-")
+        day_max_val = extremes_dict.get(("MAX", "KEP_P_kWh"), "-")
+    
+    # 데이터가 비어있을 경우를 대비한 상호 백업 쿼리 가동 (안전장치)
+    if day_min_val == "-" or day_max_val == "-":
+        c.execute('SELECT MIN(KEP_P_kWh), MAX(KEP_P_kWh) FROM raw_data WHERE log_date = ?', (selected_date,))
+        res_raw = c.fetchone()
+        if res_raw:
+            if day_min_val == "-" and res_raw[0] is not None: day_min_val = round(res_raw[0], 1)
+            if day_max_val == "-" and res_raw[1] is not None: day_max_val = round(res_raw[1], 1)
+
+    # [B] 22행 월간 전력량용 데이터 가져오기
+    # 월시작 누적 전력량 추적 (당월 1일부터 당일까지 중 최초로 기록된 로깅 데이터)
     start_of_month = f"{dt.year}-{dt.month:02d}-01"
     c.execute('''
         SELECT KEP_P_kWh FROM raw_data 
@@ -120,36 +136,35 @@ def generate_excel_report(selected_date):
     month_start_res = c.fetchone()
     month_start_val = round(month_start_res[0], 1) if month_start_res and month_start_res[0] is not None else "-"
 
-    # 2) 당일 최종 전력량 추적 (보고서 지정 날짜의 최고 누적 전력량 값)
-    c.execute('SELECT MAX(KEP_P_kWh) FROM raw_data WHERE log_date = ?', (selected_date,))
-    row_end_res = c.fetchone()
-    day_end_val = round(row_end_res[0], 1) if row_end_res and row_end_res[0] is not None else "-"
-
-    # 3) 22행 전체 셀을 수평으로 정밀 스캔하여 데이터 교체 및 수식 주입
-    for cell in ws_summary[22]:
-        if cell.value and isinstance(cell.value, str):
-            text_clean = cell.value.strip().replace(" ", "")
-            
-            # C22 및 E22 자리 정밀 탐색 치환
-            if 'start("KEP_P_kWh")' in text_clean:
-                cell.value = month_start_val
-            elif 'end("KEP_P_kWh")' in text_clean:
-                cell.value = day_end_val
-            # G22 자리에 수식이 깨지지 않도록 수식 공식 강제 주입
-            elif 'E22-C22' in text_clean:
-                cell.value = "=E22-C22"
+    # 4) 21행과 22행 전용 정밀 사격 제어 루프
+    for row_idx in [21, 22]:
+        for cell in ws_summary[row_idx]:
+            if cell.value and isinstance(cell.value, str):
+                text_clean = cell.value.strip().replace(" ", "")
+                
+                # 21행 일간 전력량 치환 정밀 매핑 (min / max 식별자 매칭)
+                if row_idx == 21:
+                    if 'min("KEP_P_kWh")' in text_clean:
+                        cell.value = day_min_val     # C21 셀 안착
+                    elif 'max("KEP_P_kWh")' in text_clean:
+                        cell.value = day_max_val     # E21 셀 안착
+                    elif 'E21-C21' in text_clean:
+                        cell.value = "=E21-C21"       # G21 일간 전력 사용량 공식 입력
+                
+                # 22행 월간 전력량 치환 정밀 매핑 (start / end 식별자 매칭)
+                elif row_idx == 22:
+                    if 'start("KEP_P_kWh")' in text_clean:
+                        cell.value = month_start_val  # C22 셀 안착
+                    elif 'end("KEP_P_kWh")' in text_clean:
+                        cell.value = day_max_val      # E22 셀 안착 (당일 최대 누적치가 곧 최종 누적값)
+                    elif 'E22-C22' in text_clean:
+                        cell.value = "=E22-C22"       # G22 월간 전력 사용량 공식 입력
 
     # =========================================================================
     # [파트 3] 한전 메인 적산 사용량 하단 요약 테이블 연동 구역 (26행 이하)
     # =========================================================================
-    # 전일 종료값(=금일 시작값) 연산용 데이터 조회
-    prev_date = (dt - timedelta(days=1)).strftime("%Y-%m-%d")
-    c.execute('SELECT MAX(KEP_P_kWh) FROM raw_data WHERE log_date = ?', (prev_date,))
-    row_start_res = c.fetchone()
-    day_start_val = round(row_start_res[0], 1) if row_start_res and row_start_res[0] is not None else "-"
-
-    today_mwh = day_end_val
-    prev_mwh = day_start_val
+    today_mwh = day_max_val if day_max_val != "-" else "-"
+    prev_mwh = day_min_val if day_min_val != "-" else "-"
     diff_mwh = round(today_mwh - prev_mwh, 1) if today_mwh != "-" and prev_mwh != "-" else "-"
 
     for row in ws_summary.iter_rows(min_row=26):
@@ -200,54 +215,9 @@ def generate_excel_report(selected_date):
     conn.close()
     wb.save(output_file)
     
-    # 엑셀 파일 뼈대 속 외부 수식 파편 물리 청소 강제 작동 (오류 경고 완전 제거)
+    # 엑셀 파일 내부 외부 수식 관계 물리적 청소 기능 호출
     clean_external_links_physically(output_file)
-    print(f"[최종 보완 완료] 정밀 연동 보고서 생성 성공: {output_file}")
-
-
-def update_power_consumption_section(ws, selected_date):
-    """
-    운영현황 시트의 21행(일간 전력량) 및 22행(월간 전력량)의 
-    텍스트 표식을 실제 DB 데이터로 치환하는 함수
-    """
-    conn = sqlite3.connect("plc_logging_real.db")
-    c = conn.cursor()
-    
-    # 1. DB에서 금일(selected_date)의 KEP_P_kWh 최고값(마지막) 및 최저값(시작) 조회
-    c.execute('''
-        SELECT MIN(KEP_P_kWh), MAX(KEP_P_kWh) 
-        FROM raw_data 
-        WHERE log_date = ?
-    ''', (selected_date,))
-    res = c.fetchone()
-    
-    # 데이터가 없을 경우 예외 처리
-    today_min_kwh = round(res[0], 1) if res and res[0] is not None else "-"
-    today_max_kwh = round(res[1], 1) if res and res[1] is not None else "-"
-    
-    # 2. 엑셀 시트 전체(혹은 전력량 영역인 20~25행 사이)를 순회하며 텍스트 치환
-    for row in ws.iter_rows(min_row=20, max_row=25, min_col=1, max_col=10):
-        for cell in row:
-            if cell.value and isinstance(cell.value, str):
-                cell_text = cell.value.strip()
-                
-                # [버그 해결] C21 셀의 min("KEP_P_kWh") 표식을 실제 시작 전력량 값으로 치환
-                if 'min("KEP_P_kWh")' in cell_text or 'min( "KEP_P_kWh")' in cell_text:
-                    cell.value = today_min_kwh
-                    
-                # [버그 해결] E21 셀의 max("KEP_P_kWh") 표식을 실제 마지막 전력량 값으로 치환
-                elif 'max("KEP_P_kWh")' in cell_text or 'max( "KEP_P_kWh")' in cell_text:
-                    cell.value = today_max_kwh
-                    
-                # (참고) 22행 월간 전력량 표식도 영문으로 되어 있다면 함께 처리
-                elif 'start("KEP_P_kWh")' in cell_text:
-                    # 월시작 전력량 조회 로직 적용 (필요시)
-                    pass
-                elif 'end("KEP_P_kWh")' in cell_text:
-                    cell.value = today_max_kwh  # 오늘 최종 지침과 동일
-                    
-    conn.close()
-
+    print(f"[업데이트 완료] 21행 일간 및 22행 월간 전력량 연동 성공: {output_file}")
 
 if __name__ == "__main__":
     generate_excel_report("2026-05-21")

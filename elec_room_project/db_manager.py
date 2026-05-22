@@ -122,3 +122,70 @@ def calculate_crc(data):
                 crc >>= 1
     return struct.pack('<H', crc)
 
+# db_manager.py 맨 아래에 추가
+
+METER_FIELDS = [
+    "main_active", "main_reactive", 
+    "ind_mid", "ind_max", "ind_light", 
+    "street_mid", "street_max", "street_light", 
+    "geo_1", "geo_2", "geo_3"
+]
+
+def create_manual_meter_table():
+    """3개 계량장치의 일일 지침을 저장할 독자적인 테이블을 생성합니다."""
+    conn = sqlite3.connect(DB_NAME)
+    c = conn.cursor()
+    c.execute('''
+        CREATE TABLE IF NOT EXISTS manual_meter_logs (
+            log_date DATE PRIMARY KEY,
+            main_active REAL,
+            main_reactive REAL,
+            ind_mid REAL,
+            ind_max REAL,
+            ind_light REAL,
+            street_mid REAL,
+            street_max REAL,
+            street_light REAL,
+            geo_1 REAL,
+            geo_2 REAL,
+            geo_3 REAL
+        )
+    ''')
+    conn.commit()
+    conn.close()
+
+def get_manual_meter_data(target_date):
+    """지정된 날짜의 수동 검침 지침 데이터를 딕셔너리 형태로 불러옵니다."""
+    create_manual_meter_table() # 테이블 없으면 자동 생성
+    conn = sqlite3.connect(DB_NAME)
+    c = conn.cursor()
+    
+    fields_str = ", ".join(METER_FIELDS)
+    c.execute(f'SELECT {fields_str} FROM manual_meter_logs WHERE log_date = ?', (target_date,))
+    res = c.fetchone()
+    conn.close()
+    
+    data_dict = {f: "" for f in METER_FIELDS}
+    if res:
+        for idx, field in enumerate(METER_FIELDS):
+            data_dict[field] = str(res[idx]) if res[idx] is not None else ""
+    return data_dict
+
+def save_manual_meter_data(target_date, data_dict):
+    """지정된 날짜에 11개 필드 데이터를 저장하거나 기존 데이터가 있으면 수정(UPDATE)합니다."""
+    create_manual_meter_table()
+    conn = sqlite3.connect(DB_NAME)
+    c = conn.cursor()
+    
+    # INSERT OR REPLACE 구문을 활용하여 데이터 유무에 따라 저장/수정 자동 처리
+    fields_str = "log_date, " + ", ".join(METER_FIELDS)
+    placeholders = ", ".join(["?"] * (len(METER_FIELDS) + 1))
+    
+    values = [target_date]
+    for field in METER_FIELDS:
+        val = data_dict.get(field, "")
+        values.append(float(val) if val.strip() != "" else None)
+        
+    c.execute(f'INSERT OR REPLACE INTO manual_meter_logs ({fields_str}) VALUES ({placeholders})', values)
+    conn.commit()
+    conn.close()
