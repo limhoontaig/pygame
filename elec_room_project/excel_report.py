@@ -37,14 +37,20 @@ def clean_external_links_physically(file_path):
         if os.path.exists(temp_file_path): os.remove(temp_file_path)
         print(f"[경고] 외부 링크 물리 청소 중 예외 발생: {e}")
 
-def generate_excel_report(selected_date):
+def generate_excel_report(selected_date, target_dir=None):
+
     """
     21행의 일간 전력량 서식(min/max)과 22행의 월간 전력량 서식(start/end)을 
     DB 실측 통계 데이터로 매핑하고, 수식이 정상 작동하도록 주입하는 핵심 엔진입니다.
     """
     BASE_DIR = os.path.dirname(os.path.abspath(__file__))
     template_file = os.path.join(BASE_DIR, "template_전기실_운영일지.xlsx")
-    output_file = os.path.join(BASE_DIR, f"{selected_date}_전기실_운영일지.xlsx")
+
+    # 🛠️ 수정 배치: target_dir이 지정되면 해당 폴더에, 없으면 기존처럼 소스 폴더에 저장
+    if target_dir:
+        output_file = os.path.join(target_dir, f"{selected_date}_전기실_운영일지.xlsx")
+    else:  
+        output_file = os.path.join(BASE_DIR, f"{selected_date}_전기실_운영일지.xlsx")
     
     if not os.path.exists(template_file):
         raise FileNotFoundError(f"템플릿 파일 [{template_file}]이 경로에 존재하지 않습니다.")

@@ -1,10 +1,11 @@
+import os
 import sys
 import threading
 import sqlite3
 import pandas as pd
 from datetime import datetime, timedelta
 
-from PyQt5.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, 
+from PyQt5.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, QFileDialog,
                              QPushButton, QTableWidget, QTableWidgetItem, QLabel, QHBoxLayout, 
                              QDateEdit, QComboBox, QGroupBox, QSplitter, QStackedWidget, QMessageBox)
 from PyQt5.QtCore import QTimer, QDate, Qt
@@ -92,9 +93,7 @@ class ManualMeterInputDialog(QDialog):
         layout_geo.addRow("지열 3호기 지침:", self.inputs["geo_3"])
         group_geo.setLayout(layout_geo)
         grid.addWidget(group_geo, 1, 1)
-        
-        main_layout.addLayout(grid)
-        
+      
         # 안내 문구
         lbl_info = QLabel("※ 숫자를 입력하면 실시간 저장/수정되며, 공백으로 두면 빈 데이터로 처리됩니다.")
         lbl_info.setStyleSheet("color: blue; font-size: 11px;")
@@ -309,6 +308,7 @@ class SCADAWindow(QMainWindow):
                     elif row[1] == 'MIN': item.setForeground(Qt.blue)
                 table.setItem(r_idx, c_idx, item)
 
+    '''
     def export_excel_click(self):
         selected_date = self.qdate.date().toString("yyyy-MM-dd")
         try:
@@ -316,6 +316,34 @@ class SCADAWindow(QMainWindow):
             QMessageBox.information(self, "출력 완료", f"[{selected_date}_전기실_운영일지.xlsx]가 생성되었습니다.")
         except Exception as e:
             QMessageBox.critical(self, "출력 실패", f"에러 발생:\n{e}")
+    '''
+    def export_excel_click(self):
+        selected_date = self.qdate.date().toString("yyyy-MM-dd")
+        
+        # 1. 사용자에게 저장할 디렉토리 경로를 입력받는 표준 대화상자 팝업
+        selected_dir = QFileDialog.getExistingDirectory(self, "운영일지 저장 폴더 선택", "")
+        
+        # 2. 사용자가 폴더를 선택하지 않고 취소(창닫기)했을 경우 처리
+        if not selected_dir:
+            return  # 프로세스 안전 종료 (아무 작업도 하지 않음)
+            
+        try:
+            # 3. 엑셀 생성 엔진에 선택된 디렉토리 경로를 함께 전달
+            # (excel_report.py의 함수가 target_dir 매개변수를 받도록 함께 수정해야 합니다)
+            excel_report.generate_excel_report(selected_date, target_dir=selected_dir)
+            
+            # 4. 저장 성공 완료 알림창 표시
+            saved_path = os.path.join(selected_dir, f"{selected_date}_전기실_운영일지.xlsx")
+            QMessageBox.information(
+                self, "출력 완료", 
+                f"성공적으로 엑셀 운영일지가 생성되었습니다.\n\n저장 경로:\n{saved_path}"
+            )
+        except Exception as e:
+            QMessageBox.critical(self, "출력 실패", f"에러 발생:\n{e}")
+
+
+
+
 
     def auto_refresh(self):
         curr_hour = datetime.now().hour
