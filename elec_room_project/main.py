@@ -293,7 +293,7 @@ class SCADAWindow(QMainWindow):
             conn = sqlite3.connect(db_manager.DB_NAME)
             c = conn.cursor()
             
-            query_raw = f"SELECT log_date, log_time, {', '.join([f'\"{n}\"' for n in db_manager.DATA_LABELS])} FROM raw_data WHERE log_date = ? ORDER BY log_time DESC LIMIT 50"
+            query_raw = f"SELECT log_date, log_time, {', '.join([f'\"{n}\"' for n in db_manager.DATA_LABELS])} FROM raw_data WHERE log_date = ? ORDER BY log_time DESC" # LIMIT 50"
             c.execute(query_raw, (selected_date,))
             self.display_table(self.raw_table, c.fetchall())
             
