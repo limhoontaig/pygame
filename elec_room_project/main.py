@@ -29,7 +29,7 @@ class ManualMeterInputDialog(QDialog):
     def __init__(self, default_date_str, parent=None):
         super().__init__(parent)
         self.setWindowTitle("독립 계량장치 일일 지침 수동 입력/수정")
-        self.resize(550, 450)
+        self.resize(650, 450)
         
         main_layout = QVBoxLayout()
         
@@ -39,6 +39,12 @@ class ManualMeterInputDialog(QDialog):
         self.date_edit = QDateEdit()
         self.date_edit.setCalendarPopup(True)
         self.date_edit.setDate(QDate.fromString(default_date_str, "yyyy-MM-dd"))
+        
+        # 💡 [여기서 크기 및 스타일을 확장합니다]
+        self.date_edit.setMinimumWidth(120) # 가로 최소 크기를 150 픽셀로 강제 확장 (기존보다 훨씬 넓어집니다)
+        self.date_edit.setAlignment(Qt.AlignCenter) # 날짜 글자를 가운데 정렬하여 가독성 향상
+        self.date_edit.setStyleSheet("font-size: 13px; padding: 3px;") # 글자 크기 및 내부 여백 조정
+
         self.date_edit.dateChanged.connect(self.load_date_data) # 날짜 바꾸면 즉시 기존 데이터 로드
         date_layout.addWidget(self.date_edit)
         date_layout.addStretch()
@@ -93,6 +99,18 @@ class ManualMeterInputDialog(QDialog):
         layout_geo.addRow("지열 3호기 지침:", self.inputs["geo_3"])
         group_geo.setLayout(layout_geo)
         grid.addWidget(group_geo, 1, 1)
+        '''
+        # 🛠️ [그룹 5] 추가 및 그리드 0, 1열 통합 (행: 2, 열: 0, 행스팬: 1, 열스팬: 2)
+        group_5 = QGroupBox("그룹 5번 데이터 (통합 영역)")
+        layout_5 = QFormLayout()
+        self.inputs["group5_field1"] = QLineEdit() # 필요에 따라 db_manager 필드명과 매칭하세요
+        self.inputs["group5_field2"] = QLineEdit()
+        layout_5.addRow("그룹 5 데이터 1:", self.inputs["group5_field1"])
+        layout_5.addRow("그룹 5 데이터 2:", self.inputs["group5_field2"])
+        group_5.setLayout(layout_5)
+        grid.addWidget(group_5, 2, 0, 1, 2) # 0,0부터 시작해서 1행, 2열을 통합하여 배치
+        '''
+        main_layout.addLayout(grid)
       
         # 안내 문구
         lbl_info = QLabel("※ 숫자를 입력하면 실시간 저장/수정되며, 공백으로 두면 빈 데이터로 처리됩니다.")
@@ -109,7 +127,7 @@ class ManualMeterInputDialog(QDialog):
         
         # 최초 실행 시 현재 설정된 날짜 데이터 로딩 가동
         self.load_date_data()
-        
+
     def load_date_data(self):
         """날짜가 변경될 때마다 DB를 뒤져 해당 일자의 기존 수치를 양식에 표기합니다."""
         date_str = self.date_edit.date().toString("yyyy-MM-dd")
@@ -117,7 +135,8 @@ class ManualMeterInputDialog(QDialog):
         current_data = db_manager.get_manual_meter_data(date_str)
         
         for field, value in current_data.items():
-            self.inputs[field].setText(value)
+            if field in self.inputs: # 딕셔너리에 필드가 존재할 때만 입력창에 값 세팅   
+                self.inputs[field].setText(value)
             
     def validate_and_accept(self):
         """입력된 값들이 정상적인 숫자 포맷인지 최종 무결성 검사를 수행합니다."""
@@ -308,15 +327,6 @@ class SCADAWindow(QMainWindow):
                     elif row[1] == 'MIN': item.setForeground(Qt.blue)
                 table.setItem(r_idx, c_idx, item)
 
-    '''
-    def export_excel_click(self):
-        selected_date = self.qdate.date().toString("yyyy-MM-dd")
-        try:
-            excel_report.generate_excel_report(selected_date)
-            QMessageBox.information(self, "출력 완료", f"[{selected_date}_전기실_운영일지.xlsx]가 생성되었습니다.")
-        except Exception as e:
-            QMessageBox.critical(self, "출력 실패", f"에러 발생:\n{e}")
-    '''
     def export_excel_click(self):
         selected_date = self.qdate.date().toString("yyyy-MM-dd")
         
@@ -341,10 +351,6 @@ class SCADAWindow(QMainWindow):
         except Exception as e:
             QMessageBox.critical(self, "출력 실패", f"에러 발생:\n{e}")
 
-
-
-
-
     def auto_refresh(self):
         curr_hour = datetime.now().hour
         if curr_hour != self.last_hour:
@@ -353,29 +359,50 @@ class SCADAWindow(QMainWindow):
         self.load_data()
         self.update_graph()
 
+    # 🛠️ 수동 검침 입력 팝업 함수 수정
     def click_open_meter_popup(self):
-        """'전력량 입력' 버튼 터치 시 수동 검침 통합 팝업을 기동하는 슬롯 함수"""
-        # 현재 화면 캘린더에 지정되어 있는 날짜를 기본값으로 토스
+        """'전력량 입력' 버튼 터치 시 수동 검침 통합 팝업을 기동하고 저장/출력을 연동하는 함수"""
         current_view_date = self.qdate.date().toString("yyyy-MM-dd")
         
         dialog = ManualMeterInputDialog(current_view_date, self)
         if dialog.exec_() == QDialog.Accepted:
             save_date, final_data = dialog.get_final_inputs()
+            
+            # 1. 엑셀 운영일지 함께 출력 여부 확인 질의 창
+            reply = QMessageBox.question(
+                self, "엑셀 동시 출력 확인",
+                f"[{save_date}] 일자의 데이터를 DB에 저장합니다.\n이와 동시에 엑셀 운영일지도 함께 출력하시겠습니까?",
+                QMessageBox.Yes | QMessageBox.No, QMessageBox.Yes
+            )
+            
+            selected_dir = None
+            # 2. 'Yes'인 경우 저장 전에 디렉토리 미리 선택받기
+            if reply == QMessageBox.Yes:
+                selected_dir = QFileDialog.getExistingDirectory(self, "운영일지 저장 폴더 선택 (DB 저장 후 자동 출력)", "")
+                if not selected_dir:
+                    # 폴더 선택을 취소한 경우 프로세스 보호를 위해 전체 중단
+                    QMessageBox.warning(self, "작업 취소", "폴더가 선택되지 않아 DB 저장 및 엑셀 출력 작업이 취소되었습니다.")
+                    return
+
             try:
-                # db_manager에 설계한 통합 저장 로직 원격 작동
+                # 3. DB 저장 선행 처리
                 db_manager.save_manual_meter_data(save_date, final_data)
+                success_msg = f"[{save_date}] 일자의 데이터가 DB에 안전하게 반영되었습니다."
                 
-                QMessageBox.information(
-                    self, "입력 및 수정 완료", 
-                    f"[{save_date}] 일자의 독립 계량기 11개 필드 지침 데이터가\nDB(manual_meter_logs)에 안전하게 반영되었습니다."
-                )
+                # 4. 사용자가 함께 출력을 요청했고, 디렉토리가 정상 지정되었을 경우 엑셀 출력 작동
+                if reply == QMessageBox.Yes and selected_dir:
+                    excel_report.generate_excel_report(save_date, target_dir=selected_dir)
+                    saved_path = os.path.join(selected_dir, f"{save_date}_전기실_운영일지.xlsx")
+                    success_msg += f"\n\n이어서 엑셀 운영일지 출력이 완료되었습니다.\n저장 경로:\n{saved_path}"
                 
-                # 필요 시 메인 화면 테이블 리프레시 가동
-                if hasattr(self, 'refresh_data'):
-                    self.refresh_data()
+                QMessageBox.information(self, "작업 완료", success_msg)
+                
+                # 메인 화면 테이블 리프레시 가동
+                self.load_data()
+                self.update_graph()
                     
             except Exception as e:
-                QMessageBox.critical(self, "저장 실패", f"DB 수동 데이터 업데이트 프로세스 중 오류 발생:\n{e}")
+                QMessageBox.critical(self, "프로세스 오류", f"데이터 처리 중 오류가 발생했습니다:\n{e}")
 
 if __name__ == "__main__":
     db_manager.init_db()
