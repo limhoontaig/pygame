@@ -189,3 +189,22 @@ def save_manual_meter_data(target_date, data_dict):
     c.execute(f'INSERT OR REPLACE INTO manual_meter_logs ({fields_str}) VALUES ({placeholders})', values)
     conn.commit()
     conn.close()
+
+def get_manual_meter_log_for_table(target_date):
+    """메인 화면 테이블 표기용으로 해당 날짜의 수동 검침 데이터를 리스트 형태로 반환합니다."""
+    create_manual_meter_table()
+    conn = sqlite3.connect(DB_NAME)
+    c = conn.cursor()
+    
+    # METER_FIELDS = ['main_active', 'main_reactive', 'ind_mid', 'ind_max', 'ind_light', 'street_mid', 'street_max', 'street_light', 'geo_1', 'geo_2', 'geo_3']
+    fields_str = ", ".join(METER_FIELDS)
+    c.execute(f"SELECT log_date, {fields_str} FROM manual_meter_logs WHERE log_date = ?", (target_date,))
+    row = c.fetchone()
+    conn.close()
+    
+    if row:
+        # 데이터를 UI 테이블에 출력하기 좋은 정밀도나 스트링 형태로 변환하여 반환
+        return [row[0]] + [f"{v:.1f}" if isinstance(v, float) else str(v) if v is not None else "-" for v in row[1:]]
+    else:
+        # 데이터가 없을 경우 날짜와 함께 빈 대시(-) 채우기
+        return [target_date] + ["-"] * len(METER_FIELDS)

@@ -167,7 +167,7 @@ class SCADAWindow(QMainWindow):
         self.last_hour = datetime.now().hour
 
     def initUI(self):
-        self.setWindowTitle("변전실 데이터 통합 관리 시스템 (모듈화 프로젝트)")
+        self.setWindowTitle("래미안개포루체하임아파트 변전실 데이터 통합 관리 시스템 (모듈화 프로젝트)")
         self.resize(1400, 900)
         
         central_widget = QWidget()
@@ -176,19 +176,32 @@ class SCADAWindow(QMainWindow):
 
         top_ctrl = QGroupBox("운영 제어 센터")
         top_layout = QHBoxLayout(top_ctrl)
+        top_layout.setSpacing(50)
         
         self.qdate = QDateEdit(QDate.currentDate())
         self.qdate.setCalendarPopup(True)
-        top_layout.addWidget(QLabel("선택 날짜:"))
+        
+        lbl_date_title = QLabel("<b>선택 날짜:</b>")
+        lbl_date_title.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
+        lbl_date_title.setStyleSheet("font-size: 13px;")
+        
+        top_layout.addWidget(lbl_date_title)
+        
         top_layout.addWidget(self.qdate)
+
+        self.qdate.setMinimumWidth(120) # 가로 최소 크기를 150 픽셀로 강제 확장 (기존보다 훨씬 넓어집니다)
+        self.qdate.setAlignment(Qt.AlignCenter) # 날짜 글자를 가운데 정렬하여 가독성 향상
+        self.qdate.setStyleSheet("font-size: 13px; padding: 3px;") # 글자 크기 및 내부 여백 조정
         
         self.btn_show_table = QPushButton("종합 데이터 표")
+        self.btn_show_table.setStyleSheet("background-color: #2980b9; color: white; font-weight: bold; min-height: 35px;")
         self.btn_show_graph = QPushButton("부하 변동 그래프")
+        self.btn_show_graph.setStyleSheet("background-color: #8e44ad; color: white; font-weight: bold; min-height: 35px;")
         self.btn_export_excel = QPushButton("엑셀 운영일지 출력")
-        self.btn_export_excel.setStyleSheet("background-color: #27ae60; color: white; font-weight: bold;")
+        self.btn_export_excel.setStyleSheet("background-color: #27ae60; color: white; font-weight: bold; min-height: 35px;")
         
         # SCADAWindow 클래스의 initUI 또는 버튼 레이아웃 배치 구역에 추가
-        self.btn_meter_input = QPushButton("전력량 입력") # 요청하신 버튼명 지정
+        self.btn_meter_input = QPushButton("전력량계 검침량 입력") # 요청하신 버튼명 지정
         self.btn_meter_input.setStyleSheet("background-color: #2196F3; color: white; font-weight: bold; min-height: 35px;")
         self.btn_meter_input.clicked.connect(self.click_open_meter_popup)
         
@@ -219,12 +232,24 @@ class SCADAWindow(QMainWindow):
         self.extreme_table.setColumnCount(len(db_manager.COLUMN_LABELS))
         self.extreme_table.setHorizontalHeaderLabels(db_manager.COLUMN_LABELS)
 
+        # 🛠️ [새로운 추가 항목] 수동 계량기 일지 로그 테이블 설계
+        self.manual_table = QTableWidget()
+        manual_headers = ["기록 일자"] + db_manager.METER_FIELDS # 날짜 + 11개 수동필드 제목 매칭
+        self.manual_table.setColumnCount(len(manual_headers))
+        self.manual_table.setHorizontalHeaderLabels(manual_headers)
+
         splitter.addWidget(QLabel("● 실시간 계측 데이터 로그"))
         splitter.addWidget(self.raw_table)
         splitter.addWidget(QLabel("● 시간별 평균 전력 추이"))
         splitter.addWidget(self.avg_table)
         splitter.addWidget(QLabel("● 일일 최고(MAX) / 최저(MIN) 값 설비 통계"))
         splitter.addWidget(self.extreme_table)
+
+        # 🛠️ 분할 스플리터 레이아웃에 수동 지침 데이터 표 안착
+        splitter.addWidget(QLabel("● 독립 계량장치 일일 지침 수동 로그 (manual_meter_logs)"))
+        splitter.addWidget(self.manual_table)
+
+
         table_layout.addWidget(splitter)
         self.stack.addWidget(self.page_table)
 
@@ -281,8 +306,26 @@ class SCADAWindow(QMainWindow):
             self.display_table(self.extreme_table, c.fetchall(), is_extreme=True)
             
             conn.close()
+
+            # 🛠️ 수동 입력 로그 조회 연동 추가
+            if hasattr(db_manager, 'get_manual_meter_log_for_table'):
+                manual_row = db_manager.get_manual_meter_log_for_table(selected_date)
+                self.display_manual_table([manual_row])
+
         except Exception as e:
             print(f"UI 로딩 실패: {e}")
+
+    # 🛠️ 수동 검침 출력 전용 가벼운 렌더링 함수
+    def display_manual_table(self, rows):
+        self.manual_table.setRowCount(len(rows))
+        for r_idx, row in enumerate(rows):
+            for c_idx, val in enumerate(row):
+                item = QTableWidgetItem(str(val))
+                item.setTextAlignment(Qt.AlignCenter)
+                # 수동 데이터 식별을 위해 연한 노란색/청색 계열 텍스트 포인트 추가 가능
+                if c_idx > 0 and val != "-":
+                    item.setForeground(Qt.darkGreen)
+                self.manual_table.setItem(r_idx, c_idx, item)
 
     def update_graph(self):
         if self.stack.currentIndex() != 1: return
