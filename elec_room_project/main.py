@@ -99,17 +99,7 @@ class ManualMeterInputDialog(QDialog):
         layout_geo.addRow("지열 3호기 지침:", self.inputs["geo_3"])
         group_geo.setLayout(layout_geo)
         grid.addWidget(group_geo, 1, 1)
-        '''
-        # 🛠️ [그룹 5] 추가 및 그리드 0, 1열 통합 (행: 2, 열: 0, 행스팬: 1, 열스팬: 2)
-        group_5 = QGroupBox("그룹 5번 데이터 (통합 영역)")
-        layout_5 = QFormLayout()
-        self.inputs["group5_field1"] = QLineEdit() # 필요에 따라 db_manager 필드명과 매칭하세요
-        self.inputs["group5_field2"] = QLineEdit()
-        layout_5.addRow("그룹 5 데이터 1:", self.inputs["group5_field1"])
-        layout_5.addRow("그룹 5 데이터 2:", self.inputs["group5_field2"])
-        group_5.setLayout(layout_5)
-        grid.addWidget(group_5, 2, 0, 1, 2) # 0,0부터 시작해서 1행, 2열을 통합하여 배치
-        '''
+        
         main_layout.addLayout(grid)
       
         # 안내 문구
@@ -345,39 +335,6 @@ class SCADAWindow(QMainWindow):
                     item.setForeground(Qt.darkGreen)
                 self.manual_table.setItem(r_idx, c_idx, item)
 
-    '''
-    def update_graph(self):
-        if self.stack.currentIndex() != 1: return
-        target_col = self.data_selector.currentText()
-        period = self.period_selector.currentText()
-        selected_date = self.qdate.date().toPyDate()
-
-        conn = sqlite3.connect(db_manager.DB_NAME)
-        if "일간" in period:
-            query = f'SELECT log_time, "{target_col}" FROM raw_data WHERE log_date = ? ORDER BY log_time ASC'
-            params = (selected_date.strftime('%Y-%m-%d'),)
-        else:
-            days = 7 if "주간" in period else 30
-            start_date = selected_date - timedelta(days=days)
-            query = f'SELECT log_date || \' \' || SUBSTR(log_time,1,5) as dt, "{target_col}" FROM hourly_avg WHERE log_date BETWEEN ? AND ? ORDER BY log_date, log_time'
-            params = (start_date.strftime('%Y-%m-%d'), selected_date.strftime('%Y-%m-%d'))
-
-        df = pd.read_sql_query(query, conn, params=params)
-        conn.close()
-
-        self.ax.clear()
-        if not df.empty:
-            x_col = 'log_time' if "일간" in period else 'dt'
-            self.ax.plot(df[x_col], df[target_col], marker='o', markersize=2, color='blue')
-            import matplotlib.ticker as ticker
-            self.ax.xaxis.set_major_locator(ticker.MaxNLocator(nbins=10))
-            self.ax.set_title(f"[{target_col}] {period} 추이 분석")
-            self.ax.grid(True, linestyle='--')
-            self.canvas.figure.autofmt_xdate() 
-        else:
-            self.ax.text(0.5, 0.5, "데이터가 존재하지 않습니다.", ha='center')
-        self.canvas.draw()
-    '''
 
     def update_graph(self):
         if self.stack.currentIndex() != 1: return
