@@ -183,7 +183,7 @@ class SCADAWindow(QMainWindow):
         
         lbl_date_title = QLabel("<b>선택 날짜:</b>")
         lbl_date_title.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
-        lbl_date_title.setStyleSheet("font-size: 13px;")
+        lbl_date_title.setStyleSheet("font-size: 14px; font-weight: bold;")
         
         top_layout.addWidget(lbl_date_title)
         
@@ -191,7 +191,7 @@ class SCADAWindow(QMainWindow):
 
         self.qdate.setMinimumWidth(120) # 가로 최소 크기를 150 픽셀로 강제 확장 (기존보다 훨씬 넓어집니다)
         self.qdate.setAlignment(Qt.AlignCenter) # 날짜 글자를 가운데 정렬하여 가독성 향상
-        self.qdate.setStyleSheet("font-size: 13px; padding: 3px;") # 글자 크기 및 내부 여백 조정
+        self.qdate.setStyleSheet("font-size: 14px; padding: 3px; font-weight: bold;") # 글자 크기 및 내부 여백 조정
         
         self.btn_show_table = QPushButton("종합 데이터 표")
         self.btn_show_table.setStyleSheet("background-color: #2980b9; color: white; font-weight: bold; min-height: 35px;")
@@ -256,9 +256,25 @@ class SCADAWindow(QMainWindow):
         # 그래프 탭 구성
         self.page_graph = QWidget()
         graph_layout = QVBoxLayout(self.page_graph)
+        
         graph_ctrl = QHBoxLayout()
+        
+        '''
         self.data_selector = QComboBox()
+        '''
+        # 변경: 단일 선택 콤보박스 대신, 다중 선택이 가능한 QListWidget 사용
+        from PyQt5.QtWidgets import QListWidget, QAbstractItemView
+        self.data_selector = QListWidget()
+        self.data_selector.setSelectionMode(QAbstractItemView.MultiSelection) # 다중 선택 모드 활성화
         self.data_selector.addItems(db_manager.DATA_LABELS)
+        self.data_selector.setMaximumHeight(80) # UI 공간을 너무 차지하지 않도록 높이 제한
+        
+        # 기본적으로 첫 번째 항목은 선택되어 있도록 설정
+        if self.data_selector.count() > 0:
+            self.data_selector.item(0).setSelected(True)
+        
+        
+        # self.data_selector.addItems(db_manager.DATA_LABELS)
         self.period_selector = QComboBox()
         self.period_selector.addItems(["일간 (실시간 데이터)", "주간 (시간별 평균)", "월간 (시간별 평균)"])
         
@@ -280,7 +296,9 @@ class SCADAWindow(QMainWindow):
         self.btn_export_excel.clicked.connect(self.export_excel_click)
         
         self.qdate.dateChanged.connect(self.auto_refresh)
-        self.data_selector.currentIndexChanged.connect(self.update_graph)
+        # currentIndexChanged 대신 itemSelectionChanged를 사용합니다.
+        self.data_selector.itemSelectionChanged.connect(self.update_graph)
+        # self.data_selector.currentIndexChanged.connect(self.update_graph)
         self.period_selector.currentIndexChanged.connect(self.update_graph)
 
         self.load_data()
@@ -327,6 +345,7 @@ class SCADAWindow(QMainWindow):
                     item.setForeground(Qt.darkGreen)
                 self.manual_table.setItem(r_idx, c_idx, item)
 
+    '''
     def update_graph(self):
         if self.stack.currentIndex() != 1: return
         target_col = self.data_selector.currentText()
@@ -358,6 +377,58 @@ class SCADAWindow(QMainWindow):
         else:
             self.ax.text(0.5, 0.5, "데이터가 존재하지 않습니다.", ha='center')
         self.canvas.draw()
+    '''
+
+    def update_graph(self):
+        if self.stack.currentIndex() != 1: return
+        
+        # 1. 선택된 모든 필드 가져오기
+        selected_items = self.data_selector.selectedItems()
+        if not selected_items:
+            self.ax.clear()
+            self.ax.text(0.5, 0.5, "비교할 필드를 선택해주세요.", ha='center')
+            self.canvas.draw()
+            return
+            
+        target_cols = [item.text() for item in selected_items]
+        period = self.period_selector.currentText()
+        selected_date = self.qdate.date().toPyDate()
+
+        # 2. SQL 쿼리문 생성 (선택된 모든 필드를 콤마로 연결하여 호출)
+        cols_str = ', '.join([f'"{col}"' for col in target_cols])
+        
+        conn = sqlite3.connect(db_manager.DB_NAME)
+        if "일간" in period:
+            query = f'SELECT log_time, {cols_str} FROM raw_data WHERE log_date = ? ORDER BY log_time ASC'
+            params = (selected_date.strftime('%Y-%m-%d'),)
+        else:
+            days = 7 if "주간" in period else 30
+            start_date = selected_date - timedelta(days=days)
+            query = f'SELECT log_date || \' \' || SUBSTR(log_time,1,5) as dt, {cols_str} FROM hourly_avg WHERE log_date BETWEEN ? AND ? ORDER BY log_date, log_time'
+            params = (start_date.strftime('%Y-%m-%d'), selected_date.strftime('%Y-%m-%d'))
+
+        df = pd.read_sql_query(query, conn, params=params)
+        conn.close()
+
+        # 3. 그래프 그리기 (다중 선 구현)
+        self.ax.clear()
+        if not df.empty:
+            x_col = 'log_time' if "일간" in period else 'dt'
+            
+            # 선택한 필드 수만큼 반복하며 그래프에 선을 누적해서 그립니다.
+            for col in target_cols:
+                self.ax.plot(df[x_col], df[col], marker='o', markersize=2, label=col)
+                
+            import matplotlib.ticker as ticker
+            self.ax.xaxis.set_major_locator(ticker.MaxNLocator(nbins=10))
+            self.ax.set_title(f"선택 필드 {period} 비교 분석")
+            self.ax.grid(True, linestyle='--')
+            self.ax.legend(loc='upper right') # 각 선이 무엇인지 알려주는 범례 표시
+            self.canvas.figure.autofmt_xdate() 
+        else:
+            self.ax.text(0.5, 0.5, "데이터가 존재하지 않습니다.", ha='center')
+        
+        self.canvas.draw()
 
     def display_table(self, table, rows, is_extreme=False):
         table.setRowCount(len(rows))
@@ -365,6 +436,9 @@ class SCADAWindow(QMainWindow):
             for c_idx, val in enumerate(row):
                 txt = f"{val:.1f}" if isinstance(val, float) else str(val)
                 item = QTableWidgetItem(txt)
+                # 💡 이 줄을 추가하여 모든 텍스트를 중앙 정렬합니다.
+                item.setTextAlignment(Qt.AlignCenter)
+
                 if is_extreme and c_idx > 1:
                     if row[1] == 'MAX': item.setForeground(Qt.red)
                     elif row[1] == 'MIN': item.setForeground(Qt.blue)
