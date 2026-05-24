@@ -16,8 +16,9 @@ ensure_db_directory()
 
 # DB_NAME = "plc_logging_real.db"
 DATA_LABELS = [
-    "실내온도", "외기온도", "SF운전시간", "EF운전시간", "KEP_A_R", "KEP_A_S", "KEP_A_T", 
+    "실내온도", "외기온도", "SF운전시간", "EF운전시간", 
     "KEP_V_R", "KEP_V_S", "KEP_V_T", "KEP_V_R_S", "KEP_V_S_T", "KEP_V_T_R", 
+    "KEP_A_R", "KEP_A_S", "KEP_A_T", 
     "KEP_frequency", "KEP_P_kW", "KEP_P_kWh", 
     "Tr1_A_R", "Tr1_A_S", "Tr1_A_T", "Tr1_V_R", "Tr1_V_S", "Tr1_V_T", "Tr1_V_R_S", "Tr1_V_S_T", "Tr1_V_T_R", "Tr1_P_kW", "Tr1_Temp",
     "Tr2_A_R", "Tr2_A_S", "Tr2_A_T", "Tr2_V_R", "Tr2_V_S", "Tr2_V_T", "Tr2_V_R_S", "Tr2_V_S_T", "Tr2_V_T_R", "Tr2_P_kW", "Tr2_Temp",
