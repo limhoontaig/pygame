@@ -1,8 +1,20 @@
+# db_manager.py
+import os
 import sqlite3
 import struct
 from datetime import datetime, timedelta
 
-DB_NAME = "plc_logging_real.db"
+# 💡 사용자의 AppData/Local/ElecRoomSCADA 폴더 내에 생성
+DB_DIR = os.path.join(os.environ['LOCALAPPDATA'], 'ElecRoomSCADA')
+DB_NAME = os.path.join(DB_DIR, "plc_logging_real.db")
+
+def ensure_db_directory():
+    if not os.path.exists(DB_DIR):
+        os.makedirs(DB_DIR)
+
+ensure_db_directory()
+
+# DB_NAME = "plc_logging_real.db"
 DATA_LABELS = [
     "실내온도", "외기온도", "SF운전시간", "EF운전시간", "KEP_A_R", "KEP_A_S", "KEP_A_T", 
     "KEP_V_R", "KEP_V_S", "KEP_V_T", "KEP_V_R_S", "KEP_V_S_T", "KEP_V_T_R", 
