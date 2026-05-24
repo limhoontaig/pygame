@@ -1,12 +1,60 @@
 # excel_report.py
 import sqlite3
 import shutil
+import sys
 import os
 import zipfile
 import re
 from datetime import datetime, timedelta
 import openpyxl
-from db_manager import DB_NAME, DATA_LABELS, METER_FIELDS, create_manual_meter_table
+from db_manager import DB_NAME, DATA_LABELS, METER_FIELDS, DB_DIR, create_manual_meter_table
+
+TEMPLATE_NAME = "template_전기실_운영일지.xlsx"
+TEMPLATE_IN_APPDATA = os.path.join(DB_DIR, TEMPLATE_NAME)
+
+def get_bundle_template_path(relative_path):
+    """
+    PyInstaller (.exe) 환경과 일반 파이썬 (.py) 환경을 모두 지원하는 
+    완벽한 템플릿 경로 추적 디버깅 함수입니다.
+    """
+    try:
+        # 1. PyInstaller로 실행파일이 된 경우 (임시 폴더 경로 반환)
+        base_path = sys._MEIPASS
+        print(f"[DEBUG-EXE] 실행파일 환경 내부 경로 탐색: {base_path}")
+        return os.path.join(base_path, relative_path)
+    except Exception:
+        # 2. 일반 파이썬 코드로 디버깅/실행 중인 경우
+        # 💡 현재 이 코드 파일(excel_report.py)이 위치한 실제 절대 경로를 기준점으로 잡습니다!
+        base_path = os.path.dirname(os.path.abspath(__file__))
+        print(f"[DEBUG-DEV] 일반 파이썬 디버깅 환경 경로 탐색: {base_path}")
+        return os.path.join(base_path, relative_path)
+
+def ensure_excel_template():
+    """앱데이터 폴더에 템플릿 파일이 없으면 자동으로 원본을 찾아서 복사해 둡니다."""
+    print(f"[DEBUG] 최종 앱데이터 템플릿 타깃 경로: {TEMPLATE_IN_APPDATA}")
+    
+    if not os.path.exists(TEMPLATE_IN_APPDATA):
+        print("⚠️ [DEBUG] 앱데이터 폴더 내에 템플릿 파일이 존재하지 않습니다. 복사를 시작합니다.")
+        
+        # 위에서 보정한 안전한 경로 함수 호출
+        bundled_template = get_bundle_template_path(TEMPLATE_NAME)
+        print(f"[DEBUG] 복사 소스가 될 원본 템플릿 예상 경로: {bundled_template}")
+        
+        if os.path.exists(bundled_template):
+            # 앱데이터 폴더가 없으면 자동 생성
+            if not os.path.exists(DB_DIR):
+                os.makedirs(DB_DIR)
+                print(f"[DEBUG] 앱데이터 디렉토리 생성 완료: {DB_DIR}")
+                
+            shutil.copy(bundled_template, TEMPLATE_IN_APPDATA)
+            print(f"✅ [성공] 엑셀 템플릿 파일이 앱데이터에 안전하게 복구되었습니다.")
+        else:
+            print(f"❌ [오류] 원본 템플릿 파일({TEMPLATE_NAME})을 지정된 경로에서 찾을 수 없습니다. 파일명을 다시 확인하세요.")
+    else:
+        print("ℹ️ [DEBUG] 앱데이터 폴더에 이미 템플릿이 안전하게 존재하므로 복사를 생략합니다.")
+
+# 프로그램 시작 시점에 무조건 디버깅 체크 구동
+ensure_excel_template()
 
 def clean_external_links_physically(file_path):
     """
@@ -44,16 +92,16 @@ def generate_excel_report(selected_date, target_dir=None):
     21행의 일간 전력량 서식(min/max)과 22행의 월간 전력량 서식(start/end)을 
     DB 실측 통계 데이터로 매핑하고, 수식이 정상 작동하도록 주입하는 핵심 엔진입니다.
     """
-    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-    template_file = os.path.join(BASE_DIR, "template_전기실_운영일지.xlsx")
+    # ⭕ 변경 코드: 무조건 안전한 로컬 앱데이터 폴더의 템플릿을 소스로 사용합니다.
+    template_file = TEMPLATE_IN_APPDATA
 
     # 🛠️ 수정 배치: target_dir이 지정되면 해당 폴더에, 없으면 기존처럼 소스 폴더에 저장
     if target_dir:
         output_file = os.path.join(target_dir, f"{selected_date}_전기실_운영일지.xlsx")
     else:  
-        output_file = os.path.join(BASE_DIR, f"{selected_date}_전기실_운영일지.xlsx")
+        output_file = os.path.join(DB_DIR, f"{selected_date}_전기실_운영일지.xlsx")
     
-    if not os.path.exists(template_file):
+    if not os.path.exists(TEMPLATE_IN_APPDATA):
         raise FileNotFoundError(f"템플릿 파일 [{template_file}]이 경로에 존재하지 않습니다.")
     
     # 1. 템플릿 안전 복사 및 워크북 로드
