@@ -31,7 +31,7 @@ class SCADAWindow(QMainWindow):
         self.last_hour = datetime.now().hour
 
     def initUI(self):
-        self.setWindowTitle("래미안개포루체하임아파트 변전실 데이터 통합 관리 시스템 (모듈화 프로젝트)")
+        self.setWindowTitle("래미안개포루체하임아파트 변전실 데이터 통합 관리 시스템 (모듈화 프로젝트: Developed by 관리과장 임훈택 on 2026-05-24)")
         self.resize(1400, 900)
         
         central_widget = QWidget()
@@ -113,7 +113,6 @@ class SCADAWindow(QMainWindow):
         splitter.addWidget(QLabel("● 독립 계량장치 일일 지침 수동 로그 (manual_meter_logs)"))
         splitter.addWidget(self.manual_table)
 
-
         table_layout.addWidget(splitter)
         self.stack.addWidget(self.page_table)
 
@@ -123,9 +122,6 @@ class SCADAWindow(QMainWindow):
         
         graph_ctrl = QHBoxLayout()
         
-        '''
-        self.data_selector = QComboBox()
-        '''
         # 변경: 단일 선택 콤보박스 대신, 다중 선택이 가능한 QListWidget 사용
         from PyQt5.QtWidgets import QListWidget, QAbstractItemView
         self.data_selector = QListWidget()
@@ -136,7 +132,6 @@ class SCADAWindow(QMainWindow):
         # 기본적으로 첫 번째 항목은 선택되어 있도록 설정
         if self.data_selector.count() > 0:
             self.data_selector.item(0).setSelected(True)
-        
         
         # self.data_selector.addItems(db_manager.DATA_LABELS)
         self.period_selector = QComboBox()
@@ -208,7 +203,6 @@ class SCADAWindow(QMainWindow):
                 if c_idx > 0 and val != "-":
                     item.setForeground(Qt.darkGreen)
                 self.manual_table.setItem(r_idx, c_idx, item)
-
 
     def update_graph(self):
         if self.stack.currentIndex() != 1: return
@@ -309,129 +303,61 @@ class SCADAWindow(QMainWindow):
 
     def click_open_meter_popup(self):
         """[수동 지침 입력] 버튼 클릭 시 호출되는 함수 (QDialog 임포트 에러 해결 버전)"""
-        print("\n=== [DEBUG] 1. 수동 입력 팝업 창 생성 시작 ===")
         current_date_str = self.qdate.date().toString("yyyy-MM-dd") # 변수명 self.qdate 반영 완료
         
         # 팝업 객체 생성 및 실행
         dialog = ManualMeterInputDialog(current_date_str, self)
-        print("=== [DEBUG] 2. 팝업 창 exec_() 실행 (사용자 입력 대기) ===")
         
         result = dialog.exec_()
-        print(f"=== [DEBUG] 3. 팝업 창 닫힘 (반환 결과 코드: {result}) ===")
         
         # 💡 NameError를 방지하기 위해 정수 숫자(1 = Accepted, 0 = Rejected)로 명확하게 비교합니다.
         if result == 1: # 1은 QDialog.Accepted를 의미합니다.
-            print("=== [DEBUG] 4. 사용자가 Save(저장)를 눌러 Accepted 블록 진입 ===")
             
             save_date = dialog.date_edit.date().toString("yyyy-MM-dd")
-            print(f"    * 저장 대상 날짜: {save_date}")
             
             # 입력 데이터 수집
             final_data = {}
             try:
                 for field, edit in dialog.inputs.items():
                     final_data[field] = edit.text().strip()
-                print(f"    * 수집된 데이터 딕셔너리: {final_data}")
             except Exception as e:
-                print(f"    ❌ [ERROR] 데이터 수집 중 에러 발생: {e}")
                 return
 
             # 사용자에게 저장 여부 확인
-            print("=== [DEBUG] 5. 저장 확인 메시지 박스 출력 직전 ===")
             reply = QMessageBox.question(
                 self, '데이터 저장 확인',
                 f"[{save_date}] 수동 입력 지침을 DB에 반영하시겠습니까?\n(Yes 선택 시 운영일지 출력이 함께 진행됩니다.)",
                 QMessageBox.Yes | QMessageBox.No, QMessageBox.Yes
             )
-            print(f"    * 사용자의 선택 결과: {'Yes' if reply == QMessageBox.Yes else 'No'}")
             
             selected_dir = None
             if reply == QMessageBox.Yes:
-                print("=== [DEBUG] 6. 엑셀 저장 폴더 선택 창 오픈 ===")
                 selected_dir = QFileDialog.getExistingDirectory(self, "운영일지 저장 폴더 선택 (DB 저장 후 자동 출력)", "")
-                print(f"    * 선택된 폴더 경로: {selected_dir}")
                 if not selected_dir:
-                    print("    ⚠️ [WARNING] 폴더 선택이 취소되어 작업을 중단합니다.")
                     QMessageBox.warning(self, "작업 취소", "폴더가 선택되지 않아 DB 저장 및 엑셀 출력 작업이 취소되었습니다.")
                     return
 
             try:
-                print("=== [DEBUG] 7. db_manager.save_manual_meter_data 호출 직전 ===")
                 db_manager.save_manual_meter_data(save_date, final_data)
-                print("    * DB 저장 성공!")
-                
                 success_msg = f"[{save_date}] 일자의 데이터가 DB에 안전하게 반영되었습니다."
                 
                 if reply == QMessageBox.Yes and selected_dir:
-                    print("=== [DEBUG] 8. excel_report.generate_excel_report 호출 직전 ===")
                     excel_report.generate_excel_report(save_date, target_dir=selected_dir)
                     saved_path = os.path.join(selected_dir, f"{save_date}_전기실_운영일지.xlsx")
                     success_msg += f"\n\n이어서 엑셀 운영일지 출력이 완료되었습니다.\n저장 경로:\n{saved_path}"
-                    print("    * 엑셀 출력 성공!")
                 
                 QMessageBox.information(self, "저장 완료", success_msg)
                 
-                print("=== [DEBUG] 9. 메인 화면 테이블/그래프 새로고침(refresh_data) 호출 직전 ===")
                 # 만약 메인윈도우 새로고침 함수명이 다르면 이 부분에서 에러가 날 수 있으니 주시해 주세요.
                 if hasattr(self, 'refresh_data'):
                     self.refresh_data()
                 elif hasattr(self, 'load_data'):
                     self.load_data()
-                print("=== [DEBUG] 10. 모든 프로세스 정상 완료 ===")
                 
             except Exception as e:
-                print(f"    ❌ [ERROR] DB 저장 또는 엑셀 출력 중 예외 발생: {e}")
                 QMessageBox.critical(self, "오류 발생", f"작업 중 에러가 발생했습니다:\n{str(e)}")
                 
         else:
             # result가 0(Rejected, 취소)인 경우 일로 들어옵니다.
             print("=== [DEBUG] 4-Cancel. 사용자가 Cancel(취소)을 누르거나 창을 닫음 (Rejected) ===")
             print("=== [DEBUG] 5-Cancel. 추가 작업 없이 안전하게 함수 종료 ===")
-
-    '''
-    # 🛠️ 수동 검침 입력 팝업 함수 수정
-    def click_open_meter_popup(self):
-        """'전력량 입력' 버튼 터치 시 수동 검침 통합 팝업을 기동하고 저장/출력을 연동하는 함수"""
-        current_view_date = self.qdate.date().toString("yyyy-MM-dd")
-        
-        dialog = ManualMeterInputDialog(current_view_date, self)
-        if dialog.exec_() == QDialog.Accepted:
-            save_date, final_data = dialog.get_final_inputs()
-            
-            # 1. 엑셀 운영일지 함께 출력 여부 확인 질의 창
-            reply = QMessageBox.question(
-                self, "엑셀 동시 출력 확인",
-                f"[{save_date}] 일자의 데이터를 DB에 저장합니다.\n이와 동시에 엑셀 운영일지도 함께 출력하시겠습니까?",
-                QMessageBox.Yes | QMessageBox.No, QMessageBox.Yes
-            )
-            
-            selected_dir = None
-            # 2. 'Yes'인 경우 저장 전에 디렉토리 미리 선택받기
-            if reply == QMessageBox.Yes:
-                selected_dir = QFileDialog.getExistingDirectory(self, "운영일지 저장 폴더 선택 (DB 저장 후 자동 출력)", "")
-                if not selected_dir:
-                    # 폴더 선택을 취소한 경우 프로세스 보호를 위해 전체 중단
-                    QMessageBox.warning(self, "작업 취소", "폴더가 선택되지 않아 DB 저장 및 엑셀 출력 작업이 취소되었습니다.")
-                    return
-
-            try:
-                # 3. DB 저장 선행 처리
-                db_manager.save_manual_meter_data(save_date, final_data)
-                success_msg = f"[{save_date}] 일자의 데이터가 DB에 안전하게 반영되었습니다."
-                
-                # 4. 사용자가 함께 출력을 요청했고, 디렉토리가 정상 지정되었을 경우 엑셀 출력 작동
-                if reply == QMessageBox.Yes and selected_dir:
-                    excel_report.generate_excel_report(save_date, target_dir=selected_dir)
-                    saved_path = os.path.join(selected_dir, f"{save_date}_전기실_운영일지.xlsx")
-                    success_msg += f"\n\n이어서 엑셀 운영일지 출력이 완료되었습니다.\n저장 경로:\n{saved_path}"
-                
-                QMessageBox.information(self, "작업 완료", success_msg)
-                
-                # 메인 화면 테이블 리프레시 가동
-                self.load_data()
-                self.update_graph()
-                    
-            except Exception as e:
-                QMessageBox.critical(self, "프로세스 오류", f"데이터 처리 중 오류가 발생했습니다:\n{e}")
-    '''
-

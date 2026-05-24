@@ -36,30 +36,7 @@ def init_db():
     conn.commit()
     conn.close()
 
-def insert_raw_data(values):
-    if len(values) < len(DATA_LABELS): return
-    try:
-        conn = sqlite3.connect(DB_NAME)
-        c = conn.cursor()
-        now = datetime.now()
-        l_date, l_time = now.strftime('%Y-%m-%d'), now.strftime('%H:%M:%S')
-        
-        DIV_BY_10 = {"실내온도", "외기온도", "SF운전시간", "EF운전시간", "Tr1_Temp", "Tr2_Temp", "Tr3_Temp"}
-        DIV_BY_100 = {"KEP_A_R", "KEP_A_S", "KEP_A_T", "KEP_frequency", "KEP_V_R", "KEP_V_S", "KEP_V_T", "KEP_V_R_S", "KEP_V_S_T", "KEP_V_T_R", "KEP_P_mWh"}
-        
-        adjusted_values = []
-        for label, val in zip(DATA_LABELS, values):
-            if label in DIV_BY_10: adjusted_values.append(val / 10.0)
-            elif label in DIV_BY_100: adjusted_values.append(val / 100.0)
-            else: adjusted_values.append(float(val))
 
-        placeholders = ", ".join(["?"] * len(adjusted_values))
-        col_names = ", ".join([f'"{name}"' for name in DATA_LABELS])
-        c.execute(f"INSERT INTO raw_data (log_date, log_time, {col_names}) VALUES (?, ?, {placeholders})", [l_date, l_time] + adjusted_values)
-        conn.commit()
-        conn.close()
-    except Exception as e:
-        print(f"DB 저장 오류: {e}")
 
 # ==========================================
 # 3. 데이터 분석 연산부
@@ -116,25 +93,8 @@ def calculate_daily_extremes(target_date):
     finally:
         conn.close()
 
-def verify_crc(data):
-    if len(data) < 4: return False
-    body = data[:-2]
-    recv_crc = data[-2:]
-    calc_crc = calculate_crc(body)
-    return recv_crc == calc_crc or recv_crc == calc_crc[::-1]
 
-def calculate_crc(data):
-    crc = 0xFFFF
-    for byte in data:
-        crc ^= byte
-        for _ in range(8):
-            if crc & 0x0001:
-                crc = (crc >> 1) ^ 0xA001
-            else:
-                crc >>= 1
-    return struct.pack('<H', crc)
-
-# db_manager.py 맨 아래에 추가
+# 계량기 검침내역 관리 db table 및 관련 함수들 
 
 METER_FIELDS = [
     "main_active", "main_reactive", 
@@ -208,7 +168,6 @@ def get_manual_meter_log_for_table(target_date):
     conn = sqlite3.connect(DB_NAME)
     c = conn.cursor()
     
-    # METER_FIELDS = ['main_active', 'main_reactive', 'ind_mid', 'ind_max', 'ind_light', 'street_mid', 'street_max', 'street_light', 'geo_1', 'geo_2', 'geo_3']
     fields_str = ", ".join(METER_FIELDS)
     c.execute(f"SELECT log_date, {fields_str} FROM manual_meter_logs WHERE log_date = ?", (target_date,))
     row = c.fetchone()

@@ -8,8 +8,6 @@ import db_manager
 import plc_worker
 from ui_main_window import SCADAWindow # 💡 분리한 메인 윈도우 임포트
 
-
-
 if __name__ == "__main__":
     # 1. 데이터베이스 초기화
     db_manager.init_db()

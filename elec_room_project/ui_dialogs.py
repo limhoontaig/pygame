@@ -5,106 +5,6 @@ from PyQt5.QtCore import QDate, Qt
 
 import db_manager # DB 조회를 위해 가져옴
 
-'''
-class ManualMeterInputDialog(QDialog):
-    """독립된 3개 계량장치의 11개 지침을 날짜별로 통합 입력/수정하는 팝업 창"""
-    def __init__(self, default_date_str, parent=None):
-        super().__init__(parent)
-        self.setWindowTitle("독립 계량장치 일일 지침 수동 입력/수정")
-        self.resize(650, 450)
-        
-        main_layout = QVBoxLayout()
-        
-        # 1. 날짜 선택 영역
-        date_layout = QHBoxLayout()
-        date_layout.addWidget(QLabel("<b>검침 대상 일자:</b>"))
-        self.date_edit = QDateEdit()
-        self.date_edit.setCalendarPopup(True)
-        self.date_edit.setDate(QDate.fromString(default_date_str, "yyyy-MM-dd"))
-        
-        # 💡 [여기서 크기 및 스타일을 확장합니다]
-        self.date_edit.setMinimumWidth(120) # 가로 최소 크기를 150 픽셀로 강제 확장 (기존보다 훨씬 넓어집니다)
-        self.date_edit.setAlignment(Qt.AlignCenter) # 날짜 글자를 가운데 정렬하여 가독성 향상
-        self.date_edit.setStyleSheet("font-size: 13px; padding: 3px;") # 글자 크기 및 내부 여백 조정
-
-        self.date_edit.dateChanged.connect(self.load_date_data) # 날짜 바꾸면 즉시 기존 데이터 로드
-        date_layout.addWidget(self.date_edit)
-        date_layout.addStretch()
-        main_layout.addLayout(date_layout)
-        
-        # 2. 3대 장치 입력 폼 구성 (입력 필드 딕셔너리 정렬)
-        self.inputs = {}
-        grid = QGridLayout()
-        
-        # [그룹 1] 한전 메인 데이터
-        group_main = QGroupBox("한전 메인 계량기")
-        layout_main = QFormLayout()
-        self.inputs["main_active"] = QLineEdit()
-        self.inputs["main_reactive"] = QLineEdit()
-        layout_main.addRow("메인 유효 전력량 (4번):", self.inputs["main_active"])
-        layout_main.addRow("메인 무효 전력량 (5번):", self.inputs["main_reactive"])
-        group_main.setLayout(layout_main)
-        grid.addWidget(group_main, 0, 0)
-        
-        # [그룹 2] 산업용 전력 데이터
-        group_ind = QGroupBox("산업용 (급수/정화조)")
-        layout_ind = QFormLayout()
-        self.inputs["ind_mid"] = QLineEdit()
-        self.inputs["ind_max"] = QLineEdit()
-        self.inputs["ind_light"] = QLineEdit()
-        layout_ind.addRow("산업용 유효 중간 (13번):", self.inputs["ind_mid"])
-        layout_ind.addRow("산업용 유효 최대 (14번):", self.inputs["ind_max"])
-        layout_ind.addRow("산업용 유효 경부하 (15번):", self.inputs["ind_light"])
-        group_ind.setLayout(layout_ind)
-        grid.addWidget(group_ind, 0, 1)
-        
-        # [그룹 3] 가로등 전력 데이터
-        group_street = QGroupBox("가로등 (LV10)")
-        layout_street = QFormLayout()
-        self.inputs["street_mid"] = QLineEdit()
-        self.inputs["street_max"] = QLineEdit()
-        self.inputs["street_light"] = QLineEdit()
-        layout_street.addRow("가로등 유효 중간 (13번):", self.inputs["street_mid"])
-        layout_street.addRow("가로등 유효 최대 (14번):", self.inputs["street_max"])
-        layout_street.addRow("가로등 유효 경부하 (15번):", self.inputs["street_light"])
-        group_street.setLayout(layout_street)
-        grid.addWidget(group_street, 1, 0)
-        
-        # [그룹 4] 지열 시스템 데이터
-        group_geo = QGroupBox("지열 시스템 지침")
-        layout_geo = QFormLayout()
-        self.inputs["geo_1"] = QLineEdit()
-        self.inputs["geo_2"] = QLineEdit()
-        self.inputs["geo_3"] = QLineEdit()
-        layout_geo.addRow("지열 1호기 지침:", self.inputs["geo_1"])
-        layout_geo.addRow("지열 2호기 지침:", self.inputs["geo_2"])
-        layout_geo.addRow("지열 3호기 지침:", self.inputs["geo_3"])
-        group_geo.setLayout(layout_geo)
-        grid.addWidget(group_geo, 1, 1)
-        
-        main_layout.addLayout(grid)
-      
-        # 안내 문구
-        lbl_info = QLabel("※ 숫자를 입력하면 실시간 저장/수정되며, 공백으로 두면 빈 데이터로 처리됩니다.")
-        lbl_info.setStyleSheet("color: blue; font-size: 11px;")
-        main_layout.addWidget(lbl_info)
-        
-        # 3. 저장 및 취소 버튼
-        buttons = QDialogButtonBox(QDialogButtonBox.Save | QDialogButtonBox.Cancel)
-        # 에러가 발생하여 변경함
-        # buttons.accepted.connect(self.validate_and_accept)
-        # buttons.rejected.connect(self.reject)
-        # ⭕ 변경: 버튼 클릭 시 직접 시그널을 연결하지 않고, 버튼 객체를 찾아 개별 클릭 이벤트로 매핑합니다.
-        buttons.button(QDialogButtonBox.Save).clicked.connect(self.validate_and_accept)
-        buttons.button(QDialogButtonBox.Cancel).clicked.connect(self.close_dialog) # 커스텀 종료 함수로 연결
-        main_layout.addWidget(buttons)
-        
-        self.setLayout(main_layout)
-        
-        # 최초 실행 시 현재 설정된 날짜 데이터 로딩 가동
-        self.load_date_data()
-
-'''
 class ManualMeterInputDialog(QDialog):
     """독립된 3개 계량장치의 11개 지침을 날짜별로 통합 입력/수정하는 팝업 창"""
     def __init__(self, default_date_str, parent=None):
@@ -177,7 +77,6 @@ class ManualMeterInputDialog(QDialog):
         # 최초 실행 시 데이터 로드
         self.load_date_data()
 
-
     def load_date_data(self):
         """날짜가 변경될 때마다 DB를 뒤져 해당 일자의 기존 수치를 양식에 표기합니다."""
         date_str = self.date_edit.date().toString("yyyy-MM-dd")
@@ -202,6 +101,7 @@ class ManualMeterInputDialog(QDialog):
                     
         # 모든 검증을 통과하면 부모 창(Main Window)으로 Accepted 신호 전송
         self.accept()
+        
     def close_dialog(self):
         """Cancel 버튼 클릭 시 안전하게 창을 닫습니다."""
         self.done(QDialog.Rejected) # QDialog를 거치지 않고 직접 명시적으로 거절(Rejected) 코드로 종료

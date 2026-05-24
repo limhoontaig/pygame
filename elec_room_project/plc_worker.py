@@ -1,7 +1,9 @@
+# plc_worker.py
 import serial
 import struct
 import time
-from db_manager import insert_raw_data, verify_crc
+import sqlite3 # 💡 DB 직접 삽입을 위해 추가
+from db_manager import DB_NAME, DATA_LABELS  # 💡 db_manager에서는 경로와 라벨만 가져옴
 
 COM_PORT = 'COM3'         
 BAUD_RATE = 19200         
@@ -73,3 +75,46 @@ def serial_receive_thread():
         except Exception as e:
             print(f"시리얼 수신 스레드 예외 발생: {e}")
             break
+
+def insert_raw_data(values):
+    if len(values) < len(DATA_LABELS): return
+    try:
+        conn = sqlite3.connect(DB_NAME)
+        c = conn.cursor()
+        now = datetime.now()
+        l_date, l_time = now.strftime('%Y-%m-%d'), now.strftime('%H:%M:%S')
+        
+        DIV_BY_10 = {"실내온도", "외기온도", "SF운전시간", "EF운전시간", "Tr1_Temp", "Tr2_Temp", "Tr3_Temp"}
+        DIV_BY_100 = {"KEP_A_R", "KEP_A_S", "KEP_A_T", "KEP_frequency", "KEP_V_R", "KEP_V_S", "KEP_V_T", "KEP_V_R_S", "KEP_V_S_T", "KEP_V_T_R", "KEP_P_mWh"}
+        
+        adjusted_values = []
+        for label, val in zip(DATA_LABELS, values):
+            if label in DIV_BY_10: adjusted_values.append(val / 10.0)
+            elif label in DIV_BY_100: adjusted_values.append(val / 100.0)
+            else: adjusted_values.append(float(val))
+
+        placeholders = ", ".join(["?"] * len(adjusted_values))
+        col_names = ", ".join([f'"{name}"' for name in DATA_LABELS])
+        c.execute(f"INSERT INTO raw_data (log_date, log_time, {col_names}) VALUES (?, ?, {placeholders})", [l_date, l_time] + adjusted_values)
+        conn.commit()
+        conn.close()
+    except Exception as e:
+        print(f"DB 저장 오류: {e}")
+
+def verify_crc(data):
+    if len(data) < 4: return False
+    body = data[:-2]
+    recv_crc = data[-2:]
+    calc_crc = calculate_crc(body)
+    return recv_crc == calc_crc or recv_crc == calc_crc[::-1]
+
+def calculate_crc(data):
+    crc = 0xFFFF
+    for byte in data:
+        crc ^= byte
+        for _ in range(8):
+            if crc & 0x0001:
+                crc = (crc >> 1) ^ 0xA001
+            else:
+                crc >>= 1
+    return struct.pack('<H', crc)
