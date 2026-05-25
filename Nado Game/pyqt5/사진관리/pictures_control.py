@@ -21,7 +21,7 @@ from PIL import Image
 from PIL.ExifTags import TAGS
 import pandas as pd
 import numpy as np
-import mysql
+#import mysql
 import mysql.connector
 import math
 from threading import Event, Timer
