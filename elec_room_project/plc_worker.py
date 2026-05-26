@@ -2,6 +2,7 @@
 import serial
 import struct
 import time
+from datetime import datetime, timedelta
 import sqlite3 # 💡 DB 직접 삽입을 위해 추가
 from db_manager import DB_NAME, DATA_LABELS  # 💡 db_manager에서는 경로와 라벨만 가져옴
 
