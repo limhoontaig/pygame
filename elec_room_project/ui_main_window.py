@@ -50,12 +50,11 @@ class SCADAWindow(QMainWindow):
         lbl_date_title.setStyleSheet("font-size: 14px; font-weight: bold;")
         
         top_layout.addWidget(lbl_date_title)
-        
         top_layout.addWidget(self.qdate)
 
-        self.qdate.setMinimumWidth(120) # 가로 최소 크기를 150 픽셀로 강제 확장 (기존보다 훨씬 넓어집니다)
-        self.qdate.setAlignment(Qt.AlignCenter) # 날짜 글자를 가운데 정렬하여 가독성 향상
-        self.qdate.setStyleSheet("font-size: 14px; padding: 3px; font-weight: bold;") # 글자 크기 및 내부 여백 조정
+        self.qdate.setMinimumWidth(120) 
+        self.qdate.setAlignment(Qt.AlignCenter) 
+        self.qdate.setStyleSheet("font-size: 14px; padding: 3px; font-weight: bold;") 
         
         self.btn_show_table = QPushButton("종합 데이터 표")
         self.btn_show_table.setStyleSheet("background-color: #2980b9; color: white; font-weight: bold; min-height: 35px;")
@@ -64,22 +63,20 @@ class SCADAWindow(QMainWindow):
         self.btn_export_excel = QPushButton("엑셀 운영일지 출력")
         self.btn_export_excel.setStyleSheet("background-color: #27ae60; color: white; font-weight: bold; min-height: 35px;")
         
-        # SCADAWindow 클래스의 initUI 또는 버튼 레이아웃 배치 구역에 추가
-        self.btn_meter_input = QPushButton("전력량계 검침량 입력") # 요청하신 버튼명 지정
+        self.btn_meter_input = QPushButton("전력량계 검침량 입력") 
         self.btn_meter_input.setStyleSheet("background-color: #2196F3; color: white; font-weight: bold; min-height: 35px;")
         self.btn_meter_input.clicked.connect(self.click_open_meter_popup)
         
         top_layout.addWidget(self.btn_show_table)
         top_layout.addWidget(self.btn_show_graph)
         top_layout.addWidget(self.btn_export_excel)
-        # 🛠️ 수정한 부분: hbox 대신 top_layout 레이아웃 변수명을 정확하게 매칭
         top_layout.addWidget(self.btn_meter_input)    
         main_layout.addWidget(top_ctrl)
 
         self.stack = QStackedWidget()
         main_layout.addWidget(self.stack)
 
-        # 테이블 탭 구성
+        # ==================== 1. 테이블 탭 구성 ====================
         self.page_table = QWidget()
         table_layout = QVBoxLayout(self.page_table)
         splitter = QSplitter(Qt.Vertical)
@@ -96,9 +93,8 @@ class SCADAWindow(QMainWindow):
         self.extreme_table.setColumnCount(len(db_manager.COLUMN_LABELS))
         self.extreme_table.setHorizontalHeaderLabels(db_manager.COLUMN_LABELS)
 
-        # 🛠️ [새로운 추가 항목] 수동 계량기 일지 로그 테이블 설계
         self.manual_table = QTableWidget()
-        manual_headers = ["기록 일자"] + db_manager.METER_FIELDS # 날짜 + 11개 수동필드 제목 매칭
+        manual_headers = ["기록 일자"] + db_manager.METER_FIELDS 
         self.manual_table.setColumnCount(len(manual_headers))
         self.manual_table.setHorizontalHeaderLabels(manual_headers)
 
@@ -108,37 +104,36 @@ class SCADAWindow(QMainWindow):
         splitter.addWidget(self.avg_table)
         splitter.addWidget(QLabel("● 일일 최고(MAX) / 최저(MIN) 값 설비 통계"))
         splitter.addWidget(self.extreme_table)
-
-        # 🛠️ 분할 스플리터 레이아웃에 수동 지침 데이터 표 안착
         splitter.addWidget(QLabel("● 독립 계량장치 일일 지침 수동 로그 (manual_meter_logs)"))
         splitter.addWidget(self.manual_table)
 
         table_layout.addWidget(splitter)
         self.stack.addWidget(self.page_table)
 
-        # 그래프 탭 구성
+        # ==================== 2. 그래프 탭 구성 ====================
         self.page_graph = QWidget()
         graph_layout = QVBoxLayout(self.page_graph)
         
         graph_ctrl = QHBoxLayout()
         
-        # 변경: 단일 선택 콤보박스 대신, 다중 선택이 가능한 QListWidget 사용
-        from PyQt5.QtWidgets import QListWidget, QAbstractItemView
+        # [왼쪽 축] 다중 선택 리스트 위젯
         self.data_selector = QListWidget()
-        self.data_selector.setSelectionMode(QAbstractItemView.MultiSelection) # 다중 선택 모드 활성화
+        self.data_selector.setSelectionMode(QAbstractItemView.MultiSelection) 
         self.data_selector.addItems(db_manager.DATA_LABELS)
-        self.data_selector.setMaximumHeight(80) # UI 공간을 너무 차지하지 않도록 높이 제한
+        self.data_selector.setMaximumHeight(80) 
         
-        # 기본적으로 첫 번째 항목은 선택되어 있도록 설정
-        if self.data_selector.count() > 0:
-            self.data_selector.item(0).setSelected(True)
-        
-        # self.data_selector.addItems(db_manager.DATA_LABELS)
+        # [오른쪽 보조축] 다중 선택 리스트 위젯
+        self.right_axis_selector = QListWidget()
+        self.right_axis_selector.setSelectionMode(QAbstractItemView.MultiSelection)
+        self.right_axis_selector.setMaximumHeight(80) 
+
         self.period_selector = QComboBox()
         self.period_selector.addItems(["일간 (실시간 데이터)", "주간 (시간별 평균)", "월간 (시간별 평균)"])
         
-        graph_ctrl.addWidget(QLabel("시각화 필드:"))
+        graph_ctrl.addWidget(QLabel("기본(왼쪽) 축 필드 선택:"))
         graph_ctrl.addWidget(self.data_selector)
+        graph_ctrl.addWidget(QLabel("➡️ 오른쪽(보조) 축으로 보낼 필드:")) 
+        graph_ctrl.addWidget(self.right_axis_selector)     
         graph_ctrl.addWidget(QLabel("조회 기간:"))
         graph_ctrl.addWidget(self.period_selector)
         graph_layout.addLayout(graph_ctrl)
@@ -148,19 +143,144 @@ class SCADAWindow(QMainWindow):
         graph_layout.addWidget(self.canvas)
         self.stack.addWidget(self.page_graph)
 
+        # ==================== 3. 초기 상태 지정 및 이벤트 연결 ====================
+        # ⚠️ 중요: UI 컴포넌트가 온전히 로드되기 전까지 강제 팅김을 막기 위해 시그널을 잠시 차단합니다.
+        self.data_selector.blockSignals(True)
+        self.right_axis_selector.blockSignals(True)
+
+        if self.data_selector.count() > 0:
+            self.data_selector.item(0).setSelected(True)
+        
+        # 기본 데이터를 마운트 시켜 놓습니다.
+        self.load_data()
+        
+        # 모든 구조 작성이 완료된 시점에 비로소 안전하게 이벤트를 연결합니다.
         self.btn_show_table.clicked.connect(lambda: self.stack.setCurrentIndex(0))
         self.btn_show_graph.clicked.connect(lambda: self.stack.setCurrentIndex(1))
-        
-        # 💡 분리해 둔 엑셀 엔진 모듈의 함수를 바로 호출합니다!
         self.btn_export_excel.clicked.connect(self.export_excel_click)
         
         self.qdate.dateChanged.connect(self.auto_refresh)
-        # currentIndexChanged 대신 itemSelectionChanged를 사용합니다.
-        self.data_selector.itemSelectionChanged.connect(self.update_graph)
-        # self.data_selector.currentIndexChanged.connect(self.update_graph)
         self.period_selector.currentIndexChanged.connect(self.update_graph)
+        
+        # 이벤트 등록
+        self.data_selector.itemSelectionChanged.connect(self.sync_right_axis_list)
+        self.right_axis_selector.itemSelectionChanged.connect(self.update_graph)
 
-        self.load_data()
+        # 잠금을 해제하여 상호 운용을 개시합니다.
+        self.data_selector.blockSignals(False)
+        self.right_axis_selector.blockSignals(False)
+        
+        # 첫 화면 렌더링
+        self.update_graph()
+
+    def sync_right_axis_list(self):
+        """왼쪽 리스트 변경 시 오른쪽 리스트를 실시간 동기화하되, 재귀 루프를 차단합니다."""
+        # 무한 루프로 인한 프로그램 다운 방지 핵심 구간
+        self.data_selector.blockSignals(True)
+        self.right_axis_selector.blockSignals(True)
+        
+        try:
+            prev_selected = [item.text() for item in self.right_axis_selector.selectedItems()]
+            left_selected = [item.text() for item in self.data_selector.selectedItems()]
+            
+            self.right_axis_selector.clear()
+            if left_selected:
+                self.right_axis_selector.addItems(left_selected)
+                for i in range(self.right_axis_selector.count()):
+                    item = self.right_axis_selector.item(i)
+                    if item.text() in prev_selected:
+                        item.setSelected(True)
+        finally:
+            self.data_selector.blockSignals(False)
+            self.right_axis_selector.blockSignals(False)
+        
+        self.update_graph()
+
+    def update_graph(self):
+        """양방향 멀티 초이스 기능이 안전하게 처리되는 그래프 업데이트 스크립트"""
+        if self.stack.currentIndex() != 1: return
+        
+        selected_items = self.data_selector.selectedItems()
+        if not selected_items:
+            self.canvas.figure.clf()
+            self.ax = self.canvas.figure.add_subplot(111)
+            self.ax.text(0.5, 0.5, "비교할 필드를 선택해주세요.", ha='center')
+            self.canvas.draw()
+            return
+            
+        target_cols = [item.text() for item in selected_items]
+        period = self.period_selector.currentText()
+        selected_date = self.qdate.date().toPyDate()
+
+        # 양방향 분리 매핑 로직
+        right_cols = [item.text() for item in self.right_axis_selector.selectedItems()]
+        right_cols = [col for col in right_cols if col in target_cols] # 유효성 검증 예외처리
+        left_cols = [col for col in target_cols if col not in right_cols]
+
+        cols_str = ', '.join([f'"{col}"' for col in target_cols])
+        
+        try:
+            conn = sqlite3.connect(db_manager.DB_NAME)
+            if "일간" in period:
+                query = f'SELECT log_time, {cols_str} FROM raw_data WHERE log_date = ? ORDER BY log_time ASC'
+                params = (selected_date.strftime('%Y-%m-%d'),)
+            else:
+                days = 7 if "주간" in period else 30
+                start_date = selected_date - timedelta(days=days)
+                query = f'SELECT log_date || \' \' || SUBSTR(log_time,1,5) as dt, {cols_str} FROM hourly_avg WHERE log_date BETWEEN ? AND ? ORDER BY log_date, log_time'
+                params = (start_date.strftime('%Y-%m-%d'), selected_date.strftime('%Y-%m-%d'))
+
+            df = pd.read_sql_query(query, conn, params=params)
+            conn.close()
+        except Exception as e:
+            print(f"그래프 DB 조회 에러 발생: {e}")
+            return
+
+        self.canvas.figure.clf()
+        self.ax = self.canvas.figure.add_subplot(111)
+        
+        if not df.empty:
+            x_col = 'log_time' if "일간" in period else 'dt'
+            all_lines = []
+            
+            # [1] 기본 축 - 왼쪽 렌더링
+            for col in left_cols:
+                if col in df.columns:
+                    line = self.ax.plot(df[x_col], df[col], marker='o', markersize=2, label=col)
+                    all_lines += line
+            
+            if left_cols:
+                self.ax.set_ylabel(', '.join(left_cols[:2]) + ('...' if len(left_cols) > 2 else ''), color='#1f77b4', fontweight='bold')
+                self.ax.tick_params(axis='y', labelcolor='#1f77b4')
+            else:
+                self.ax.yaxis.set_visible(False)
+
+            # [2] 보조 축 - 오른쪽 다중 렌더링
+            if right_cols:
+                ax2 = self.ax.twinx()
+                for col in right_cols:
+                    if col in df.columns:
+                        line = ax2.plot(df[x_col], df[col], marker='^', markersize=3, linestyle='--', label=f"{col} (우)")
+                        all_lines += line
+                
+                ax2.set_ylabel(', '.join(right_cols[:2]) + ('...' if len(right_cols) > 2 else ''), color='#ff7f0e', fontweight='bold')
+                ax2.tick_params(axis='y', labelcolor='#ff7f0e')
+                ax2.grid(False) 
+
+            # 통합 범례(Legend) 연출
+            if all_lines:
+                labels = [l.get_label() for l in all_lines]
+                self.ax.legend(all_lines, labels, loc='upper right')
+                
+            import matplotlib.ticker as ticker
+            self.ax.xaxis.set_major_locator(ticker.MaxNLocator(nbins=10))
+            self.ax.set_title(f"선택 필드 {period} 분석 (양방향 멀티 축 제어)", fontsize=13, fontweight='bold')
+            self.ax.grid(True, linestyle='--')
+            self.canvas.figure.autofmt_xdate() 
+        else:
+            self.ax.text(0.5, 0.5, "데이터가 존재하지 않습니다.", ha='center')
+        
+        self.canvas.draw()
 
     def load_data(self):
         selected_date = self.qdate.date().toString("yyyy-MM-dd")
@@ -170,7 +290,7 @@ class SCADAWindow(QMainWindow):
             conn = sqlite3.connect(db_manager.DB_NAME)
             c = conn.cursor()
             
-            query_raw = f"SELECT log_date, log_time, {', '.join([f'\"{n}\"' for n in db_manager.DATA_LABELS])} FROM raw_data WHERE log_date = ? ORDER BY log_time DESC" # LIMIT 50"
+            query_raw = f"SELECT log_date, log_time, {', '.join([f'\"{n}\"' for n in db_manager.DATA_LABELS])} FROM raw_data WHERE log_date = ? ORDER BY log_time DESC"
             c.execute(query_raw, (selected_date,))
             self.display_table(self.raw_table, c.fetchall())
             
@@ -184,7 +304,6 @@ class SCADAWindow(QMainWindow):
             
             conn.close()
 
-            # 🛠️ 수동 입력 로그 조회 연동 추가
             if hasattr(db_manager, 'get_manual_meter_log_for_table'):
                 manual_row = db_manager.get_manual_meter_log_for_table(selected_date)
                 self.display_manual_table([manual_row])
@@ -192,68 +311,15 @@ class SCADAWindow(QMainWindow):
         except Exception as e:
             print(f"UI 로딩 실패: {e}")
 
-    # 🛠️ 수동 검침 출력 전용 가벼운 렌더링 함수
     def display_manual_table(self, rows):
         self.manual_table.setRowCount(len(rows))
         for r_idx, row in enumerate(rows):
             for c_idx, val in enumerate(row):
                 item = QTableWidgetItem(str(val))
                 item.setTextAlignment(Qt.AlignCenter)
-                # 수동 데이터 식별을 위해 연한 노란색/청색 계열 텍스트 포인트 추가 가능
                 if c_idx > 0 and val != "-":
                     item.setForeground(Qt.darkGreen)
                 self.manual_table.setItem(r_idx, c_idx, item)
-
-    def update_graph(self):
-        if self.stack.currentIndex() != 1: return
-        
-        # 1. 선택된 모든 필드 가져오기
-        selected_items = self.data_selector.selectedItems()
-        if not selected_items:
-            self.ax.clear()
-            self.ax.text(0.5, 0.5, "비교할 필드를 선택해주세요.", ha='center')
-            self.canvas.draw()
-            return
-            
-        target_cols = [item.text() for item in selected_items]
-        period = self.period_selector.currentText()
-        selected_date = self.qdate.date().toPyDate()
-
-        # 2. SQL 쿼리문 생성 (선택된 모든 필드를 콤마로 연결하여 호출)
-        cols_str = ', '.join([f'"{col}"' for col in target_cols])
-        
-        conn = sqlite3.connect(db_manager.DB_NAME)
-        if "일간" in period:
-            query = f'SELECT log_time, {cols_str} FROM raw_data WHERE log_date = ? ORDER BY log_time ASC'
-            params = (selected_date.strftime('%Y-%m-%d'),)
-        else:
-            days = 7 if "주간" in period else 30
-            start_date = selected_date - timedelta(days=days)
-            query = f'SELECT log_date || \' \' || SUBSTR(log_time,1,5) as dt, {cols_str} FROM hourly_avg WHERE log_date BETWEEN ? AND ? ORDER BY log_date, log_time'
-            params = (start_date.strftime('%Y-%m-%d'), selected_date.strftime('%Y-%m-%d'))
-
-        df = pd.read_sql_query(query, conn, params=params)
-        conn.close()
-
-        # 3. 그래프 그리기 (다중 선 구현)
-        self.ax.clear()
-        if not df.empty:
-            x_col = 'log_time' if "일간" in period else 'dt'
-            
-            # 선택한 필드 수만큼 반복하며 그래프에 선을 누적해서 그립니다.
-            for col in target_cols:
-                self.ax.plot(df[x_col], df[col], marker='o', markersize=2, label=col)
-                
-            import matplotlib.ticker as ticker
-            self.ax.xaxis.set_major_locator(ticker.MaxNLocator(nbins=10))
-            self.ax.set_title(f"선택 필드 {period} 비교 분석")
-            self.ax.grid(True, linestyle='--')
-            self.ax.legend(loc='upper right') # 각 선이 무엇인지 알려주는 범례 표시
-            self.canvas.figure.autofmt_xdate() 
-        else:
-            self.ax.text(0.5, 0.5, "데이터가 존재하지 않습니다.", ha='center')
-        
-        self.canvas.draw()
 
     def display_table(self, table, rows, is_extreme=False):
         table.setRowCount(len(rows))
@@ -261,7 +327,6 @@ class SCADAWindow(QMainWindow):
             for c_idx, val in enumerate(row):
                 txt = f"{val:.1f}" if isinstance(val, float) else str(val)
                 item = QTableWidgetItem(txt)
-                # 💡 이 줄을 추가하여 모든 텍스트를 중앙 정렬합니다.
                 item.setTextAlignment(Qt.AlignCenter)
 
                 if is_extreme and c_idx > 1:
@@ -271,20 +336,12 @@ class SCADAWindow(QMainWindow):
 
     def export_excel_click(self):
         selected_date = self.qdate.date().toString("yyyy-MM-dd")
-        
-        # 1. 사용자에게 저장할 디렉토리 경로를 입력받는 표준 대화상자 팝업
         selected_dir = QFileDialog.getExistingDirectory(self, "운영일지 저장 폴더 선택", "")
-        
-        # 2. 사용자가 폴더를 선택하지 않고 취소(창닫기)했을 경우 처리
         if not selected_dir:
-            return  # 프로세스 안전 종료 (아무 작업도 하지 않음)
+            return  
             
         try:
-            # 3. 엑셀 생성 엔진에 선택된 디렉토리 경로를 함께 전달
-            # (excel_report.py의 함수가 target_dir 매개변수를 받도록 함께 수정해야 합니다)
             excel_report.generate_excel_report(selected_date, target_dir=selected_dir)
-            
-            # 4. 저장 성공 완료 알림창 표시
             saved_path = os.path.join(selected_dir, f"{selected_date}_전기실_운영일지.xlsx")
             QMessageBox.information(
                 self, "출력 완료", 
@@ -302,20 +359,12 @@ class SCADAWindow(QMainWindow):
         self.update_graph()
 
     def click_open_meter_popup(self):
-        """[수동 지침 입력] 버튼 클릭 시 호출되는 함수 (QDialog 임포트 에러 해결 버전)"""
-        current_date_str = self.qdate.date().toString("yyyy-MM-dd") # 변수명 self.qdate 반영 완료
-        
-        # 팝업 객체 생성 및 실행
+        current_date_str = self.qdate.date().toString("yyyy-MM-dd")
         dialog = ManualMeterInputDialog(current_date_str, self)
-        
         result = dialog.exec_()
         
-        # 💡 NameError를 방지하기 위해 정수 숫자(1 = Accepted, 0 = Rejected)로 명확하게 비교합니다.
-        if result == 1: # 1은 QDialog.Accepted를 의미합니다.
-            
+        if result == 1: 
             save_date = dialog.date_edit.date().toString("yyyy-MM-dd")
-            
-            # 입력 데이터 수집
             final_data = {}
             try:
                 for field, edit in dialog.inputs.items():
@@ -323,7 +372,6 @@ class SCADAWindow(QMainWindow):
             except Exception as e:
                 return
 
-            # 사용자에게 저장 여부 확인
             reply = QMessageBox.question(
                 self, '데이터 저장 확인',
                 f"[{save_date}] 수동 입력 지침을 DB에 반영하시겠습니까?\n(Yes 선택 시 운영일지 출력이 함께 진행됩니다.)",
@@ -348,7 +396,6 @@ class SCADAWindow(QMainWindow):
                 
                 QMessageBox.information(self, "저장 완료", success_msg)
                 
-                # 만약 메인윈도우 새로고침 함수명이 다르면 이 부분에서 에러가 날 수 있으니 주시해 주세요.
                 if hasattr(self, 'refresh_data'):
                     self.refresh_data()
                 elif hasattr(self, 'load_data'):
@@ -356,8 +403,5 @@ class SCADAWindow(QMainWindow):
                 
             except Exception as e:
                 QMessageBox.critical(self, "오류 발생", f"작업 중 에러가 발생했습니다:\n{str(e)}")
-                
         else:
-            # result가 0(Rejected, 취소)인 경우 일로 들어옵니다.
-            print("=== [DEBUG] 4-Cancel. 사용자가 Cancel(취소)을 누르거나 창을 닫음 (Rejected) ===")
-            print("=== [DEBUG] 5-Cancel. 추가 작업 없이 안전하게 함수 종료 ===")
+            print("=== [DEBUG] 사용자가 입력을 취소함 ===")
