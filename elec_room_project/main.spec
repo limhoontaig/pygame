@@ -5,12 +5,12 @@ a = Analysis(
     ['main.py'],
     pathex=[],
     binaries=[],
-    datas=[('template_전기실_운영일지.xlsx', '.'), ('statistics.png', '.')],
+    datas=[('statistics.ico', '.'), ('template_전기실_운영일지.xlsx', '.')],
     hiddenimports=[],
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
-    excludes=[],
+    excludes=['PyQt6', 'PySide6'],
     noarchive=False,
     optimize=0,
 )
@@ -35,5 +35,5 @@ exe = EXE(
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
-    icon=['statistics.png'],
+    icon=['statistics.ico'],
 )
