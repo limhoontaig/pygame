@@ -3,13 +3,12 @@ import sys
 import threading
 import time
 from PyQt5.QtWidgets import QApplication, QSplashScreen, QDesktopWidget
-from PyQt5.QtCore import Qt, QCoreApplication
+from PyQt5.QtCore import Qt, QCoreApplication, QThread, pyqtSignal
 from PyQt5.QtGui import QCursor, QFont
 
-# 최상위 관리 모듈 및 메인 UI 윈도우 로드
+# 최상위 관리 모듈 로드 (윈도우 로드는 지연 가능하도록 아래에서 하거나 그대로 둠)
 import db_manager
 import plc_worker
-from ui_main_window import SCADAWindow 
 
 def center_window(widget):
     """위젯을 화면 중앙으로 이동시키는 함수"""
@@ -18,11 +17,32 @@ def center_window(widget):
     qr.moveCenter(cp)
     widget.move(qr.topLeft())
 
+# 초기화를 담당할 백그라운드 스레드
+class InitWorker(QThread):
+    progress_signal = pyqtSignal(str)
+    finished_signal = pyqtSignal()
+
+    def run(self):
+        # 1단계: DB 초기화 (가장 오래 걸리는 작업)
+        self.progress_signal.emit("⚡ 데이터베이스 연결 및 구성 중...")
+        db_manager.init_db()
+        time.sleep(0.3) 
+        
+        # 2단계: PLC 통신 스레드 기동
+        self.progress_signal.emit("🔌 PLC 통신 엔진 시작 중...")
+        t = threading.Thread(target=plc_worker.serial_receive_thread, daemon=True)
+        t.start()
+        time.sleep(0.3)
+        
+        # 3단계: 준비 완료 신호
+        self.progress_signal.emit("🖥️ 시스템 화면 생성 중...")
+        self.finished_signal.emit()
+
+
 if __name__ == "__main__":
-    # 1. GUI 애플리케이션 생성
     app = QApplication(sys.argv)
     
-    # 2. 로딩 화면(Splash Screen) 설정 및 크기 키우기
+    # 1. Splash Screen 즉시 생성 및 표시 (메인 스레드 가볍게 유지)
     splash = QSplashScreen()
     splash.setFixedSize(600, 400)
     splash.setStyleSheet("""
@@ -36,54 +56,58 @@ if __name__ == "__main__":
     
     font = QFont("Malgun Gothic", 18, QFont.Bold)
     splash.setFont(font)
-    
-    # 화면 중앙에 배치하고 표시
     center_window(splash)
     splash.show()
     splash.raise_()
     
-    # 마우스 커서를 '대기 상태'로 변경
     app.setOverrideCursor(QCursor(Qt.WaitCursor))
-    
-    # [개선] 텍스트가 잘 보이도록 정렬 및 줄바꿈 조정
-    splash.showMessage("\n\n\n\n⚡ 시스템 엔진 기동 중...\n변전실 데이터를 불러오고 있습니다.", 
+    splash.showMessage("\n\n\n\n🚀 시스템 엔진 기동 준비 중...", 
                        Qt.AlignCenter | Qt.AlignVCenter, Qt.white)
     
-    # ⭐ [핵심 개선 1] OS가 로딩 창을 즉시 그릴 수 있도록 이벤트를 강제로 강하게 처리
-    for _ in range(10):
+    # Splash 화면을 OS가 즉시 그리도록 강제 이벤트를 처리
+    # 이 시점에는 무거운 객체가 전혀 없으므로 Splash가 0.1초 만에 팍 뜹니다.
+    for _ in range(5):
         QCoreApplication.processEvents()
-        time.sleep(0.05)  # 약 0.5초간 UI가 안정적으로 먼저 뜨도록 대기
+    
+    # 2. 백그라운드 스레드 생성 및 시작
+    worker = InitWorker()
+    
+    # 진행 메시지 반영
+    worker.progress_signal.connect(
+        lambda msg: splash.showMessage(f"\n\n\n\n{msg}", Qt.AlignCenter | Qt.AlignVCenter, Qt.white)
+    )
+    
+    # 전역 참조용 메인 윈도우 변수 선언 (가비지 컬렉션 방지)
+    win = None
+    
+    # ⭐ [핵심 개선] DB 초기화 등이 '완전히 끝난 후' 메인 윈도우를 비로서 임포트하고 생성합니다.
+    def on_init_finished():
+        global win
+        
+        # 메인 윈도우 모듈을 이 시점에 로드하여 초기 기동 속도를 극대화
+        from ui_main_window import SCADAWindow 
+        
+        # DB 작업이 끝난 평온한 상태에서 메인 창 생성
+        win = SCADAWindow()
+        center_window(win)
+        
+        # 최상단 고정으로 메인 화면 표시
+        win.setWindowFlags(win.windowFlags() | Qt.WindowStaysOnTopHint)
+        win.show()
+        
+        # 고정 해제 및 포커스 집중
+        win.setWindowFlags(win.windowFlags() & ~Qt.WindowStaysOnTopHint) 
+        win.show()
+        win.raise_()
+        win.activateWindow()
+        
+        # 로딩 창 깔끔하게 종료
+        splash.finish(win)
+        app.restoreOverrideCursor()
 
-    # 3. 데이터베이스 및 스레드 초기화
-    # 이제 로딩 창이 완전히 뜬 상태에서 DB 작업을 시작하므로 사용자가 텍스트를 볼 수 있습니다.
-    db_manager.init_db()
+    worker.finished_signal.connect(on_init_finished)
     
-    # DB 초기화 직후 UI 갱신 한 번 더 실행
-    QCoreApplication.processEvents()
-    
-    t = threading.Thread(target=plc_worker.serial_receive_thread, daemon=True)
-    t.start()
-    
-    # 4. 메인 윈도우 생성
-    win = SCADAWindow()
-    
-    # 5. 메인 화면 위치 및 포커스 설정
-    center_window(win)
-    
-    # 다른 창들보다 가장 앞으로 강제로 띄우는 설정
-    win.setWindowFlags(win.windowFlags() | Qt.WindowStaysOnTopHint)
-    win.show()
-    
-    # 실행 직후 최상단 고정을 해제
-    win.setWindowFlags(win.windowFlags() & ~Qt.WindowStaysOnTopHint) 
-    win.show()
-    
-    # 최종적으로 포커스를 줌
-    win.raise_()
-    win.activateWindow()
-    
-    # 로딩 창 종료 및 커서 복구
-    splash.finish(win)
-    app.restoreOverrideCursor()
+    # 3. 백그라운드 초기화 작업 시작
+    worker.start()
     
     sys.exit(app.exec_())
