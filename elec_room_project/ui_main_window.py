@@ -221,25 +221,68 @@ class SCADAWindow(QMainWindow):
                     QMessageBox.critical(self, "오류 발생", f"에러: {e}")
     
     
+    # ui_main_window.py 내의 기존 해당 함수를 아래 코드로 교체합니다.
     def click_open_inspection_popup(self):
-        """[현장 점검 입력] 버튼을 눌렀을 때 실행되는 함수"""
-        current_date_str = self.qdate.date().toString("yyyy-MM-dd")
-        dialog = FieldInspectionDialog(current_date_str, self)
+        """[현장 점검 입력] 버튼을 눌렀을 때 실행되는 함수 (조회 날짜 무시, 무조건 '오늘'로 강제 고정)"""
+        # 🌟 핵심 수정: 메인 화면의 self.qdate.date()를 무시하고, 무조건 실제 오늘 날짜(Today)를 따옵니다.
+        today_date_str = datetime.now().strftime("%Y-%m-%d")
+        
+        # 팝업 다이얼로그를 띄울 때 오늘 날짜를 기본값으로 주입합니다.
+        dialog = FieldInspectionDialog(today_date_str, self)
         result = dialog.exec_()
         
-        if result == 1: # OK 버튼을 누른 경우
-            save_date = dialog.date_edit.date().toString("yyyy-MM-dd")
-            round_idx = dialog.combo_round.currentIndex() + 1 # 1, 2, 3차 추출
+        if result == 1: # 사용자가 팝업창에서 OK(확인) 버튼을 누른 경우
+            # 팝업창 내부의 날짜를 가져오더라도 무조건 오늘 날짜입니다.
+            save_date = today_date_str 
+            round_idx = dialog.combo_round.currentIndex() + 1 # 선택한 차수 (1, 2, 3)
             inspector = dialog.input_name.text().strip()
             
-            reply = QMessageBox.question(
-                self, '점검 등록 확인', f"[{save_date}] {round_idx}차 현장점검 완료 기록을 DB에 반영하시겠습니까?",
-                QMessageBox.Yes | QMessageBox.No, QMessageBox.Yes
-            )
+            # -------------------------------------------------------------
+            # 선행 등록된 점검자가 있는지 '오늘 날짜' 기준으로 사전 검사
+            # -------------------------------------------------------------
+            existing_inspections = db_manager.get_field_inspections_for_date(save_date)
+            target_round_data = existing_inspections.get(round_idx, {"name": "", "time": ""})
             
-            if reply == QMessageBox.Yes:
-                success = db_manager.save_field_inspection(save_date, round_idx, inspector)
-                if success:
-                    QMessageBox.information(self, "저장 완료", f"{round_idx}차 현장 점검 기록이 성공적으로 완료되었습니다.")
-                else:
-                    QMessageBox.critical(self, "저장 실패", "데이터베이스 저장 중 에러가 발생했습니다.")
+            # 만약 오늘 선택한 차수에 이미 기록이 존재한다면!
+            if target_round_data["name"] != "":
+                old_name = target_round_data["name"]
+                old_time = target_round_data["time"]
+                
+                # 근무자에게 경고창을 띄우고 기존 정보를 고지합니다.
+                reply = QMessageBox.question(
+                    self, '⚠️ 오늘 점검 기록 중복 경고',
+                    f"오늘({save_date}) 해당 차수에는 이미 등록된 점검 기록이 존재합니다.\n\n"
+                    f"■ 차수: {round_idx}차 점검\n"
+                    f"■ 기존 점검자: {old_name}\n"
+                    f"■ 기록 시간: {old_time}\n\n"
+                    f"현재 입력하신 [{inspector}] 성명으로 기존 기록을 덮어쓰시겠습니까?",
+                    QMessageBox.Yes | QMessageBox.No, QMessageBox.No
+                )
+                
+                if reply == QMessageBox.No:
+                    print(f"[INFO] 오늘자 {round_idx}차 점검 입력이 취소되었습니다.")
+                    return
+            else:
+                # 당일 최초 입력 시 확인창
+                reply = QMessageBox.question(
+                    self, '점검 등록 확인', 
+                    f"오늘 날짜 [{save_date}] 기준으로 {round_idx}차 현장점검을 완료 처리하시겠습니까?",
+                    QMessageBox.Yes | QMessageBox.No, QMessageBox.Yes
+                )
+                
+                if reply == QMessageBox.No:
+                    return
+            
+            # -------------------------------------------------------------
+            # 💾 최종 데이터베이스 반영 (db_manager 내부에서 현재 컴퓨터 시간 주입)
+            # -------------------------------------------------------------
+            success = db_manager.save_field_inspection(save_date, round_idx, inspector)
+            if success:
+                QMessageBox.information(self, "저장 완료", f"오늘자({save_date}) {round_idx}차 현장 점검 기록이 완료되었습니다.")
+                
+                # 만약 메인 화면이 '오늘 날짜'를 보고 있었다면 표를 새로고침 해줍니다.
+                current_view_date = self.qdate.date().toString("yyyy-MM-dd")
+                if current_view_date == save_date:
+                    self.load_data()
+            else:
+                QMessageBox.critical(self, "저장 실패", "데이터베이스 저장 중 에러가 발생했습니다.")
