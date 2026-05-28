@@ -13,7 +13,7 @@ from ui_graph_manager import GraphManager
 
 import db_manager
 import excel_report
-from ui_dialogs import ManualMeterInputDialog 
+from ui_dialogs import ManualMeterInputDialog, FieldInspectionDialog 
 
 class SCADAWindow(QMainWindow):
     def __init__(self):
@@ -54,13 +54,17 @@ class SCADAWindow(QMainWindow):
         self.btn_export_excel.setStyleSheet("background-color: #27ae60; color: white; font-weight: bold; min-height: 35px;")
         self.btn_meter_input = QPushButton("전력량계 검침량 입력") 
         self.btn_meter_input.setStyleSheet("background-color: #2196F3; color: white; font-weight: bold; min-height: 35px;")
+        self.btn_field_inspection = QPushButton("현장 점검 입력")
+        self.btn_field_inspection.setStyleSheet("background-color: #E67E22; color: white; font-weight: bold; min-height: 35px;")
+        self.btn_field_inspection.clicked.connect(self.click_open_inspection_popup) # # 👈 레이아웃에 추가 이벤트 연결
         
         top_layout.addWidget(lbl_date_title)
         top_layout.addWidget(self.qdate)
         top_layout.addWidget(self.btn_show_table)
         top_layout.addWidget(self.btn_show_graph)
         top_layout.addWidget(self.btn_export_excel)
-        top_layout.addWidget(self.btn_meter_input)    
+        top_layout.addWidget(self.btn_meter_input)
+        top_layout.addWidget(self.btn_field_inspection)  # 👈 레이아웃에 추가  
         main_layout.addWidget(top_ctrl)
 
         self.stack = QStackedWidget()
@@ -215,3 +219,27 @@ class SCADAWindow(QMainWindow):
                     QMessageBox.information(self, "저장 완료", "성공적으로 처리되었습니다.")
                 except Exception as e:
                     QMessageBox.critical(self, "오류 발생", f"에러: {e}")
+    
+    
+    def click_open_inspection_popup(self):
+        """[현장 점검 입력] 버튼을 눌렀을 때 실행되는 함수"""
+        current_date_str = self.qdate.date().toString("yyyy-MM-dd")
+        dialog = FieldInspectionDialog(current_date_str, self)
+        result = dialog.exec_()
+        
+        if result == 1: # OK 버튼을 누른 경우
+            save_date = dialog.date_edit.date().toString("yyyy-MM-dd")
+            round_idx = dialog.combo_round.currentIndex() + 1 # 1, 2, 3차 추출
+            inspector = dialog.input_name.text().strip()
+            
+            reply = QMessageBox.question(
+                self, '점검 등록 확인', f"[{save_date}] {round_idx}차 현장점검 완료 기록을 DB에 반영하시겠습니까?",
+                QMessageBox.Yes | QMessageBox.No, QMessageBox.Yes
+            )
+            
+            if reply == QMessageBox.Yes:
+                success = db_manager.save_field_inspection(save_date, round_idx, inspector)
+                if success:
+                    QMessageBox.information(self, "저장 완료", f"{round_idx}차 현장 점검 기록이 성공적으로 완료되었습니다.")
+                else:
+                    QMessageBox.critical(self, "저장 실패", "데이터베이스 저장 중 에러가 발생했습니다.")

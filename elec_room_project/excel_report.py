@@ -7,7 +7,8 @@ import zipfile
 import re
 from datetime import datetime, timedelta
 import openpyxl
-from db_manager import DB_NAME, DATA_LABELS, METER_FIELDS, DB_DIR, create_manual_meter_table
+from db_manager import (DB_NAME, DATA_LABELS, METER_FIELDS, DB_DIR, 
+                        create_manual_meter_table, get_field_inspections_for_date) # 👈 괄호로 묶고 이 함수를 추가해 줍니다.
 
 TEMPLATE_NAME = "template_전기실_운영일지.xlsx"
 TEMPLATE_IN_APPDATA = os.path.join(DB_DIR, TEMPLATE_NAME)
@@ -259,6 +260,47 @@ def generate_excel_report(selected_date, target_dir=None):
                         db_val = meter_data[time_type][field_name]
                         # DB 값이 존재하면 실수형(float)으로 입력, 없으면 공백 처리
                         cell.value = float(db_val) if db_val is not None else ""
+
+    # =================================================================
+    # [파트 3-4 신규 추가] 하드코딩 탈피: E40:G48 셀을 순회하며 점검 데이터 자동 매핑
+    # =================================================================
+    try:
+        print(f"[DEBUG] 현장 점검 데이터 엑셀 매핑 시작 (날짜: {selected_date})")
+        
+        # 1. 상단에서 임포트한 함수를 통해 오늘 날짜의 1,2,3차 점검자/시간 딕셔너리 획득
+        inspection_data = get_field_inspections_for_date(selected_date)
+        
+        # 2. 과장님이 제안하신 E40부터 G48까지의 범위를 순회 (행과 열을 돌며 탐색)
+        for row in ws_summary["E40:G48"]:
+            for cell in row:
+                if cell.value and isinstance(cell.value, str):
+                    # 공백을 제거하고 순수 텍스트만 비교합니다.
+                    cell_text = cell.value.strip()
+                    
+                    # --- 1차 점검 매핑 ---
+                    if "1차" in cell_text and "점검자" in cell_text:
+                        cell.value = inspection_data[1]["name"] if inspection_data[1]["name"] else "-"
+                    elif "1차" in cell_text and "시간" in cell_text:
+                        cell.value = inspection_data[1]["time"] if inspection_data[1]["time"] else "-"
+                        
+                    # --- 2차 점검 매핑 ---
+                    elif "2차" in cell_text and "점검자" in cell_text:
+                        cell.value = inspection_data[2]["name"] if inspection_data[2]["name"] else "-"
+                    elif "2차" in cell_text and "시간" in cell_text:
+                        cell.value = inspection_data[2]["time"] if inspection_data[2]["time"] else "-"
+                        
+                    # --- 3차 점검 매핑 ---
+                    elif "3차" in cell_text and "점검자" in cell_text:
+                        cell.value = inspection_data[3]["name"] if inspection_data[3]["name"] else "-"
+                    elif "3차" in cell_text and "시간" in cell_text:
+                        cell.value = inspection_data[3]["time"] if inspection_data[3]["time"] else "-"
+                        
+        print("[DEBUG] 현장 점검 데이터 엑셀 유연 매핑 완료")
+        
+    except Exception as e:
+        # 혹시 모를 에러 발생 시 프로그램 전체가 멈추지 않고 로그만 남기도록 유도
+        print(f"[ERROR] 현장 점검 서식 순회 매핑 중 오류 발생: {e}")
+    # =================================================================
 
     # =========================================================================
     # [파트 4] 상세내역 시트 - 시간별 데이터 완벽 주입 (상/하단 24시간 입력 제어)

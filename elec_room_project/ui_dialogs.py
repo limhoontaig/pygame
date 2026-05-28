@@ -1,6 +1,6 @@
 # ui_dialogs.py
 import sqlite3
-from PyQt5.QtWidgets import QDialog, QVBoxLayout, QHBoxLayout, QLabel, QDateEdit, QGroupBox, QFormLayout, QLineEdit, QGridLayout, QDialogButtonBox, QMessageBox
+from PyQt5.QtWidgets import QDialog, QVBoxLayout, QHBoxLayout, QLabel, QDateEdit, QGroupBox, QFormLayout, QLineEdit, QGridLayout, QDialogButtonBox, QMessageBox, QComboBox
 from PyQt5.QtCore import QDate, Qt
 
 import db_manager # DB 조회를 위해 가져옴
@@ -149,3 +149,56 @@ class ManualMeterInputDialog(QDialog):
         date_str = self.date_edit.date().toString("yyyy-MM-dd")
         data_dict = {field: edit.text().strip() for field, edit in self.inputs.items()}
         return date_str, data_dict
+
+class FieldInspectionDialog(QDialog):
+    """현장 점검 근무자 입력 및 차수 선택 팝업 창"""
+    def __init__(self, default_date_str, parent=None):
+        super().__init__(parent)
+        self.setWindowTitle("현장 일일 점검 기록 입력")
+        self.resize(400, 250)
+
+        # 기존 스타일과 통일성 유지 (글씨 굵게, 크기 +1)
+        current_font = self.font()
+        current_font.setPointSize(current_font.pointSize() + 1)
+        current_font.setBold(True)
+        self.setFont(current_font)
+
+        layout = QVBoxLayout(self)
+
+        # 1. 날짜 설정 (메인 화면에서 선택된 날짜 자동 고정)
+        date_layout = QHBoxLayout()
+        date_layout.addWidget(QLabel("점검 일자:"))
+        self.date_edit = QDateEdit(QDate.fromString(default_date_str, "yyyy-MM-dd"))
+        self.date_edit.setCalendarPopup(True)
+        self.date_edit.setEnabled(False)  # 임의 날짜 조작 방지를 위해 읽기 전용 처리 가능
+        date_layout.addWidget(self.date_edit)
+        layout.addLayout(date_layout)
+
+        # 2. 점검 차수 선택 (콤보박스)
+        round_layout = QHBoxLayout()
+        round_layout.addWidget(QLabel("점검 차수:"))
+        self.combo_round = QComboBox()
+        self.combo_round.addItems(["1차 점검", "2차 점검", "3차 점검"])
+        round_layout.addWidget(self.combo_round)
+        layout.addLayout(round_layout)
+
+        # 3. 점검자 이름 입력
+        name_layout = QHBoxLayout()
+        name_layout.addWidget(QLabel("점검자 성명:"))
+        self.input_name = QLineEdit()
+        self.input_name.setPlaceholderText("성명을 입력하세요")
+        name_layout.addWidget(self.input_name)
+        layout.addLayout(name_layout)
+
+        # 4. 하단 버튼 (확인 / 취소)
+        buttons = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel, Qt.Horizontal, self)
+        buttons.accepted.connect(self.validate_and_accept)
+        buttons.rejected.connect(self.reject)
+        layout.addWidget(buttons)
+
+    def validate_and_accept(self):
+        if not self.input_name.text().strip():
+            QMessageBox.warning(self, "입력 오류", "점검자 성명을 정확히 입력해 주세요.")
+            self.input_name.setFocus()
+            return
+        self.accept()

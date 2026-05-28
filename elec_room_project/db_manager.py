@@ -34,6 +34,7 @@ def init_db():
     c.execute(f'CREATE TABLE IF NOT EXISTS raw_data (log_date DATE, log_time TIME, {cols})')
     c.execute(f'CREATE TABLE IF NOT EXISTS hourly_avg (log_date DATE, log_time TIME, {cols})')
     c.execute(f'CREATE TABLE IF NOT EXISTS daily_extremes (log_date DATE, extreme_type TEXT, {cols}, PRIMARY KEY (log_date, extreme_type))')
+    create_field_inspection_table()
     conn.commit()
     conn.close()
 
@@ -180,3 +181,67 @@ def get_manual_meter_log_for_table(target_date):
     else:
         # 데이터가 없을 경우 날짜와 함께 빈 대시(-) 채우기
         return [target_date] + ["-"] * len(METER_FIELDS)
+
+# ==========================================
+# [신규 추가] 현장 점검 관리 DB 및 함수들
+# ==========================================
+
+def create_field_inspection_table():
+    """현장 점검 데이터를 기록할 테이블을 생성합니다."""
+    conn = sqlite3.connect(DB_NAME)
+    c = conn.cursor()
+    # 날짜와 차수(1, 2, 3차)의 조합이 중복되지 않도록 복합 기본키(PRIMARY KEY) 설정
+    c.execute('''
+        CREATE TABLE IF NOT EXISTS field_inspection (
+            inspection_date DATE,
+            inspection_round INTEGER,
+            inspector_name TEXT NOT NULL,
+            inspected_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY (inspection_date, inspection_round)
+        )
+    ''')
+    conn.commit()
+    conn.close()
+
+def save_field_inspection(target_date, round_val, inspector_name):
+    """지정된 날짜와 차수에 점검자 정보를 저장합니다. 이미 있으면 수정(UPDATE)합니다."""
+    create_field_inspection_table()
+    conn = sqlite3.connect(DB_NAME)
+    c = conn.cursor()
+    try:
+        c.execute('''
+            INSERT OR REPLACE INTO field_inspection (inspection_date, inspection_round, inspector_name, inspected_at)
+            VALUES (?, ?, ?, datetime('now', 'localtime'))
+        ''', (target_date, round_val, inspector_name))
+        conn.commit()
+        return True
+    except Exception as e:
+        print(f"현장 점검 저장 오류: {e}")
+        return False
+    finally:
+        conn.close()
+
+def get_field_inspections_for_date(target_date):
+    """특정 날짜의 1, 2, 3차 점검 내역을 딕셔너리 형태로 반환합니다."""
+    create_field_inspection_table()
+    conn = sqlite3.connect(DB_NAME)
+    c = conn.cursor()
+    c.execute('''
+        SELECT inspection_round, inspector_name, strftime('%H:%M', inspected_at) 
+        FROM field_inspection 
+        WHERE inspection_date = ?
+    ''', (target_date,))
+    rows = c.fetchall()
+    conn.close()
+    
+    # 기본값 설정 (데이터가 없을 경우 빈 문자열 처리)
+    result = {
+        1: {"name": "", "time": ""},
+        2: {"name": "", "time": ""},
+        3: {"name": "", "time": ""}
+    }
+    for row in rows:
+        round_num, name, time_str = row
+        if round_num in result:
+            result[round_num] = {"name": name, "time": time_str}
+    return result        
