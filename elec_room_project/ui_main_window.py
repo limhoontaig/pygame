@@ -194,7 +194,7 @@ class SCADAWindow(QMainWindow):
             return
 
         # 2단계: 폴더 선택 창 열기
-        dir_path = QFileDialog.getExistingDirectory(self, "엑셀 파일 저장 폴더 선택", "D:\\")
+        dir_path = QFileDialog.getExistingDirectory(self, "엑셀 파일 저장 폴더 선택", "D:\\전기실_운전일지")
         if not dir_path:
             QMessageBox.warning(self, "출력 취소", "저장할 폴더가 선택되지 않아 엑셀 출력을 취소합니다.")
             return
@@ -291,7 +291,7 @@ class SCADAWindow(QMainWindow):
                         return
 
                     # 폴더 선택 창 열기
-                    selected_dir = QFileDialog.getExistingDirectory(self, "운영일지 저장 폴더 선택", "D:\\")
+                    selected_dir = QFileDialog.getExistingDirectory(self, "운영일지 저장 폴더 선택", "D:\\전기실_운전일지")
                     if not selected_dir: 
                         self.load_data()
                         QMessageBox.warning(self, "출력 취소", "저장할 폴더가 선택되지 않아 엑셀 출력을 취소합니다.\n(DB 데이터는 안전하게 저장되었습니다.)")
