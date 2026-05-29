@@ -7,33 +7,62 @@ import db_manager # DB 조회를 위해 가져옴
 
 class ManualMeterInputDialog(QDialog):
     """독립된 3개 계량장치의 11개 지침을 날짜별로 통합 입력/수정하는 팝업 창"""
-    def __init__(self, default_date_str, parent=None):
+    def __init__(self, default_date_str=None, parent=None):
         super().__init__(parent)
         self.setWindowTitle("독립 계량장치 일일 지침 수동 입력/수정")
-        self.resize(700, 500) # 그룹화로 인해 UI 보기 좋게 사이즈를 약간 키웠습니다.
+        self.resize(700, 500) 
 
-        # [여기 추가] 다이얼로그 전체 폰트 설정 (기존 폰트에서 크기 +1, 볼드 처리)
-        current_font = self.font()                   # 현재 기본 폰트 가져오기
-        current_font.setPointSize(current_font.pointSize() + 1) # 크기 1 사이즈 증가
-        current_font.setBold(True)                   # 볼드체(굵게) 설정
-        self.setFont(current_font)                   # 다이얼로그 전체에 적용 (자식들에게 상속됨)
+        # 다이얼로그 전체 폰트 설정 (기존 폰트에서 크기 +1, 볼드 처리)
+        current_font = self.font()                   
+        current_font.setPointSize(current_font.pointSize() + 1) 
+        current_font.setBold(True)                   
+        self.setFont(current_font)                   
         
+        # 메인 레이아웃 생성
         main_layout = QVBoxLayout()
+        # [변경] 다이얼로그 안쪽 상부 여백을 20 -> 10으로 줄여 붕 뜨는 느낌 제거
+        main_layout.setContentsMargins(15, 10, 15, 15)
         
-        # 1. 날짜 선택 영역
+        # 1. 날짜 선택 영역 (1라인 가로 배치 및 왼쪽 정렬 밀착)
         date_layout = QHBoxLayout()
-        date_layout.addWidget(QLabel("<b>검침 대상 일자:</b>"))
+        date_layout.setSpacing(10) # 위젯 간의 가로 간격을 촘촘하게 10px로 제한
+        
+        # 날짜 레이블 색상 변경 (안정적인 톤)
+        date_label = QLabel("<span style='color: #2c3e50;'><b>검침/기록 대상 일자:</b></span>")
+        date_layout.addWidget(date_label)
+        
         self.date_edit = QDateEdit()
-        self.date_edit.setCalendarPopup(True)
-        self.date_edit.setDate(QDate.fromString(default_date_str, "yyyy-MM-dd"))
-        self.date_edit.setMinimumWidth(120)
+        self.date_edit.setCalendarPopup(True) # 캘린더 팝업 허용 (언제든 변경 가능)
+        
+        # --- 날짜 로직 변경 분기 ---
+        if default_date_str:
+            # 부모 창에서 특정 날짜를 강제로 지정해 준 경우
+            target_date = QDate.fromString(default_date_str, "yyyy-MM-dd")
+        else:
+            # 기본값: 오늘 기준 전날(-1일) 세팅
+            target_date = QDate.currentDate().addDays(-1)
+            
+        self.date_edit.setDate(target_date)
+        
+        # [변경] 날짜 입력창이 뚱뚱해지지 않도록 너비를 딱 알맞게 고정
+        self.date_edit.setMinimumWidth(130)
+        self.date_edit.setMaximumWidth(150)
         
         # 날짜 변경 시 데이터를 새로 로드하는 이벤트 연결
         self.date_edit.dateChanged.connect(self.load_date_data)
-        
         date_layout.addWidget(self.date_edit)
-        date_layout.addStretch()
+        
+        # 근무자 혼돈 방지를 위한 안내 문구 (날짜창 바로 옆에 위치)
+        notice_label = QLabel("<span style='color: #e74c3c; font-size: 10pt;'>* 전날 전력량 입력을 위해 기본 '어제 날짜'로 지정되었습니다.</span>")
+        date_layout.addWidget(notice_label)
+        
+        # [핵심] 가로 레이아웃 우측에 스트레치를 넣어 모든 위젯을 왼쪽으로 콤팩트하게 밀착시킴
+        date_layout.addStretch(1)
+        
+        # 메인 레이아웃에 날짜 라인 추가
         main_layout.addLayout(date_layout)
+        # 날짜 라인과 하부 그리드(계량기 양식) 사이의 수직 간격을 촘촘하게 제어
+        main_layout.addSpacing(5)
         
         # 전체 그룹을 2x2로 배치할 메인 그리드 레이아웃
         grid_layout = QGridLayout()
@@ -118,11 +147,10 @@ class ManualMeterInputDialog(QDialog):
     def load_date_data(self):
         """날짜가 변경될 때마다 DB를 뒤져 해당 일자의 기존 수치를 양식에 표기합니다."""
         date_str = self.date_edit.date().toString("yyyy-MM-dd")
-        # db_manager의 조회 함수 호출
         current_data = db_manager.get_manual_meter_data(date_str)
         
         for field, value in current_data.items():
-            if field in self.inputs: # 딕셔너리에 필드가 존재할 때만 입력창에 값 세팅   
+            if field in self.inputs: 
                 self.inputs[field].setText(value)
             
     def validate_and_accept(self):
@@ -135,17 +163,14 @@ class ManualMeterInputDialog(QDialog):
                 except ValueError:
                     QMessageBox.warning(self, "포맷 오류", "지침 입력 값은 순수 숫자(또는 소수점)만 입력 가능합니다.")
                     edit.setFocus()
-                    return  # 검증 실패 시 창을 닫지 않고 함수 종료
+                    return  
                     
-        # 모든 검증을 통과하면 부모 창(Main Window)으로 Accepted 신호 전송
         self.accept()
 
     def close_dialog(self):
-        """Cancel 버튼 클릭 시 안전하게 창을 닫습니다."""
-        self.done(QDialog.Rejected) # QDialog를 거치지 않고 직접 명시적으로 거절(Rejected) 코드로 종료
+        self.done(QDialog.Rejected) 
 
     def get_final_inputs(self):
-        """저장 승인 시 가공된 날짜 및 11개 필드 딕셔너리를 메인 윈도우로 반환합니다."""
         date_str = self.date_edit.date().toString("yyyy-MM-dd")
         data_dict = {field: edit.text().strip() for field, edit in self.inputs.items()}
         return date_str, data_dict
@@ -157,7 +182,6 @@ class FieldInspectionDialog(QDialog):
         self.setWindowTitle("현장 일일 점검 기록 입력")
         self.resize(400, 250)
 
-        # 기존 스타일과 통일성 유지 (글씨 굵게, 크기 +1)
         current_font = self.font()
         current_font.setPointSize(current_font.pointSize() + 1)
         current_font.setBold(True)
@@ -165,16 +189,14 @@ class FieldInspectionDialog(QDialog):
 
         layout = QVBoxLayout(self)
 
-        # 1. 날짜 설정 (메인 화면에서 선택된 날짜 자동 고정)
         date_layout = QHBoxLayout()
         date_layout.addWidget(QLabel("점검 일자:"))
         self.date_edit = QDateEdit(QDate.fromString(default_date_str, "yyyy-MM-dd"))
         self.date_edit.setCalendarPopup(True)
-        self.date_edit.setEnabled(False)  # 임의 날짜 조작 방지를 위해 읽기 전용 처리 가능
+        self.date_edit.setEnabled(False)  
         date_layout.addWidget(self.date_edit)
         layout.addLayout(date_layout)
 
-        # 2. 점검 차수 선택 (콤보박스)
         round_layout = QHBoxLayout()
         round_layout.addWidget(QLabel("점검 차수:"))
         self.combo_round = QComboBox()
@@ -182,7 +204,6 @@ class FieldInspectionDialog(QDialog):
         round_layout.addWidget(self.combo_round)
         layout.addLayout(round_layout)
 
-        # 3. 점검자 이름 입력
         name_layout = QHBoxLayout()
         name_layout.addWidget(QLabel("점검자 성명:"))
         self.input_name = QLineEdit()
@@ -190,7 +211,6 @@ class FieldInspectionDialog(QDialog):
         name_layout.addWidget(self.input_name)
         layout.addLayout(name_layout)
 
-        # 4. 하단 버튼 (확인 / 취소)
         buttons = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel, Qt.Horizontal, self)
         buttons.accepted.connect(self.validate_and_accept)
         buttons.rejected.connect(self.reject)

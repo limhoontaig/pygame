@@ -197,7 +197,7 @@ class SCADAWindow(QMainWindow):
 
     def click_open_meter_popup(self):
         current_date_str = self.qdate.date().toString("yyyy-MM-dd")
-        dialog = ManualMeterInputDialog(current_date_str, self)
+        dialog = ManualMeterInputDialog(None, self)
         result = dialog.exec_()
         
         if result == 1: 
