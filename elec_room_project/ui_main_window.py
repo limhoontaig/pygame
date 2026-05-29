@@ -213,19 +213,7 @@ class SCADAWindow(QMainWindow):
                 QMessageBox.critical(self, "출력 실패", "엑셀 운영일지 생성 중 오류가 발생했습니다.\n템플릿 파일이 있는지 확인하세요.")
         except Exception as e:
             QMessageBox.critical(self, "에러", f"엑셀 출력 실패: {e}")
-        '''
-        selected_date = self.qdate.date().toString("yyyy-MM-dd")
-        selected_dir = QFileDialog.getExistingDirectory(self, "운영일지 저장 폴더 선택", "")
-        if not selected_dir: return  
-            
-        try:
-            excel_report.generate_excel_report(selected_date, target_dir=selected_dir)
-            saved_path = os.path.join(selected_dir, f"{selected_date}_전기실_운영일지.xlsx")
-            QMessageBox.information(self, "출력 완료", f"성공적으로 엑셀 운영일지가 생성되었습니다.\n\n저장 경로:\n{saved_path}")
-        except Exception as e:
-            QMessageBox.critical(self, "출력 실패", f"에러 발생:\n{e}")
-        '''
-
+        
     def auto_refresh(self):
         curr_hour = datetime.now().hour
         if curr_hour != self.last_hour:
@@ -243,22 +231,80 @@ class SCADAWindow(QMainWindow):
             save_date = dialog.date_edit.date().toString("yyyy-MM-dd")
             final_data = {field: edit.text().strip() for field, edit in dialog.inputs.items()}
 
-            reply = QMessageBox.question(
-                self, '데이터 저장 확인', f"[{save_date}] 수동 입력 지침을 DB에 반영하시겠습니까?",
-                QMessageBox.Yes | QMessageBox.No, QMessageBox.Yes
-            )
+            # -----------------------------------------------------------------
+            # 💡 [개선] 데이터 저장 방식을 3단계로 선택할 수 있는 커스텀 알림창 생성
+            # -----------------------------------------------------------------
+            msg_box = QMessageBox(self)
+            msg_box.setWindowTitle("데이터 처리 방식 선택")
+            msg_box.setText(f"[{save_date}] 수동 입력 지침 데이터를 어떻게 처리하시겠습니까?")
             
-            if reply == QMessageBox.Yes:
-                selected_dir = QFileDialog.getExistingDirectory(self, "운영일지 저장 폴더 선택", "")
-                if not selected_dir: return
-                try:
-                    db_manager.save_manual_meter_data(save_date, final_data)
+            # 3개의 버튼 추가 및 직관적인 텍스트 설정
+            btn_save_only = msg_box.addButton("데이터 저장만", QMessageBox.ActionRole)
+            btn_save_and_export = msg_box.addButton("데이터 저장 및 출력", QMessageBox.ActionRole)
+            btn_cancel = msg_box.addButton("취소", QMessageBox.RejectRole)
+            
+            msg_box.setDefaultButton(btn_save_and_export) # 기본 포커스는 가장 많이 쓰는 '저장 및 출력'
+            msg_box.exec_() # 알림창 실행
+            
+            clicked_button = msg_box.clickedButton()
+
+            # 1️⃣ [취소]를 누른 경우: 아무 작업도 하지 않고 리턴 (팝업창으로 돌아갈 수 있도록)
+            if clicked_button == btn_cancel:
+                print("[INFO] 사용자가 저장을 취소했습니다.")
+                return
+
+            # 2️⃣ [데이터 저장만] 또는 [데이터 저장 및 출력] 공통: 우선 DB에 안전하게 저장
+            try:
+                db_manager.save_manual_meter_data(save_date, final_data)
+                
+                # -------------------------------------------------------------
+                # 2-A. [데이터 저장만] 선택 시 로직
+                # -------------------------------------------------------------
+                if clicked_button == btn_save_only:
+                    self.load_data() # 메인 화면 갱신
+                    QMessageBox.information(self, "저장 완료", "데이터가 데이터베이스(DB)에 성공적으로 기록되었습니다.")
+                    return
+                
+                # -------------------------------------------------------------
+                # 2-B. [데이터 저장 및 출력] 선택 시 로직 (기존 안내 및 폴더 선택)
+                # -------------------------------------------------------------
+                elif clicked_button == btn_save_and_export:
+                    # 폴더 지정 안내창 표시
+                    folder_guide = QMessageBox.question(
+                        self, 
+                        "운영일지 저장 폴더 안내", 
+                        "데이터 저장이 완료되었습니다.\n\n"
+                        "이어서 전기실 운영일지 엑셀 파일 생성을 진행합니다.\n"
+                        "다음 화면에서 파일이 저장될 '컴퓨터 폴더(디렉토리)'를 선택해 주세요.",
+                        QMessageBox.Yes | QMessageBox.No, 
+                        QMessageBox.Yes
+                    )
+                    
+                    if folder_guide == QMessageBox.No:
+                        self.load_data()
+                        QMessageBox.information(self, "안내", "DB 저장은 완료되었으나, 사용자가 엑셀 출력을 취소했습니다.")
+                        return
+
+                    # 폴더 선택 창 열기
+                    selected_dir = QFileDialog.getExistingDirectory(self, "운영일지 저장 폴더 선택", "")
+                    if not selected_dir: 
+                        self.load_data()
+                        QMessageBox.warning(self, "출력 취소", "저장할 폴더가 선택되지 않아 엑셀 출력을 취소합니다.\n(DB 데이터는 안전하게 저장되었습니다.)")
+                        return
+                    
+                    # 엑셀 파일 생성
                     excel_report.generate_excel_report(save_date, target_dir=selected_dir)
                     self.load_data()
-                    QMessageBox.information(self, "저장 완료", "성공적으로 처리되었습니다.")
-                except Exception as e:
-                    QMessageBox.critical(self, "오류 발생", f"에러: {e}")
-    
+                    
+                    QMessageBox.information(
+                        self, 
+                        "처리 완료", 
+                        f"데이터 DB 반영 및 엑셀 일지 작성이 모두 성공적으로 완료되었습니다.\n\n"
+                        f"저장위치: {selected_dir}"
+                    )
+                    
+            except Exception as e:
+                QMessageBox.critical(self, "오류 발생", f"데이터 처리 중 에러가 발생했습니다: {e}")
     
     # ui_main_window.py 내의 기존 해당 함수를 아래 코드로 교체합니다.
     def click_open_inspection_popup(self):
