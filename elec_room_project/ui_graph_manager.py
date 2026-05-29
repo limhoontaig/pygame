@@ -184,7 +184,11 @@ class GraphManager(QWidget):
 
             if all_lines:
                 labels = [l.get_label() for l in all_lines]
-                self.ax.legend(all_lines, labels, loc='upper right')
+                # 1. 먼저 범례 객체를 변수(leg)에 할당합니다. (기존 loc='upper right' 유지 가능)
+                leg = self.ax.legend(all_lines, labels, loc='upper right')
+                
+                # 2. 범례를 마우스로 드래그할 수 있도록 활성화합니다!
+                leg.set_draggable(True)
                 
             self.ax.xaxis.set_major_locator(ticker.MaxNLocator(nbins=10))
             self.ax.set_title(f"선택 필드 {period} 분석 (양방향 멀티 축 제어)", fontsize=13, fontweight='bold')
