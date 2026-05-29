@@ -10,7 +10,7 @@ class ManualMeterInputDialog(QDialog):
     def __init__(self, default_date_str=None, parent=None):
         super().__init__(parent)
         self.setWindowTitle("독립 계량장치 일일 지침 수동 입력/수정")
-        self.resize(700, 500) 
+        self.resize(500, 330) 
 
         # 다이얼로그 전체 폰트 설정 (기존 폰트에서 크기 +1, 볼드 처리)
         current_font = self.font()                   
@@ -22,7 +22,53 @@ class ManualMeterInputDialog(QDialog):
         main_layout = QVBoxLayout()
         # [변경] 다이얼로그 안쪽 상부 여백을 20 -> 10으로 줄여 붕 뜨는 느낌 제거
         main_layout.setContentsMargins(15, 10, 15, 15)
+
+        # 1. 날짜 선택 영역 및 안내 문구 수직 배치 구조로 변경
+        date_section_layout = QVBoxLayout()
+        date_section_layout.setSpacing(8) # 상단 라인과 아래 안내 문구 사이의 간격
         
+        # [첫 번째 줄] 레이블 + 캘린더 콤보박스 (가로 배치)
+        date_top_layout = QHBoxLayout()
+        date_top_layout.setSpacing(10)
+        
+        date_label = QLabel("<span style='color: #2c3e50;'><b>검침/기록 대상 일자:</b></span>")
+        date_top_layout.addWidget(date_label)
+        
+        self.date_edit = QDateEdit()
+        self.date_edit.setCalendarPopup(True)
+        
+        # --- 날짜 로직 분기 ---
+        if default_date_str:
+            target_date = QDate.fromString(default_date_str, "yyyy-MM-dd")
+        else:
+            target_date = QDate.currentDate().addDays(-1)
+            
+        self.date_edit.setDate(target_date)
+        
+        # 너비 고정
+        self.date_edit.setMinimumWidth(130)
+        self.date_edit.setMaximumWidth(150)
+        self.date_edit.dateChanged.connect(self.load_date_data)
+        date_top_layout.addWidget(self.date_edit)
+        
+        # 첫 줄 위젯들을 왼쪽으로 밀착
+        date_top_layout.addStretch(1)
+        date_section_layout.addLayout(date_top_layout)
+        
+        # [두 번째 줄] 근무자 안내 문구 (기존 10pt -> 14pt로 4포인트 크기 상향 및 진하게)
+        notice_label = QLabel(
+            "<span style='color: #e74c3c; font-size: 14pt; font-weight: bold;'>"
+            "* 전날 전력량 입력을 위해 기본 '어제 날짜'로 지정되었습니다."
+            "</span>"
+        )
+        date_section_layout.addWidget(notice_label)
+        
+        # 메인 레이아웃에 날짜 세션 전체 추가
+        main_layout.addLayout(date_section_layout)
+        
+        # 그리드(계량기 양식)와의 사이 간격 조정
+        main_layout.addSpacing(15)
+        '''
         # 1. 날짜 선택 영역 (1라인 가로 배치 및 왼쪽 정렬 밀착)
         date_layout = QHBoxLayout()
         date_layout.setSpacing(10) # 위젯 간의 가로 간격을 촘촘하게 10px로 제한
@@ -59,11 +105,12 @@ class ManualMeterInputDialog(QDialog):
         # [핵심] 가로 레이아웃 우측에 스트레치를 넣어 모든 위젯을 왼쪽으로 콤팩트하게 밀착시킴
         date_layout.addStretch(1)
         
+        
         # 메인 레이아웃에 날짜 라인 추가
         main_layout.addLayout(date_layout)
         # 날짜 라인과 하부 그리드(계량기 양식) 사이의 수직 간격을 촘촘하게 제어
         main_layout.addSpacing(5)
-        
+        '''
         # 전체 그룹을 2x2로 배치할 메인 그리드 레이아웃
         grid_layout = QGridLayout()
         self.inputs = {}
