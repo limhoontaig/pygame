@@ -182,13 +182,20 @@ class GraphManager(QWidget):
                 ax2.tick_params(axis='y', labelcolor='#ff7f0e')
                 ax2.grid(False) 
 
+            # ====== 이중 축 마우스 먹통 문제를 해결한 최종 범례 로직 ======
             if all_lines:
                 labels = [l.get_label() for l in all_lines]
-                # 1. 먼저 범례 객체를 변수(leg)에 할당합니다. (기존 loc='upper right' 유지 가능)
-                leg = self.ax.legend(all_lines, labels, loc='upper right')
                 
-                # 2. 범례를 마우스로 드래그할 수 있도록 활성화합니다!
+                # [핵심] 보조축(ax2)이 생성되어 있다면 ax2의 권한으로 범례를 그리고, 
+                # 보조축이 없다면 기본축(self.ax)의 권한으로 범례를 그립니다.
+                if 'ax2' in locals():
+                    leg = ax2.legend(all_lines, labels, loc='upper right')
+                else:
+                    leg = self.ax.legend(all_lines, labels, loc='upper right')
+                
+                # 범례 드래그 기능 활성화 (이제 무조건 작동합니다!)
                 leg.set_draggable(True)
+            # ============================================================
                 
             self.ax.xaxis.set_major_locator(ticker.MaxNLocator(nbins=10))
             self.ax.set_title(f"선택 필드 {period} 분석 (양방향 멀티 축 제어)", fontsize=13, fontweight='bold')
