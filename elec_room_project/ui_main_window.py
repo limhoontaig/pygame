@@ -176,43 +176,48 @@ class SCADAWindow(QMainWindow):
                 table.setItem(r_idx, c_idx, item)
 
     def export_excel_click(self):
-        """오늘(또는 선택된 날짜)의 데이터를 기반으로 엑셀 운영일지를 생성합니다."""
+        """[오류 수정] 상단 버튼으로 운영일지 엑셀 출력 시 정확한 함수명 호출"""
         target_date_str = self.qdate.date().toString("yyyy-MM-dd")
         
-        # -------------------------------------------------------------
-        # 💡 [개선] 처음 쓰는 사람을 위한 친절한 사전 안내창 추가
-        # -------------------------------------------------------------
+        # 1단계: 안내 메시지창 표시
         reply = QMessageBox.question(
             self, 
-            "운영일지 엑셀 저장 안내", 
-            f"선택하신 날짜 [{target_date_str}]의 운영일지를 엑셀 파일로 저장합니다.\n\n"
-            "다음 화면에서 엑셀 파일이 저장될 '컴퓨터 폴더(디렉토리)'를 선택해 주세요.\n"
-            "저장 폴더를 지정하시겠습니까?",
+            "운영일지 엑셀 출력 안내", 
+            f"선택하신 날짜 [{target_date_str}]의 운영일지를 엑셀 파일로 출력합니다.\n\n"
+            "다음 화면에서 엑셀 파일이 저장될 '컴퓨터 폴더(디렉토리)'를 지정해 주세요.\n"
+            "진행하시겠습니까?",
             QMessageBox.Yes | QMessageBox.No, 
             QMessageBox.Yes
         )
         
         if reply == QMessageBox.No:
-            print("[INFO] 사용자가 운영일지 출력을 취소했습니다.")
             return
 
-        # -------------------------------------------------------------
-        # 폴더 선택 창 열기
-        # -------------------------------------------------------------
-        dir_path = QFileDialog.getExistingDirectory(self, "엑셀 파일 저장 폴더 선택", "")
+        # 2단계: 폴더 선택 창 열기
+        dir_path = QFileDialog.getExistingDirectory(self, "엑셀 파일 저장 폴더 선택", "D:\\")
         if not dir_path:
             QMessageBox.warning(self, "출력 취소", "저장할 폴더가 선택되지 않아 엑셀 출력을 취소합니다.")
             return
 
-        # (이후 기존의 엑셀 생성 및 파일 카피 로직은 그대로 유지됩니다)
+        # 3단계: excel_report.py에 실제 존재하는 함수 호출로 수정
         try:
-            success = excel_report.generate_daily_report(target_date_str, dir_path)
-            if success:
-                QMessageBox.information(self, "출력 완료", f"[{target_date_str}] 운영일지가 성공적으로 저장되었습니다.\n저장위치: {dir_path}")
-            else:
-                QMessageBox.critical(self, "출력 실패", "엑셀 운영일지 생성 중 오류가 발생했습니다.\n템플릿 파일이 있는지 확인하세요.")
+            # 💡 매개변수 구조를 excel_report.py의 정의에 맞춰 올바르게 호출합니다.
+            excel_report.generate_excel_report(target_date_str, target_dir=dir_path)
+            
+            QMessageBox.information(
+                self, 
+                "출력 완료", 
+                f"[{target_date_str}] 운영일지가 성공적으로 저장되었습니다.\n\n"
+                f"저장위치: {dir_path}"
+            )
         except Exception as e:
-            QMessageBox.critical(self, "에러", f"엑셀 출력 실패: {e}")
+            QMessageBox.critical(
+                self, 
+                "오류 발생", 
+                f"엑셀 운영일지 생성 중 오류가 발생했습니다.\n"
+                f"템플릿 파일이 정상적인 위치에 있는지 확인하세요.\n\n"
+                f"에러 내용: {e}"
+            )
         
     def auto_refresh(self):
         curr_hour = datetime.now().hour
@@ -286,7 +291,7 @@ class SCADAWindow(QMainWindow):
                         return
 
                     # 폴더 선택 창 열기
-                    selected_dir = QFileDialog.getExistingDirectory(self, "운영일지 저장 폴더 선택", "")
+                    selected_dir = QFileDialog.getExistingDirectory(self, "운영일지 저장 폴더 선택", "D:\\")
                     if not selected_dir: 
                         self.load_data()
                         QMessageBox.warning(self, "출력 취소", "저장할 폴더가 선택되지 않아 엑셀 출력을 취소합니다.\n(DB 데이터는 안전하게 저장되었습니다.)")
