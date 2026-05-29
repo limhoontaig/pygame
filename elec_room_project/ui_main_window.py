@@ -176,6 +176,44 @@ class SCADAWindow(QMainWindow):
                 table.setItem(r_idx, c_idx, item)
 
     def export_excel_click(self):
+        """오늘(또는 선택된 날짜)의 데이터를 기반으로 엑셀 운영일지를 생성합니다."""
+        target_date_str = self.qdate.date().toString("yyyy-MM-dd")
+        
+        # -------------------------------------------------------------
+        # 💡 [개선] 처음 쓰는 사람을 위한 친절한 사전 안내창 추가
+        # -------------------------------------------------------------
+        reply = QMessageBox.question(
+            self, 
+            "운영일지 엑셀 저장 안내", 
+            f"선택하신 날짜 [{target_date_str}]의 운영일지를 엑셀 파일로 저장합니다.\n\n"
+            "다음 화면에서 엑셀 파일이 저장될 '컴퓨터 폴더(디렉토리)'를 선택해 주세요.\n"
+            "저장 폴더를 지정하시겠습니까?",
+            QMessageBox.Yes | QMessageBox.No, 
+            QMessageBox.Yes
+        )
+        
+        if reply == QMessageBox.No:
+            print("[INFO] 사용자가 운영일지 출력을 취소했습니다.")
+            return
+
+        # -------------------------------------------------------------
+        # 폴더 선택 창 열기
+        # -------------------------------------------------------------
+        dir_path = QFileDialog.getExistingDirectory(self, "엑셀 파일 저장 폴더 선택", "")
+        if not dir_path:
+            QMessageBox.warning(self, "출력 취소", "저장할 폴더가 선택되지 않아 엑셀 출력을 취소합니다.")
+            return
+
+        # (이후 기존의 엑셀 생성 및 파일 카피 로직은 그대로 유지됩니다)
+        try:
+            success = excel_report.generate_daily_report(target_date_str, dir_path)
+            if success:
+                QMessageBox.information(self, "출력 완료", f"[{target_date_str}] 운영일지가 성공적으로 저장되었습니다.\n저장위치: {dir_path}")
+            else:
+                QMessageBox.critical(self, "출력 실패", "엑셀 운영일지 생성 중 오류가 발생했습니다.\n템플릿 파일이 있는지 확인하세요.")
+        except Exception as e:
+            QMessageBox.critical(self, "에러", f"엑셀 출력 실패: {e}")
+        '''
         selected_date = self.qdate.date().toString("yyyy-MM-dd")
         selected_dir = QFileDialog.getExistingDirectory(self, "운영일지 저장 폴더 선택", "")
         if not selected_dir: return  
@@ -186,6 +224,7 @@ class SCADAWindow(QMainWindow):
             QMessageBox.information(self, "출력 완료", f"성공적으로 엑셀 운영일지가 생성되었습니다.\n\n저장 경로:\n{saved_path}")
         except Exception as e:
             QMessageBox.critical(self, "출력 실패", f"에러 발생:\n{e}")
+        '''
 
     def auto_refresh(self):
         curr_hour = datetime.now().hour

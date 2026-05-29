@@ -247,7 +247,7 @@ class FieldInspectionDialog(QDialog):
         round_layout = QHBoxLayout()
         round_layout.addWidget(QLabel("점검 차수:"))
         self.combo_round = QComboBox()
-        self.combo_round.addItems(["1차 점검", "2차 점검", "3차 점검"])
+        self.combo_round.addItems(["오전 점검", "오후 점검", "야간 점검"])
         round_layout.addWidget(self.combo_round)
         layout.addLayout(round_layout)
 
