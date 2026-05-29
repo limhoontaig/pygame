@@ -18,18 +18,14 @@ now = datetime.now()
 yyyymm = now.strftime("%Y")+now.strftime("%m")+'월'
 yyyy = now.strftime("%Y")
 
-if os.path.isfile(r'E:\source\pygame\Nado Game\pyqt5\자재관리\입고대장.xlsx'):
-    LE =  [
-        'E:/source/pygame/Nado Game/pyqt5/자재관리/입고대장.xlsx',
-        'E:/source/pygame/Nado Game/pyqt5/자재관리/사용대장.xlsx',
-        'E:/source/pygame/Nado Game/pyqt5/자재관리/동호대장.xlsx',
-        ]
-else: 
-    LE =  [
-        'C:/source/pygame/Nado Game/pyqt5/자재관리/입고대장.xlsx',
-        'C:/source/pygame/Nado Game/pyqt5/자재관리/사용대장.xlsx',
-        'C:/source/pygame/Nado Game/pyqt5/자재관리/동호대장.xlsx',
-        ]
+current_dir = os.path.dirname(os.path.abspath(__file__))
+
+LE = [
+    os.path.join(current_dir, '입고대장.xlsx'),
+    os.path.join(current_dir, '사용대장.xlsx'),
+    os.path.join(current_dir, '동호대장.xlsx'),
+]
+
 HEADERS = [
     ['일자', '품명', '규격', '입고수량', '구입금액', '단가', '구입업체', '비고'],
     ['일자', '동', '호', '공용', '품명' ,'규격','사용수량','비고'],
@@ -531,7 +527,7 @@ class MatWindow(QMainWindow, form_class):
     def in_out_query_combo_items_spec(self):    
         df = self.in_df()
         items = df['품명'].unique()
-        items.sort()
+        items=sorted(items)
         items = np.insert(items, 0,'All')
         self.CB_detailedQueryItems.clear()
         self.CB_detailedQueryItems.addItems(items)    
@@ -541,7 +537,7 @@ class MatWindow(QMainWindow, form_class):
         else:
             df = df[(df['품명'] == self.CB_detailedQueryItems.currentText())]
             spec = df['규격'].unique()
-            spec.sort()
+            spec=sorted(spec)
             self.CB_detailedQuerySpecs.addItems(spec)
 
     def set_inUsedTableWidge(self, df_list):
@@ -600,10 +596,10 @@ class MatWindow(QMainWindow, form_class):
             df_con_1[['사용수량', '동','호','품목누계']] = df_con[['사용수량', '동','호','품목누계']].astype('str')
         return df_con_1
 
-    def in_query_combo_items_spec(self):    
+    def in_query_combo_items_spec(self):        
         df = self.in_df()
         items = df['품명'].unique()
-        items.sort()
+        items = sorted(items)
         items = np.insert(items, 0,'All')
         self.CB_inUsedQueryItems.clear()
         self.CB_inUsedQueryItems.addItems(items)    
@@ -613,7 +609,7 @@ class MatWindow(QMainWindow, form_class):
         else:
             df = df[(df['품명'] == self.CB_onstockItems.currentText())]
             spec = df['규격'].unique()
-            spec.sort()
+            spec = sorted(spec)
             self.CB_inUsedQuerySpecs.addItems(spec)
         return df
 
@@ -756,14 +752,14 @@ class MatWindow(QMainWindow, form_class):
         else:
             df = df[(df['품명'] == self.CB_onstockItems.currentText())]
             spec = df['규격'].unique()
-            spec.sort()
+            spec = sorted(spec)
             self.CB_onstockSpecs.clear()
             self.CB_onstockSpecs.addItems(spec)
 
     def onstock_query_combo_items_spec(self):    
         df = self.in_df()
         items = df['품명'].unique()
-        items.sort()
+        items = sorted(items)
         items = np.insert(items, 0,'All')
         self.CB_onstockItems.clear()
         self.CB_onstockItems.addItems(items)    
@@ -773,7 +769,7 @@ class MatWindow(QMainWindow, form_class):
         else:
             df = df[(df['품명'] == self.CB_onstockItems.currentText())]
             spec = df['규격'].unique()
-            spec.sort()
+            spec = sorted(spec)
             self.CB_onstockSpecs.addItems(spec)
         return df
 
@@ -826,12 +822,12 @@ class MatWindow(QMainWindow, form_class):
     def out_combo_items_spec(self):    
         df = self.in_df()
         items = df['품명'].unique()
-        items.sort()
+        items = sorted(items)
         self.CB_outItems.clear()
         self.CB_outItems.addItems(items)    
         df = df[(df['품명'] == self.CB_outItems.currentText())]
         spec = df['규격'].unique()
-        spec.sort()
+        spec = sorted(spec)
         self.CB_outSpecs.addItems(spec)
         return df
         
@@ -946,17 +942,17 @@ class MatWindow(QMainWindow, form_class):
         self.CB_outItems.addItems(items)
         df1 = df[(df['품명'] == self.CB_outItems.currentText())]
         spec = df1['규격'].unique()
-        spec.sort()
+        spec = sorted(spec)
         self.CB_outSpecs.clear()
         self.CB_outSpecs.addItems(spec)
 
     def CB_outItemsActivated(self):
         df = self.in_df()
         items = df['품명'].unique()
-        items.sort()
+        items = sorted(items)
         df1 = df[(df['품명'] == self.CB_outItems.currentText())]
         spec = df1['규격'].unique()
-        spec.sort()
+        spec = sorted(spec)
         self.CB_outSpecs.clear()
         self.CB_outSpecs.addItems(spec)
 
@@ -1001,12 +997,12 @@ class MatWindow(QMainWindow, form_class):
     def in_combo_items_spec(self):
         df = self.in_df()
         items = df['품명'].unique()
-        items.sort()
+        items = sorted(items)
         self.comboInItems.clear()
         self.comboInItems.addItems(items)    
         df = df[(df['품명'] == self.comboInItems.currentText())]
         spec = df['규격'].unique()
-        spec.sort()
+        spec = sorted(spec)
         self.comboInSpecs.addItems(spec)
 
     def inTableToSaveExcelFile(self):
