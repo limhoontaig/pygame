@@ -130,7 +130,28 @@ class MatWindow(QMainWindow):
 
         # ★ [개선] 표 가독성 향상을 위한 설정 변경
         self.tableWidgetInIn.verticalHeader().setDefaultSectionSize(32) # 행 높이를 32픽셀로 늘려 시원하게 만듦
-        self.tableWidgetInIn.setAlternatingRowColors(False) # 2칸 단위 커스텀 제어를 위해 기본값 해제
+        
+        # =================================================================
+        # ★ [피드백 반영] 테이블 제목창(헤더) 디자인 강화 세팅
+        # =================================================================
+        # 1. 제목창 스타일 시트 적용: 은은한 네이비 블루 배경색 + 흰색 글자
+        header_style = """
+            QHeaderView::section {
+                background-color: #3A4B64;     /* 깔끔하고 신뢰감을 주는 짙은 회청색 배경 */
+                color: white;                  /* 글자색 흰색 */
+                font-weight: bold;             /* 글자 볼드체 */
+                font-size: 13pt;               /* ★ 기본 11pt에서 2포인트 키운 13pt */
+                border: 1px solid #2C3A4E;     /* 헤더 칸막이 경계선 */
+            }
+        """
+        self.tableWidgetInIn.horizontalHeader().setStyleSheet(header_style)
+        
+        # 2. 제목창의 높이를 아래 자재 목록 행 높이와 동일하게 32픽셀로 지정
+        self.tableWidgetInIn.horizontalHeader().setFixedHeight(32)
+        
+        # 3. 제목창 글자가 잘리지 않도록 입체감 유지 설정
+        self.tableWidgetInIn.horizontalHeader().setHighlightSections(False)
+        # =================================================================
         
         right_layout.addWidget(self.tableWidgetInIn)
         
@@ -234,44 +255,49 @@ class MatWindow(QMainWindow):
         QMessageBox.information(self, "등록 완료", "입고 내역 기록이 데이터베이스에 저장되었습니다.")
 
     def table_display_in(self):
-        """ [피드백 반영] 줄 간격 여유 조절 및 2칸 단위 교차 라인 컬러 처리 구현 """
+        """ DB에서 데이터를 실시간으로 읽어와 TableWidget에 매핑 (정렬 기능 호환 버전) """
         conn = database.get_db_connection()
         cursor = conn.cursor()
         cursor.execute("SELECT in_date, item_name, spec, qty, total_price, unit_price, supplier, remarks, worker FROM inbound_ledger ORDER BY id DESC")
         rows = cursor.fetchall()
         conn.close()
         
+        # ★ [중요] 데이터를 새로 바인딩할 때는 잠시 정렬 기능을 꺼두어야 에러가 나지 않습니다.
+        self.tableWidgetInIn.setSortingEnabled(False)
+        
         self.tableWidgetInIn.setRowCount(0)
         
         for row_idx, row_data in enumerate(rows):
             self.tableWidgetInIn.insertRow(row_idx)
             
-            # ★ 2줄마다 라인 색상을 구분하기 위한 조건 연산 (0,1번 줄은 흰색 / 2,3번 줄은 은은한 미색 색상)
-            # row_idx를 4로 나눈 나머지가 2와 3일 때 다른 배경색 지정
             if (row_idx % 4) in [2, 3]:
-                bg_color = QColor(245, 247, 250) # 아주 연한 회청색 (눈 피로 방지용 고급스러운 컬러)
+                bg_color = QColor(245, 247, 250)
             else:
-                bg_color = QColor(255, 255, 255) # 흰색
+                bg_color = QColor(255, 255, 255)
                 
             for col_idx, value in enumerate(row_data):
-                item = QTableWidgetItem(str(value) if value is not None else "")
-                
-                # 배경색 적용
-                item.setBackground(bg_color)
-                
-                # 정렬 규칙 (수량, 금액, 단가는 우측 / 나머지는 가운데)
+                # 수량, 구입금액, 단가 (컬럼 인덱스 3, 4, 5번) 처리
                 if col_idx in [3, 4, 5]:
+                    # 숫자가 정렬될 때 문자열로 인식되지 않도록 QTableWidgetItem 생성 후 데이터 타입을 정수로 명시 세팅
+                    item = QTableWidgetItem()
+                    item.setData(Qt.DisplayRole, int(value) if value is not None else 0)
                     item.setTextAlignment(Qt.AlignRight | Qt.AlignVCenter)
                 else:
+                    # 일반 문자열 컬럼 (일자, 품명, 입력자 등)
+                    item = QTableWidgetItem(str(value) if value is not None else "")
                     item.setTextAlignment(Qt.AlignCenter | Qt.AlignVCenter)
                     
+                item.setBackground(bg_color)
                 self.tableWidgetInIn.setItem(row_idx, col_idx, item)
                 
-        # 열 간격에도 좌우 여백을 주어 글자가 꽉 차지 않고 시원하게 정렬되도록 조정
+        # ★ 데이터를 모두 채운 후 다시 정렬 기능을 켜줍니다.
+        self.tableWidgetInIn.setSortingEnabled(True)
+        
+        # 간격 여유 조절
         self.tableWidgetInIn.resizeColumnsToContents()
         for col in range(self.tableWidgetInIn.columnCount()):
             current_width = self.tableWidgetInIn.columnWidth(col)
-            self.tableWidgetInIn.setColumnWidth(col, current_width + 25) # 글자 양옆으로 25픽셀만큼의 보너스 여유 제공
+            self.tableWidgetInIn.setColumnWidth(col, current_width + 25)
 
     def add_new_material_master(self):
         """ [기초 자재 마스터에 추가] 버튼 연동 로직 (중복 에러 완벽 방지 버전) """
