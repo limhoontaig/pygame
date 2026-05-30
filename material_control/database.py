@@ -17,6 +17,23 @@ def get_db_connection():
     print(f"[DB 접속 경로 확인]: {DB_NAME}")
     return sqlite3.connect(DB_NAME)
 
+# database.py
+import sqlite3
+import pandas as pd
+import os
+import hashlib  # 비밀번호 암호화를 위해 추가
+
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+DB_NAME = os.path.join(BASE_DIR, "material_management.db")
+
+def hash_password(password):
+    """비밀번호를 SHA-256 방식으로 안전하게 암호화합니다."""
+    return hashlib.sha256(password.encode()).hexdigest()
+
+def get_db_connection():
+    # print(f\"[DB 접속 경로 확인]: {DB_NAME}\")
+    return sqlite3.connect(DB_NAME)
+
 def init_database():
     conn = get_db_connection()
     cursor = conn.cursor()
@@ -26,6 +43,7 @@ def init_database():
         CREATE TABLE IF NOT EXISTS inbound_ledger (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             in_date TEXT NOT NULL,
+            discipline TEXT,
             item_name TEXT NOT NULL,
             spec TEXT,
             qty INTEGER DEFAULT 0,
@@ -38,68 +56,73 @@ def init_database():
         )
     """)
     
-    # 2. 자재 마스터 테이블
+    # 2. [추가] 자재 사용 대장 테이블 (usage_ledger 공종 discipline 반영)
     cursor.execute("""
-        CREATE TABLE IF NOT EXISTS material_items (
+        CREATE TABLE IF NOT EXISTS usage_ledger (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            item_name TEXT NOT NULL,
-            spec TEXT NOT NULL,
-            UNIQUE(item_name, spec)
-        )
-    """)
-    
-    # 3. 사용자 정보 테이블 [구조 수정]
-    # status: 'PENDING'(대기), 'APPROVED'(승인), 'REJECTED'(거절)
-    # is_admin: 1(관리자), 0(일반사용자)
-    cursor.execute("""
-        CREATE TABLE IF NOT EXISTS users (
-            username TEXT PRIMARY KEY,
-            password TEXT NOT NULL,
-            status TEXT DEFAULT 'PENDING',
-            is_admin INTEGER DEFAULT 0
-        )
-    """)
-    
-    # 기본 초기 데이터 세팅 (자재 마스터)
-    cursor.execute("SELECT COUNT(*) FROM material_items")
-    if cursor.fetchone()[0] == 0:
-        default_materials = [("램프", "LED 10W")]
-        cursor.executemany("INSERT OR IGNORE INTO material_items (item_name, spec) VALUES (?, ?)", default_materials)
-        
-    # 기본 관리자 계정 생성 (최초 테이블이 비었을 때 '관리자' 자동 생성)
-    cursor.execute("SELECT COUNT(*) FROM users WHERE is_admin = 1")
-    if cursor.fetchone()[0] == 0:
-        admin_pw_hash = hash_password("admin123") # 기본 초기 비밀번호: admin123
-        cursor.execute("""
-            INSERT OR IGNORE INTO users (username, password, status, is_admin) 
-            VALUES (?, ?, ?, ?)
-        """, ('admin', admin_pw_hash, 'APPROVED', 1))
-
-    # 4. 자재 사용(출고) 대장 테이블
-    cursor.execute("""
-        CREATE TABLE IF NOT EXISTS outbound_ledger (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            out_date TEXT NOT NULL,
+            use_date TEXT NOT NULL,
+            usage_type TEXT NOT NULL,  -- 세대 / 공용
             dong TEXT,
             ho TEXT,
-            category TEXT,
+            discipline TEXT,           -- 공종 컬럼 추가
             item_name TEXT NOT NULL,
             spec TEXT,
-            qty INTEGER NOT NULL,
+            qty INTEGER DEFAULT 0,
             remarks TEXT,
             worker TEXT NOT NULL,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     """)
-
-    # 5. 동호 마스터 테이블
-    cursor.execute("CREATE TABLE IF NOT EXISTS dongho_master (dong TEXT, ho TEXT)")
     
+    # 3. 자재 마스터 테이블
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS material_items (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            item_name TEXT NOT NULL,
+            spec TEXT,
+            UNIQUE(item_name, spec)
+        )
+    """)
+    
+    # 4. 동호수 마스터 테이블
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS dongho_master (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            dong TEXT NOT NULL,
+            ho TEXT NOT NULL,
+            UNIQUE(dong, ho)
+        )
+    """)
+    
+    # 5. 사용자 계정 테이블
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS users (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            username TEXT NOT NULL UNIQUE,
+            password TEXT NOT NULL,
+            status TEXT DEFAULT 'PENDING',
+            is_admin INTEGER DEFAULT 0,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+    
+    # 기본 관리자 계정(admin) 자동 생성 (없을 경우만)
+    cursor.execute("SELECT COUNT(*) FROM users WHERE username = 'admin'")
+    if cursor.fetchone()[0] == 0:
+        admin_pw = hash_password('admin1234')
+        cursor.execute("""
+            INSERT INTO users (username, password, status, is_admin) 
+            VALUES ('admin', ?, 'APPROVED', 1)
+        """, (admin_pw,))
+        print("[시스템 알림]: 기본 관리자 계정(admin / admin1234)이 생성되었습니다.")
+
+    # 6. 동호수 엑셀 데이터 초기 로드 로직 (기존 소스 유지)
     cursor.execute("SELECT COUNT(*) FROM dongho_master")
     if cursor.fetchone()[0] == 0:
-        file_name = "동호인덱스.xlsx"
-        excel_file = os.path.join(BASE_DIR, "data", file_name)
-        
+        excel_file = os.path.join(BASE_DIR, "동호수_마스터.xlsx")
+        if not os.path.exists(excel_file):
+            excel_file = os.path.join(BASE_DIR, "동호수_마스터.csv")
+            
         if os.path.exists(excel_file):
             try:
                 if excel_file.endswith('.csv'):
@@ -126,6 +149,23 @@ def init_database():
 
     conn.commit()
     conn.close()
+    print("[시스템 알림]: 데이터베이스 테이블 스키마 초기화 완료.")
+
+def get_current_stock(item_name, spec):
+    """현재 재고를 산출합니다. (입고량 합계 - 사용량 합계)"""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    # 입고량 총합
+    cursor.execute("SELECT SUM(qty) FROM inbound_ledger WHERE item_name = ? AND spec = ?", (item_name, spec))
+    total_in = cursor.fetchone()[0] or 0
+    
+    # 사용량 총합
+    cursor.execute("SELECT SUM(qty) FROM usage_ledger WHERE item_name = ? AND spec = ?", (item_name, spec))
+    total_out = cursor.fetchone()[0] or 0
+    
+    conn.close()
+    return total_in - total_out
 
 def get_current_stock(item_name, spec):
     conn = get_db_connection()

@@ -1,5 +1,7 @@
 # material_inbound_tab.py
 
+# material_inbound_tab.py
+
 import sys
 import sqlite3
 from PyQt5.QtWidgets import *
@@ -12,32 +14,31 @@ class InboundTab(QWidget):
         super().__init__()
         self.current_user = user_name
         
-        # [추가] 수정 모드를 추적하기 위한 상태 변수들
+        # 수정 모드 및 자동 계산 무한 루프 방지 플래그
         self.is_edit_mode = False
-        self.editing_row_id = None  # DB의 고유 ID(rowid)를 추적
+        self.editing_row_id = None  
+        self.is_calculating = False  # 양방향 계산 오작동 방지용 플래그
 
         self.init_ui()
-        self.refresh_all_combos() # 콤보박스 전체 초기 로드
+        self.refresh_all_combos() # 콤보박스 전체 초기 로드 (Default 값 자동 세팅 포함)
         self.table_display_in()
 
     def init_ui(self):
-        main_layout = QHBoxLayout(self) # 현재 위젯(self)의 메인 레이아웃이 됩니다.
-        
-        # 주석 레이블에 사용할 소형 폰트 스타일
-        notice_font = QFont()
-        notice_font.setPointSize(9)
-        notice_font.setItalic(True)
-        notice_style = "color: #556677; margin-bottom: 5px; margin-left: 2px;"
+        main_layout = QHBoxLayout(self)
         
         # =================================================================
         # 1. 좌측 영역: 입력 폼
         # =================================================================
         left_layout = QVBoxLayout()
         
-        # [변경] 수정 상태일 때 그룹박스 타이틀이 동적으로 바뀌도록 인스턴스 변수화
         self.group_box_in = QGroupBox("자재 입고(등록) 입력")
         grid_in = QGridLayout()
         self.group_box_in.setLayout(grid_in)
+        
+        # 안내 문구용 공통 폰트 스타일 정의
+        notice_font = QFont()
+        notice_font.setPointSize(9)
+        notice_font.setItalic(True)
         
         # (1) 입고 일자
         grid_in.addWidget(QLabel("입고일자:"), 0, 0)
@@ -46,53 +47,75 @@ class InboundTab(QWidget):
         self.dateEditIn.setDate(QDate.currentDate())
         grid_in.addWidget(self.dateEditIn, 0, 1)
         
-        # (2) 품명 (직접 입력 가능 콤보박스)
-        grid_in.addWidget(QLabel("품명:"), 1, 0)
-        self.comboBoxInName = QComboBox()
-        self.comboBoxInName.setEditable(True)  # 직접 입력 가능
-        grid_in.addWidget(self.comboBoxInName, 1, 1)
+        # (2) 공종
+        grid_in.addWidget(QLabel("공종:"), 1, 0)
+        self.comboBoxInDiscipline = QComboBox()  
+        self.comboBoxInDiscipline.setEditable(True)
+        grid_in.addWidget(self.comboBoxInDiscipline, 1, 1)
+
+        # (3) 품명
+        grid_in.addWidget(QLabel("품명:"), 2, 0)
+        self.comboBoxInName = QComboBox()        
+        self.comboBoxInName.setEditable(True)
+        grid_in.addWidget(self.comboBoxInName, 2, 1)
         
-        # (3) 규격 (직접 입력 가능 콤보박스)
-        grid_in.addWidget(QLabel("규격:"), 2, 0)
+        # (4) 규격
+        grid_in.addWidget(QLabel("규격:"), 3, 0)
         self.comboBoxInSpec = QComboBox()
-        self.comboBoxInSpec.setEditable(True)  # 직접 입력 가능
-        grid_in.addWidget(self.comboBoxInSpec, 2, 1)
+        self.comboBoxInSpec.setEditable(True)
+        grid_in.addWidget(self.comboBoxInSpec, 3, 1)
         
-        # (4) 입고 수량
-        grid_in.addWidget(QLabel("입고수량:"), 3, 0)
+        # [추가] 콤보박스 하단 신규 품목 직접 입력 안내 문구 (4행 전체 병합)
+        self.lbl_combo_notice = QLabel("※ 리스트에 없는 신규 품종(품명, 규격, 공종)은\n    콤보박스에 직접 타이핑하여 입력하시면 됩니다.")
+        self.lbl_combo_notice.setFont(notice_font)
+        self.lbl_combo_notice.setStyleSheet("color: #1976D2; margin-top: 2px; margin-bottom: 8px; line-height: 140%;")
+        grid_in.addWidget(self.lbl_combo_notice, 4, 0, 1, 2)
+        
+        # (5) 입고 수량
+        grid_in.addWidget(QLabel("입고수량:"), 5, 0)
         self.lineEditInQty = QLineEdit()
-        grid_in.addWidget(self.lineEditInQty, 3, 1)
+        grid_in.addWidget(self.lineEditInQty, 5, 1)
         
-        # (5) 단가
-        grid_in.addWidget(QLabel("단가:"), 4, 0)
+        # (6) 단가
+        grid_in.addWidget(QLabel("단가:"), 6, 0)
         self.lineEditInPrice = QLineEdit()
-        grid_in.addWidget(self.lineEditInPrice, 4, 1)
+        grid_in.addWidget(self.lineEditInPrice, 6, 1)
         
-        # (6) 공급처
-        grid_in.addWidget(QLabel("공급처:"), 5, 0)
+        # [추가] 단가와 총금액 사이 양방향 계산 기능 안내 문구 (7행 전체 병합)
+        self.lbl_price_notice = QLabel("💡 단가 또는 총금액 중 '하나만 입력'하셔도\n    수량에 맞춰 나머지 금액이 자동 역산됩니다.")
+        self.lbl_price_notice.setFont(notice_font)
+        self.lbl_price_notice.setStyleSheet("color: #2E7D32; margin-top: 4px; margin-bottom: 4px; line-height: 140%;")
+        grid_in.addWidget(self.lbl_price_notice, 7, 0, 1, 2)
+        
+        # (7) 총금액
+        grid_in.addWidget(QLabel("총금액:"), 8, 0)
+        self.lineEditInTotalPrice = QLineEdit()
+        grid_in.addWidget(self.lineEditInTotalPrice, 8, 1)
+
+        # (8) 공급처
+        grid_in.addWidget(QLabel("공급처:"), 9, 0)
         self.lineEditInSupplier = QLineEdit()
-        grid_in.addWidget(self.lineEditInSupplier, 5, 1)
+        grid_in.addWidget(self.lineEditInSupplier, 9, 1)
         
-        # (7) 비고
-        grid_in.addWidget(QLabel("비고:"), 6, 0)
+        # (9) 비고
+        grid_in.addWidget(QLabel("비고:"), 10, 0)
         self.lineEditInRemarks = QLineEdit()
-        grid_in.addWidget(self.lineEditInRemarks, 6, 1)
+        grid_in.addWidget(self.lineEditInRemarks, 10, 1)
         
-        # (8) 등록 / 수정 처리 버튼 영역
+        # (10) 버튼 영역
         button_layout = QHBoxLayout()
         self.btn_save_in = QPushButton("입고 내역 등록")
         self.btn_save_in.setStyleSheet("background-color: #4CAF50; color: white; font-weight: bold; height: 35px;")
         self.btn_save_in.clicked.connect(self.process_inbound_save)
         button_layout.addWidget(self.btn_save_in)
         
-        # [추가] 수정 취소 버튼 (수정 모드일 때만 활성화)
         self.btn_cancel_edit = QPushButton("수정 취소")
         self.btn_cancel_edit.setStyleSheet("background-color: #757575; color: white; font-weight: bold; height: 35px;")
         self.btn_cancel_edit.setVisible(False)
         self.btn_cancel_edit.clicked.connect(self.clear_input_fields)
         button_layout.addWidget(self.btn_cancel_edit)
         
-        grid_in.addLayout(button_layout, 7, 0, 1, 2)
+        grid_in.addLayout(button_layout, 11, 0, 1, 2)
         
         left_layout.addWidget(self.group_box_in)
         left_layout.addStretch()
@@ -102,10 +125,7 @@ class InboundTab(QWidget):
         # =================================================================
         right_layout = QVBoxLayout()
         
-        # 상단 기능 제어 버튼군
         top_bar = QHBoxLayout()
-        
-        # [추가] 선택 내역 수정 버튼
         self.btn_edit_row = QPushButton("선택 내역 수정")
         self.btn_edit_row.setStyleSheet("background-color: #FF9800; color: white; font-weight: bold; padding: 6px 12px;")
         self.btn_edit_row.clicked.connect(self.load_selected_row_to_form)
@@ -119,32 +139,84 @@ class InboundTab(QWidget):
         top_bar.addStretch()
         right_layout.addLayout(top_bar)
         
-        # 입고 원장 내역 테이블
         self.tableWidgetInIn = QTableWidget()
-        self.tableWidgetInIn.setColumnCount(9)
-        self.tableWidgetInIn.setHorizontalHeaderLabels(["입고일자", "품명", "규격", "수량", "단가", "총금액", "공급처", "비고", "입력자"])
+        self.tableWidgetInIn.setColumnCount(10)
+        self.tableWidgetInIn.setHorizontalHeaderLabels([
+            "입고일자", "공종", "품명", "규격", "수량", "단가", "총금액", "공급처", "비고", "입력자"
+        ])
         self.tableWidgetInIn.setSelectionBehavior(QAbstractItemView.SelectRows)
         self.tableWidgetInIn.setEditTriggers(QAbstractItemView.NoEditTriggers)
         right_layout.addWidget(self.tableWidgetInIn)
         
-        # 두 영역을 메인 레이아웃에 배치 (비율 좌1 : 우3)
         main_layout.addLayout(left_layout, 1)
         main_layout.addLayout(right_layout, 3)
 
-        # 콤보박스 변경 시 연쇄 동기화 시그널 연결
+        # 시그널 연결 (품명 변경 동기화 및 실시간 금액 양방향 계산)
         self.comboBoxInName.currentTextChanged.connect(self.sync_spec_combo)
+        self.lineEditInQty.textChanged.connect(self.calculate_from_price)
+        self.lineEditInPrice.textChanged.connect(self.calculate_from_price)
+        self.lineEditInTotalPrice.textChanged.connect(self.calculate_from_total_price)
 
     # =================================================================
-    # 데이터 흐름 제어 및 단계별 유효성 검증 함수
+    # 금액/단가 실시간 양방향 자동 계산 로직
+    # =================================================================
+    def calculate_from_price(self):
+        if self.is_calculating:
+            return
+        if not (self.lineEditInQty.hasFocus() or self.lineEditInPrice.hasFocus()):
+            return
+
+        qty_str = self.lineEditInQty.text().strip()
+        price_str = self.lineEditInPrice.text().strip()
+
+        if qty_str.isdigit() and price_str.isdigit():
+            qty = int(qty_str)
+            price = int(price_str)
+            self.is_calculating = True
+            self.lineEditInTotalPrice.setText(str(qty * price))
+            self.is_calculating = False
+        elif not qty_str or not price_str:
+            self.is_calculating = True
+            self.lineEditInTotalPrice.clear()
+            self.is_calculating = False
+
+    def calculate_from_total_price(self):
+        if self.is_calculating:
+            return
+        if not self.lineEditInTotalPrice.hasFocus():
+            return
+
+        qty_str = self.lineEditInQty.text().strip()
+        total_price_str = self.lineEditInTotalPrice.text().strip()
+
+        if qty_str.isdigit() and total_price_str.isdigit():
+            qty = int(qty_str)
+            total_price = int(total_price_str)
+            if qty > 0:
+                unit_price = total_price // qty
+                self.is_calculating = True
+                self.lineEditInPrice.setText(str(unit_price))
+                self.is_calculating = False
+            else:
+                self.is_calculating = True
+                self.lineEditInPrice.clear()
+                self.is_calculating = False
+        elif not total_price_str:
+            self.is_calculating = True
+            self.lineEditInPrice.clear()
+            self.is_calculating = False
+
+    # =================================================================
+    # 데이터 흐름 제어 및 저장 로직
     # =================================================================
     def process_inbound_save(self):
-        """새로 등록하거나 수정한 데이터를 안전한 단계를 거쳐 DB에 저장합니다."""
+        discipline = self.comboBoxInDiscipline.currentText().strip()
         item_name = self.comboBoxInName.currentText().strip()
         spec = self.comboBoxInSpec.currentText().strip()
         qty_str = self.lineEditInQty.text().strip()
         price_str = self.lineEditInPrice.text().strip()
+        total_price_str = self.lineEditInTotalPrice.text().strip()
         
-        # 필수 입력 기본 검증
         if not item_name:
             QMessageBox.warning(self, "입력 오류", "품명을 선택하거나 입력해 주세요.")
             return
@@ -152,19 +224,13 @@ class InboundTab(QWidget):
             QMessageBox.warning(self, "입력 오류", "정확한 입고 수량을 숫자로 입력해 주세요.")
             return
 
-        # ----------------------------------------------------
-        # [요구사항 반영] 단계별 신규 품명 / 규격 제어 흐름
-        # ----------------------------------------------------
         conn = database.get_db_connection()
         cursor = conn.cursor()
         
-        # DB에 존재하는 품명인지 검사
         cursor.execute("SELECT COUNT(*) FROM material_items WHERE item_name = ?", (item_name,))
         item_exists = cursor.fetchone()[0] > 0
         
-        # 1단계: 완전히 새로운 품명인 경우 처리
         if not item_exists:
-            # 규격이 아직 입력되지 않았거나 공백이라면 안내 후 포커싱 이동
             if not spec:
                 QMessageBox.information(
                     self, 
@@ -176,11 +242,9 @@ class InboundTab(QWidget):
                 conn.close()
                 return
 
-        # DB에 품명과 규격의 쌍이 일치하여 존재하는지 검사
         cursor.execute("SELECT COUNT(*) FROM material_items WHERE item_name = ? AND spec = ?", (item_name, spec))
         pair_exists = cursor.fetchone()[0] > 0
         
-        # 2단계: 품명은 있거나 없더라도, '품명 + 규격' 조합이 아예 새롭다면 마스터 등록 최종 확인 창 띄우기
         if not pair_exists:
             reply = QMessageBox.question(
                 self,
@@ -196,20 +260,17 @@ class InboundTab(QWidget):
                 conn.close()
                 return
             
-            # 승인(Yes) 시 마스터 테이블(material_items)에 선 등록 처리
             try:
                 cursor.execute("INSERT INTO material_items (item_name, spec) VALUES (?, ?)", (item_name, spec))
                 conn.commit()
             except sqlite3.IntegrityError:
-                pass # 동시성 예외 방지
+                pass
 
         conn.close()
-        # ----------------------------------------------------
 
-        # 금액 수치 변환 계산
         qty = int(qty_str)
+        total_price = int(total_price_str) if total_price_str.isdigit() else 0
         unit_price = int(price_str) if price_str.isdigit() else 0
-        total_price = qty * unit_price
         
         supplier = self.lineEditInSupplier.text().strip()
         remarks = self.lineEditInRemarks.text().strip()
@@ -219,50 +280,43 @@ class InboundTab(QWidget):
         cursor = conn.cursor()
         
         if self.is_edit_mode:
-            # [수정 모드]: 기존 레코드를 업데이트
             cursor.execute("""
                 UPDATE inbound_ledger
-                SET in_date=?, item_name=?, spec=?, qty=?, unit_price=?, total_price=?, supplier=?, remarks=?, worker=?
+                SET in_date=?, discipline=?, item_name=?, spec=?, qty=?, unit_price=?, total_price=?, supplier=?, remarks=?, worker=?
                 WHERE id = ?
-            """, (in_date, item_name, spec, qty, unit_price, total_price, supplier, remarks, self.current_user, self.editing_row_id))
+            """, (in_date, discipline, item_name, spec, qty, unit_price, total_price, supplier, remarks, self.current_user, self.editing_row_id))
             conn.commit()
             QMessageBox.information(self, "수정 완료", "자재 입고 내역이 정상적으로 수정되었습니다.")
         else:
-            # [일반 등록 모드]: 새로운 레코드 삽입
             cursor.execute("""
-                INSERT INTO inbound_ledger (in_date, item_name, spec, qty, unit_price, total_price, supplier, remarks, worker)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """, (in_date, item_name, spec, qty, unit_price, total_price, supplier, remarks, self.current_user))
+                INSERT INTO inbound_ledger (in_date, discipline, item_name, spec, qty, unit_price, total_price, supplier, remarks, worker)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """, (in_date, discipline, item_name, spec, qty, unit_price, total_price, supplier, remarks, self.current_user))
             conn.commit()
             QMessageBox.information(self, "등록 완료", "입고 내역이 등록되었습니다.")
             
         conn.close()
         
-        # 입력창 정리 및 테이블/콤보 새로고침
         self.clear_input_fields()
-        self.refresh_all_combos()
+        self.refresh_all_combos() 
         self.table_display_in()
 
-    # =================================================================
-    # [기능 추가] 수정 연동 제어 함수군
-    # =================================================================
     def load_selected_row_to_form(self):
-        """테이블에서 선택한 행의 데이터를 왼쪽 입력 양식으로 다시 로드하여 수정 준비를 합니다."""
         current_row = self.tableWidgetInIn.currentRow()
         if current_row < 0:
             QMessageBox.warning(self, "선택 오류", "수정할 입고 내역 행을 테이블에서 선택해 주세요.")
             return
             
-        # 선택된 행의 셀 문자열 추출
         in_date_str = self.tableWidgetInIn.item(current_row, 0).text()
-        item_name = self.tableWidgetInIn.item(current_row, 1).text()
-        spec = self.tableWidgetInIn.item(current_row, 2).text()
-        qty = self.tableWidgetInIn.item(current_row, 3).text().replace(",", "")
-        unit_price = self.tableWidgetInIn.item(current_row, 4).text().replace(",", "")
-        supplier = self.tableWidgetInIn.item(current_row, 6).text()
-        remarks = self.tableWidgetInIn.item(current_row, 7).text()
+        discipline = self.tableWidgetInIn.item(current_row, 1).text()
+        item_name = self.tableWidgetInIn.item(current_row, 2).text()
+        spec = self.tableWidgetInIn.item(current_row, 3).text()
+        qty = self.tableWidgetInIn.item(current_row, 4).text().replace(",", "")
+        unit_price = self.tableWidgetInIn.item(current_row, 5).text().replace(",", "")
+        total_price = self.tableWidgetInIn.item(current_row, 6).text().replace(",", "")
+        supplier = self.tableWidgetInIn.item(current_row, 7).text()
+        remarks = self.tableWidgetInIn.item(current_row, 8).text()
         
-        # DB에서 고유 ID(id/rowid)를 역 추적하여 정확한 대상을 고정합니다.
         conn = database.get_db_connection()
         cursor = conn.cursor()
         cursor.execute("""
@@ -277,63 +331,94 @@ class InboundTab(QWidget):
             self.is_edit_mode = True
             self.editing_row_id = result[0]
             
-            # 왼쪽 폼에 기존 값 세팅
             self.dateEditIn.setDate(QDate.fromString(in_date_str, "yyyy-MM-dd"))
+            self.comboBoxInDiscipline.setEditText(discipline)
             self.comboBoxInName.setEditText(item_name)
             self.comboBoxInSpec.setEditText(spec)
+            
+            self.is_calculating = True
             self.lineEditInQty.setText(qty)
             self.lineEditInPrice.setText(unit_price)
+            self.lineEditInTotalPrice.setText(total_price)
+            self.is_calculating = False
+            
             self.lineEditInSupplier.setText(supplier)
             self.lineEditInRemarks.setText(remarks)
             
-            # UI 시각적 상태 업데이트 (수정 중임을 명시)
             self.group_box_in.setTitle("⚠️ 자재 입고 내역 수정 중")
             self.btn_save_in.setText("수정 완료 저장")
             self.btn_save_in.setStyleSheet("background-color: #FF9800; color: white; font-weight: bold; height: 35px;")
             self.btn_cancel_edit.setVisible(True)
 
     def clear_input_fields(self):
-        """입력 창을 초기 상태로 비우고 일반 등록 모드로 되돌립니다."""
         self.is_edit_mode = False
         self.editing_row_id = None
         
         self.dateEditIn.setDate(QDate.currentDate())
+        self.comboBoxInDiscipline.clearEditText()
         self.comboBoxInName.clearEditText()
         self.comboBoxInSpec.clearEditText()
+        
+        self.is_calculating = True
         self.lineEditInQty.clear()
         self.lineEditInPrice.clear()
+        self.lineEditInTotalPrice.clear()
+        self.is_calculating = False
+        
         self.lineEditInSupplier.clear()
         self.lineEditInRemarks.clear()
         
-        # UI 스타일을 일반 등록 형태로 복구
         self.group_box_in.setTitle("자재 입고(등록) 입력")
         self.btn_save_in.setText("입고 내역 등록")
         self.btn_save_in.setStyleSheet("background-color: #4CAF50; color: white; font-weight: bold; height: 35px;")
         self.btn_cancel_edit.setVisible(False)
 
-    # =================================================================
-    # 기존 원본 콤보박스 및 테이블 조회 로직 유지 보완
-    # =================================================================
     def refresh_all_combos(self):
-        """DB 마스터 테이블에서 품명 리스트를 가져와 채웁니다."""
         self.comboBoxInName.blockSignals(True)
         self.comboBoxInName.clear()
+        self.comboBoxInDiscipline.blockSignals(True)
+        self.comboBoxInDiscipline.clear()
         
         conn = database.get_db_connection()
         cursor = conn.cursor()
+        
         cursor.execute("SELECT DISTINCT item_name FROM material_items ORDER BY item_name ASC")
         items = cursor.fetchall()
-        conn.close()
-        
         for i in items:
             self.comboBoxInName.addItem(str(i[0]))
             
+        cursor.execute("SELECT DISTINCT discipline FROM inbound_ledger WHERE discipline IS NOT NULL AND discipline != '' ORDER BY discipline ASC")
+        disciplines = cursor.fetchall()
+        for d in disciplines:
+            self.comboBoxInDiscipline.addItem(str(d[0]))
+            
+        cursor.execute("""
+            SELECT discipline, item_name, spec 
+            FROM inbound_ledger 
+            ORDER BY id DESC LIMIT 1
+        """)
+        last_entry = cursor.fetchone()
+        conn.close()
+        
         self.comboBoxInName.blockSignals(False)
-        self.comboBoxInName.clearEditText()
-        self.comboBoxInSpec.clear()
+        self.comboBoxInDiscipline.blockSignals(False)
+        
+        if last_entry and not self.is_edit_mode:
+            default_discipline = str(last_entry[0]) if last_entry[0] else ""
+            default_item_name = str(last_entry[1]) if last_entry[1] else ""
+            default_spec = str(last_entry[2]) if last_entry[2] else ""
+            
+            self.comboBoxInDiscipline.setEditText(default_discipline)
+            self.comboBoxInName.setEditText(default_item_name)
+            self.sync_spec_combo(default_item_name)
+            self.comboBoxInSpec.setEditText(default_spec)
+        else:
+            if not self.is_edit_mode:
+                self.comboBoxInName.clearEditText()
+                self.comboBoxInDiscipline.clearEditText()
+                self.comboBoxInSpec.clear()
 
     def sync_spec_combo(self, item_name):
-        """선택된 품명에 속한 규격 리스트를 동적으로 필터링해 우측 규격 콤보에 연결합니다."""
         if not item_name:
             return
         self.comboBoxInSpec.blockSignals(True)
@@ -349,19 +434,17 @@ class InboundTab(QWidget):
             self.comboBoxInSpec.addItem(str(s[0]))
             
         self.comboBoxInSpec.blockSignals(False)
-        # 만약 수정 모드인 경우 덮어씌워진 값이 유지되도록 clearEditText 처리를 분기합니다.
         if not self.is_edit_mode:
             self.comboBoxInSpec.clearEditText()
 
     def table_display_in(self):
-        """테이블에 전체 입고 원장을 불러와 보기 좋게 디스플레이합니다."""
         self.tableWidgetInIn.setRowCount(0)
         self.tableWidgetInIn.setSortingEnabled(False)
         
         conn = database.get_db_connection()
         cursor = conn.cursor()
         cursor.execute("""
-            SELECT in_date, item_name, spec, qty, unit_price, total_price, supplier, remarks, worker 
+            SELECT in_date, discipline, item_name, spec, qty, unit_price, total_price, supplier, remarks, worker 
             FROM inbound_ledger 
             ORDER BY id DESC
         """)
@@ -373,12 +456,12 @@ class InboundTab(QWidget):
             bg_color = QColor(245, 247, 250) if (row_idx % 4) in [2, 3] else QColor(255, 255, 255)
             
             for col_idx, value in enumerate(row_data):
-                if col_idx in [3, 4, 5]: # 수량, 단가, 총금액 포맷 처리
+                if col_idx in [4, 5, 6]: 
                     formatted_val = f"{value:,}" if isinstance(value, (int, float)) else str(value)
                     item = QTableWidgetItem(formatted_val)
                     item.setTextAlignment(Qt.AlignRight | Qt.AlignVCenter)
                 else:
-                    item = QTableWidgetItem(str(value))
+                    item = QTableWidgetItem(str(value) if value is not None else "")
                     item.setTextAlignment(Qt.AlignCenter)
                 
                 item.setBackground(bg_color)
@@ -391,16 +474,15 @@ class InboundTab(QWidget):
             self.tableWidgetInIn.setColumnWidth(col, current_width + 25)
 
     def delete_selected_row(self):
-        """선택된 내역을 원장에서 지웁니다."""
         current_row = self.tableWidgetInIn.currentRow()
         if current_row < 0:
             QMessageBox.warning(self, "삭제 오류", "삭제할 항목을 선택해 주세요.")
             return
         if QMessageBox.question(self, '확인', '선택한 내역을 삭제하시겠습니까?', QMessageBox.Yes | QMessageBox.No) == QMessageBox.Yes:
             in_date = self.tableWidgetInIn.item(current_row, 0).text()
-            item_name = self.tableWidgetInIn.item(current_row, 1).text()
-            spec = self.tableWidgetInIn.item(current_row, 2).text()
-            qty = int(self.tableWidgetInIn.item(current_row, 3).text().replace(",", ""))
+            item_name = self.tableWidgetInIn.item(current_row, 2).text() 
+            spec = self.tableWidgetInIn.item(current_row, 3).text()      
+            qty = int(self.tableWidgetInIn.item(current_row, 4).text().replace(",", "")) 
             
             conn = database.get_db_connection()
             cursor = conn.cursor()
@@ -411,9 +493,9 @@ class InboundTab(QWidget):
             conn.commit()
             conn.close()
             
-            # 수정 중인 대상을 삭제해 버렸을 때를 대비해 초기화
             if self.is_edit_mode:
                 self.clear_input_fields()
                 
             self.table_display_in()
+            self.refresh_all_combos() 
             QMessageBox.information(self, "성공", "선택한 내역이 삭제되었습니다.")
