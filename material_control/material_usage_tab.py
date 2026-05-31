@@ -1,192 +1,89 @@
 # material_usage_tab.py
-
 import sys
 import sqlite3
 from PyQt5.QtWidgets import *
 from PyQt5.QtCore import QDate, Qt
-from PyQt5.QtGui import QColor, QFont
+from PyQt5.QtGui import QColor
 import database
+from material_usage_ui import UsageTabUI  # UI 템플릿 임포트
 
 class UsageTab(QWidget):
     def __init__(self, user_name="미인증"):
         super().__init__()
         self.current_user = user_name
         
-        # 수정 모드 및 무한 시그널 루프 방지 플래그
         self.is_edit_mode = False
         self.editing_row_id = None
         self.is_loading_row = False 
+        self.is_syncing_ho_disp = False # [추가] 공용 상태 양방향 연동 무한루프 방지 플래그
 
-        self.init_ui()
+        # 1. UI 스킨 결합 및 변수 참조 연결
+        self.ui = UsageTabUI()
+        self.ui.setup_ui(self)
+        self.bind_ui_variables()
+
+        # 2. 시그널 바인딩 및 데이터 로드
+        self.connect_signals()
         self.init_combobox_data()
         self.table_display_usage()
 
-    def init_ui(self):
-        main_layout = QHBoxLayout(self)
-        
-        # =================================================================
-        # 1. 좌측 영역: 자재 사용 입력 및 수정 폼
-        # =================================================================
-        left_layout = QVBoxLayout()
-        
-        self.group_box_use = QGroupBox("자재 사용(출고) 입력")
-        grid_use = QGridLayout()
-        self.group_box_use.setLayout(grid_use)
-        
-        notice_font = QFont()
-        notice_font.setPointSize(9)
-        notice_font.setItalic(True)
-        
-        # (1) 사용 일자
-        grid_use.addWidget(QLabel("사용일자:"), 0, 0)
-        self.dateEditUse = QDateEdit()
-        self.dateEditUse.setCalendarPopup(True)
-        self.dateEditUse.setDate(QDate.currentDate())
-        grid_use.addWidget(self.dateEditUse, 0, 1)
-        
-        # (2) 구분 (세대 / 공용)
-        grid_use.addWidget(QLabel("구분:"), 1, 0)
-        self.comboType = QComboBox()
-        self.comboType.addItems(["공용", "세대"])
-        grid_use.addWidget(self.comboType, 1, 1)
-        
-        # (3) 동 / 호
-        grid_use.addWidget(QLabel("동:"), 2, 0)
-        self.comboDong = QComboBox()
-        grid_use.addWidget(self.comboDong, 2, 1)
-        
-        grid_use.addWidget(QLabel("호:"), 3, 0)
-        self.comboHo = QComboBox()
-        grid_use.addWidget(self.comboHo, 3, 1)
-        
-        # (4) 공종 (Discipline)
-        grid_use.addWidget(QLabel("공종:"), 4, 0)
-        self.comboDiscipline = QComboBox()
-        grid_use.addWidget(self.comboDiscipline, 4, 1)
-        
-        # (5) 품명 (CB_Item)
-        grid_use.addWidget(QLabel("품명:"), 5, 0)
-        self.CB_Item = QComboBox()
-        grid_use.addWidget(self.CB_Item, 5, 1)
-        
-        # (6) 규격 (CB_Spec)
-        grid_use.addWidget(QLabel("규격:"), 6, 0)
-        self.CB_Spec = QComboBox()
-        grid_use.addWidget(self.CB_Spec, 6, 1)
-        
-        # 콤보박스 연동 안내 노티스
-        self.lbl_usage_notice = QLabel("💡 공종을 선택하면 해당 공종의 품명만 필터링되며,\n    품명을 선택하면 사용 가능한 규격이 나타납니다.")
-        self.lbl_usage_notice.setFont(notice_font)
-        self.lbl_usage_notice.setStyleSheet("color: #1976D2; margin-top: 2px; margin-bottom: 5px;")
-        grid_use.addWidget(self.lbl_usage_notice, 7, 0, 1, 2)
-        
-        # (7) 현재 재고 현황 표시창
-        grid_use.addWidget(QLabel("현재 재고:"), 8, 0)
-        self.LE_CurrentStock = QLineEdit()
-        self.LE_CurrentStock.setReadOnly(True)  
-        self.LE_CurrentStock.setStyleSheet("background-color: #ECEFF1; color: #37474F; font-weight: bold;")
-        self.LE_CurrentStock.setPlaceholderText("품명/규격 선택 시 자동 계산")
-        grid_use.addWidget(self.LE_CurrentStock, 8, 1)
-        
-        # (8) 사용 수량
-        grid_use.addWidget(QLabel("사용수량:"), 9, 0)
-        self.lineEditUseQty = QLineEdit()
-        grid_use.addWidget(self.lineEditUseQty, 9, 1)
-        
-        # (9) 비고
-        grid_use.addWidget(QLabel("비고:"), 10, 0)
-        self.lineEditUseRemarks = QLineEdit()
-        grid_use.addWidget(self.lineEditUseRemarks, 10, 1)
-        
-        # (10) 버튼 처리 영역
-        button_layout = QHBoxLayout()
-        self.btn_save_use = QPushButton("사용 내역 등록")
-        self.btn_save_use.setStyleSheet("background-color: #4CAF50; color: white; font-weight: bold; height: 35px;")
-        self.btn_save_use.clicked.connect(self.process_usage_save)
-        button_layout.addWidget(self.btn_save_use)
-        
-        self.btn_cancel_use_edit = QPushButton("수정 취소")
-        self.btn_cancel_use_edit.setStyleSheet("background-color: #757575; color: white; font-weight: bold; height: 35px;")
-        self.btn_cancel_use_edit.setVisible(False)
-        self.btn_cancel_use_edit.clicked.connect(self.clear_usage_fields)
-        button_layout.addWidget(self.btn_cancel_use_edit)
-        
-        grid_use.addLayout(button_layout, 11, 0, 1, 2)
-        
-        left_layout.addWidget(self.group_box_use)
-        left_layout.addStretch()
-        
-        # =================================================================
-        # 2. 우측 영역: 사용 대장 테이블 및 제어 버튼
-        # =================================================================
-        right_layout = QVBoxLayout()
-        
-        top_bar = QHBoxLayout()
-        self.btn_edit_use_row = QPushButton("선택 내역 수정")
-        self.btn_edit_use_row.setStyleSheet("background-color: #FF9800; color: white; font-weight: bold; padding: 6px 12px;")
-        self.btn_edit_use_row.clicked.connect(self.load_selected_use_row)
-        top_bar.addWidget(self.btn_edit_use_row)
-        
-        self.btn_delete_use_row = QPushButton("선택 내역 삭제")
-        self.btn_delete_use_row.setStyleSheet("background-color: #D32F2F; color: white; font-weight: bold; padding: 6px 12px;")
-        self.btn_delete_use_row.clicked.connect(self.delete_selected_use_row)
-        top_bar.addWidget(self.btn_delete_use_row)
-        
-        top_bar.addStretch()
-        right_layout.addLayout(top_bar)
-        
-        self.tableWidgetUse = QTableWidget()
-        self.tableWidgetUse.setColumnCount(10)
-        self.tableWidgetUse.setHorizontalHeaderLabels([
-            "사용일자", "구분", "동", "호", "공종", "품명", "규격", "수량", "비고", "입력자"
-        ])
-        self.tableWidgetUse.setSelectionBehavior(QAbstractItemView.SelectRows)
-        self.tableWidgetUse.setEditTriggers(QAbstractItemView.NoEditTriggers)
-        right_layout.addWidget(self.tableWidgetUse)
-        
-        main_layout.addLayout(left_layout, 1)
-        main_layout.addLayout(right_layout, 3)
+    def bind_ui_variables(self):
+        """UI 파일의 컴포넌트들을 기존 로직 변수명과 일치시켜 소스 수정 최소화"""
+        self.comboType = self.ui.comboType
+        self.comboDong = self.ui.comboDong
+        self.comboHo = self.ui.comboHo
+        self.comboDiscipline = self.ui.comboDiscipline
+        self.CB_Item = self.ui.CB_Item
+        self.CB_Spec = self.ui.CB_Spec
+        self.LE_CurrentStock = self.ui.LE_CurrentStock
+        self.lineEditUseQty = self.ui.lineEditUseQty
+        self.lineEditUseRemarks = self.ui.lineEditUseRemarks
+        self.tableWidgetUse = self.ui.tableWidgetUse
+        self.group_box_use = self.ui.group_box_use
+        self.btn_save_use = self.ui.btn_save_use
+        self.btn_cancel_use_edit = self.ui.btn_cancel_use_edit
+        self.dateEditUse = self.ui.dateEditUse
 
-        # --------------------------------------------------
-        # 시그널 연동 정의
-        # --------------------------------------------------
+    def connect_signals(self):
+        """UI 컴포넌트 기능과 파이썬 메서드 연결"""
         self.comboType.currentTextChanged.connect(self.handle_type_change)
         self.comboDong.currentTextChanged.connect(self.handle_dong_change)
-        self.comboDiscipline.currentTextChanged.connect(self.sync_items_by_discipline)
+        
+        # [수정] 호수와 공종의 변경 감지 시그널을 상호 연동 핸들러 함수로 연결
+        self.comboHo.currentTextChanged.connect(self.handle_ho_change)
+        self.comboDiscipline.currentTextChanged.connect(self.handle_discipline_change)
         
         self.CB_Item.currentTextChanged.connect(self.handle_item_change)
         self.CB_Spec.currentTextChanged.connect(self.update_stock_display)
-        
         self.tableWidgetUse.itemSelectionChanged.connect(self.highlight_selected_row)
+        
+        # 버튼 처리 시그널 연결
+        self.btn_save_use.clicked.connect(self.process_usage_save)
+        self.ui.btn_edit_use_row.clicked.connect(self.load_selected_use_row)
+        self.ui.btn_delete_use_row.clicked.connect(self.delete_selected_use_row)
+        self.btn_cancel_use_edit.clicked.connect(self.clear_usage_fields)
 
     # =================================================================
-    # 실시간 재고 현황 조회 및 표시 함수
+    # 비즈니스 데이터 처리 및 연동 로직 코드
     # =================================================================
     def update_stock_display(self):
         item_name = self.CB_Item.currentText().strip()
         spec = self.CB_Spec.currentText().strip()
-        
         if item_name and spec:
             try:
                 stock = database.get_current_stock(item_name, spec)
                 self.LE_CurrentStock.setText(f"{stock:,} 개")
-            except Exception as e:
+            except:
                 self.LE_CurrentStock.setText("조회 오류")
         else:
             self.LE_CurrentStock.clear()
 
-    # =================================================================
-    # 데이터 연동 및 동적 필터링 로직
-    # =================================================================
     def init_combobox_data(self):
-        """초기 구동 데이터 세팅"""
         self.handle_type_change(self.comboType.currentText())
 
     def handle_type_change(self, current_type):
-        """구분(공용/세대) 변경 시 처리"""
         if self.is_loading_row:
             return
-            
         self.comboDong.blockSignals(True)
         self.comboDong.clear()
         
@@ -204,28 +101,19 @@ class UsageTab(QWidget):
                 self.comboDong.addItem("999")
             self.comboDong.blockSignals(False)
             self.comboDong.setCurrentText("999") 
-            # 강제로 로직 동기화 가동
             self.handle_dong_change("999")
         else:
-            # 세대 선택 시: 101동이 있으면 세팅, 없으면 첫 번째 동 세팅
             index = self.comboDong.findText("101")
             self.comboDong.blockSignals(False)
-            
             if index >= 0:
                 self.comboDong.setCurrentIndex(index) 
             else:
                 self.comboDong.setCurrentIndex(0)
-            
-            # [★ 버그 교정 핵심] 
-            # 텍스트 변경 시 시그널이 씹히는 문제를 방지하기 위해, 현재 세팅된 동 텍스트를 직접 가져와서 강제로 동 변화 로직을 수동 실행합니다.
             self.handle_dong_change(self.comboDong.currentText())
 
     def handle_dong_change(self, selected_dong):
-        """동이 변경되었을 때 호출되는 연쇄 반응 중심 함수"""
         if not selected_dong or self.is_loading_row:
             return
-            
-        # 1. 선택된 동에 맞는 호수 리스트 리프레시 (첫 행 자동 지정 포함)
         self.sync_ho_combo(selected_dong)
         
         if selected_dong == "999":
@@ -257,21 +145,38 @@ class UsageTab(QWidget):
                 self.comboDiscipline.setCurrentIndex(0)
                 self.sync_items_by_discipline(self.comboDiscipline.currentText())
 
-    def sync_ho_combo(self, selected_dong):
-        """DB를 조회하여 선택된 동에 맞는 호수 리스트만 콤보에 출력"""
-        if not selected_dong or self.is_loading_row:
+    # [핵심 기능 수정] 호수 변경 시 공종 양방향 동기화
+    def handle_ho_change(self, selected_ho):
+        if not selected_ho or self.is_loading_row or self.is_syncing_ho_disp:
             return
             
+        if self.comboType.currentText() == "공용" and self.comboDong.currentText() == "999":
+            self.is_syncing_ho_disp = True
+            self.comboDiscipline.setCurrentText(selected_ho)
+            self.is_syncing_ho_disp = False
+            self.sync_items_by_discipline(selected_ho)
+
+    # [핵심 기능 수정] 공종 변경 시 호수 양방향 동기화
+    def handle_discipline_change(self, selected_disp):
+        if not selected_disp or self.is_loading_row or self.is_syncing_ho_disp:
+            return
+            
+        if self.comboType.currentText() == "공용" and self.comboDong.currentText() == "999":
+            self.is_syncing_ho_disp = True
+            self.comboHo.setCurrentText(selected_disp)
+            self.is_syncing_ho_disp = False
+            
+        self.sync_items_by_discipline(selected_disp)
+
+    def sync_ho_combo(self, selected_dong):
+        if not selected_dong or self.is_loading_row:
+            return
         self.comboHo.blockSignals(True)
         self.comboHo.clear()
         
         conn = database.get_db_connection()
         cursor = conn.cursor()
-        cursor.execute("""
-            SELECT ho FROM dongho_master 
-            WHERE dong = ? 
-            ORDER BY CAST(ho AS INTEGER) ASC, ho ASC
-        """, (selected_dong,))
+        cursor.execute("SELECT ho FROM dongho_master WHERE dong = ? ORDER BY CAST(ho AS INTEGER) ASC, ho ASC", (selected_dong,))
         hos = cursor.fetchall()
         conn.close()
         
@@ -280,7 +185,6 @@ class UsageTab(QWidget):
             
         if self.comboHo.count() > 0:
             self.comboHo.setCurrentIndex(0) 
-                
         self.comboHo.blockSignals(False)
 
     def sync_items_by_discipline(self, discipline):
@@ -325,31 +229,22 @@ class UsageTab(QWidget):
         
         for s in specs:
             self.CB_Spec.addItem(str(s[0]))
-            
         self.CB_Spec.blockSignals(False)
 
-    # =================================================================
-    # 행 선택 시 하이라이트 시각 효과 로직
-    # =================================================================
     def highlight_selected_row(self):
         for r in range(self.tableWidgetUse.rowCount()):
             bg_color = QColor(245, 247, 250) if (r % 4) in [2, 3] else QColor(255, 255, 255)
             for c in range(self.tableWidgetUse.columnCount()):
                 item = self.tableWidgetUse.item(r, c)
-                if item:
-                    item.setBackground(bg_color)
+                if item: item.setBackground(bg_color)
                     
         current_row = self.tableWidgetUse.currentRow()
         if current_row >= 0:
             highlight_color = QColor(255, 224, 178) 
             for c in range(self.tableWidgetUse.columnCount()):
                 item = self.tableWidgetUse.item(current_row, c)
-                if item:
-                    item.setBackground(highlight_color)
+                if item: item.setBackground(highlight_color)
 
-    # =================================================================
-    # 저장 / 수정 / 삭제 비즈니스 로직
-    # =================================================================
     def process_usage_save(self):
         use_date = self.dateEditUse.date().toString("yyyy-MM-dd")
         usage_type = self.comboType.currentText()
@@ -378,8 +273,7 @@ class UsageTab(QWidget):
                 cursor.execute("SELECT qty FROM usage_ledger WHERE id = ?", (self.editing_row_id,))
                 old_qty_res = cursor.fetchone()
                 conn.close()
-                if old_qty_res:
-                    current_stock += old_qty_res[0]
+                if old_qty_res: current_stock += old_qty_res[0]
 
             if qty > current_stock:
                 QMessageBox.warning(self, "재고 부족", f"현재 남은 재고({current_stock}개)보다 출고 수량({qty}개)이 더 많습니다.")
@@ -389,7 +283,6 @@ class UsageTab(QWidget):
         
         conn = database.get_db_connection()
         cursor = conn.cursor()
-        
         if self.is_edit_mode:
             cursor.execute("""
                 UPDATE usage_ledger
@@ -405,7 +298,6 @@ class UsageTab(QWidget):
             """, (use_date, usage_type, dong, ho, discipline, item_name, spec, qty, remarks, self.current_user))
             conn.commit()
             QMessageBox.information(self, "등록 성공", "자재 사용 내역이 대장에 기록되었습니다.")
-            
         conn.close()
         
         self.clear_usage_fields()
@@ -444,15 +336,13 @@ class UsageTab(QWidget):
             
             self.dateEditUse.setDate(QDate.fromString(use_date_str, "yyyy-MM-dd"))
             self.comboType.setCurrentText(usage_type)
-            
             self.comboDong.setCurrentText(dong)
             if usage_type == "공용":
                 self.comboHo.clear()
                 conn = database.get_db_connection()
                 cursor = conn.cursor()
                 cursor.execute("SELECT ho FROM dongho_master WHERE dong = '999'")
-                for h in cursor.fetchall():
-                    self.comboHo.addItem(str(h[0]))
+                for h in cursor.fetchall(): self.comboHo.addItem(str(h[0]))
                 conn.close()
             else:
                 self.sync_ho_combo(dong)
@@ -492,7 +382,6 @@ class UsageTab(QWidget):
         self.btn_save_use.setText("사용 내역 등록")
         self.btn_save_use.setStyleSheet("background-color: #4CAF50; color: white; font-weight: bold; height: 35px;")
         self.btn_cancel_use_edit.setVisible(False)
-        
         self.tableWidgetUse.clearSelection()
 
     def delete_selected_use_row(self):
@@ -517,9 +406,7 @@ class UsageTab(QWidget):
             conn.commit()
             conn.close()
             
-            if self.is_edit_mode:
-                self.clear_usage_fields()
-                
+            if self.is_edit_mode: self.clear_usage_fields()
             self.table_display_usage()
             QMessageBox.information(self, "삭제 성공", "선택 정보가 사용 대장에서 정상 제외되었습니다.")
 
