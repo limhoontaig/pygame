@@ -92,7 +92,7 @@ class LoginDialog(QDialog):
             cursor = conn.cursor()
             cursor.execute("""
                 SELECT status FROM users 
-                WHERE username = ? AND password = ?
+                WHERE username = %s AND password = %s
             """, (username, hashed_pw))
             result = cursor.fetchone()
             conn.close()
@@ -128,7 +128,7 @@ class LoginDialog(QDialog):
             cursor = conn.cursor()
             
             # 중복 ID 체크
-            cursor.execute("SELECT COUNT(*) FROM users WHERE username = ?", (username,))
+            cursor.execute("SELECT COUNT(*) FROM users WHERE username = %s", (username,))
             if cursor.fetchone()[0] > 0:
                 QMessageBox.warning(self, "중복 신청", "이미 존재하거나 신청된 사용자 이름입니다.")
                 conn.close()
@@ -137,7 +137,7 @@ class LoginDialog(QDialog):
             # 신규 신청 데이터 삽입 (기본 승인 상태: PENDING)
             cursor.execute("""
                 INSERT INTO users (username, password, status, is_admin) 
-                VALUES (?, ?, 'PENDING', 0)
+                VALUES (%s, %s, 'PENDING', 0)
             """, (username, hashed_pw))
             
             conn.commit()

@@ -176,7 +176,7 @@ class UsageTab(QWidget):
         
         conn = database.get_db_connection()
         cursor = conn.cursor()
-        cursor.execute("SELECT ho FROM dongho_master WHERE dong = ? ORDER BY CAST(ho AS INTEGER) ASC, ho ASC", (selected_dong,))
+        cursor.execute("SELECT ho FROM dongho_master WHERE dong = %s ORDER BY CAST(ho AS INTEGER) ASC, ho ASC", (selected_dong,))
         hos = cursor.fetchall()
         conn.close()
         
@@ -195,7 +195,7 @@ class UsageTab(QWidget):
         
         conn = database.get_db_connection()
         cursor = conn.cursor()
-        cursor.execute("SELECT DISTINCT item_name FROM inbound_ledger WHERE discipline = ? ORDER BY item_name ASC", (discipline,))
+        cursor.execute("SELECT DISTINCT item_name FROM inbound_ledger WHERE discipline = %s ORDER BY item_name ASC", (discipline,))
         items = cursor.fetchall()
         conn.close()
         
@@ -222,7 +222,7 @@ class UsageTab(QWidget):
         cursor = conn.cursor()
         cursor.execute("""
             SELECT DISTINCT spec FROM inbound_ledger 
-            WHERE discipline = ? AND item_name = ? ORDER BY spec ASC
+            WHERE discipline = %s AND item_name = %s ORDER BY spec ASC
         """, (self.comboDiscipline.currentText(), item_name))
         specs = cursor.fetchall()
         conn.close()
@@ -270,7 +270,7 @@ class UsageTab(QWidget):
             if self.is_edit_mode:
                 conn = database.get_db_connection()
                 cursor = conn.cursor()
-                cursor.execute("SELECT qty FROM usage_ledger WHERE id = ?", (self.editing_row_id,))
+                cursor.execute("SELECT qty FROM usage_ledger WHERE id = %s", (self.editing_row_id,))
                 old_qty_res = cursor.fetchone()
                 conn.close()
                 if old_qty_res: current_stock += old_qty_res[0]
@@ -286,15 +286,15 @@ class UsageTab(QWidget):
         if self.is_edit_mode:
             cursor.execute("""
                 UPDATE usage_ledger
-                SET use_date=?, usage_type=?, dong=?, ho=?, discipline=?, item_name=?, spec=?, qty=?, remarks=?, worker=?
-                WHERE id = ?
+                SET use_date=%s, usage_type=%s, dong=%s, ho=%s, discipline=%s, item_name=%s, spec=%s, qty=%s, remarks=%s, worker=%s
+                WHERE id = %s
             """, (use_date, usage_type, dong, ho, discipline, item_name, spec, qty, remarks, self.current_user, self.editing_row_id))
             conn.commit()
             QMessageBox.information(self, "수정 성공", "자재 출고/사용 내역 수정이 완료되었습니다.")
         else:
             cursor.execute("""
                 INSERT INTO usage_ledger (use_date, usage_type, dong, ho, discipline, item_name, spec, qty, remarks, worker)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
             """, (use_date, usage_type, dong, ho, discipline, item_name, spec, qty, remarks, self.current_user))
             conn.commit()
             QMessageBox.information(self, "등록 성공", "자재 사용 내역이 대장에 기록되었습니다.")
@@ -323,7 +323,7 @@ class UsageTab(QWidget):
         cursor = conn.cursor()
         cursor.execute("""
             SELECT id FROM usage_ledger 
-            WHERE use_date=? AND usage_type=? AND dong=? AND ho=? AND item_name=? AND qty=?
+            WHERE use_date=%s AND usage_type=%s AND dong=%s AND ho=%s AND item_name=%s AND qty=%s
             ORDER BY id DESC LIMIT 1
         """, (use_date_str, usage_type, dong, ho, item_name, int(qty)))
         result = cursor.fetchone()
@@ -390,7 +390,7 @@ class UsageTab(QWidget):
             QMessageBox.warning(self, "삭제 오류", "삭제 처리할 행 데이터를 리스트에서 선택해 주세요.")
             return
             
-        if QMessageBox.question(self, '최종 확인', '선택한 사용 내역 기록을 영구 삭제하시겠습니까?', QMessageBox.Yes | QMessageBox.No) == QMessageBox.Yes:
+        if QMessageBox.question(self, '최종 확인', '선택한 사용 내역 기록을 영구 삭제하시겠습니까%s', QMessageBox.Yes | QMessageBox.No) == QMessageBox.Yes:
             use_date = self.tableWidgetUse.item(current_row, 0).text()
             dong = self.tableWidgetUse.item(current_row, 2).text()
             ho = self.tableWidgetUse.item(current_row, 3).text()
@@ -401,7 +401,7 @@ class UsageTab(QWidget):
             cursor = conn.cursor()
             cursor.execute("""
                 DELETE FROM usage_ledger 
-                WHERE use_date=? AND dong=? AND ho=? AND item_name=? AND qty=?
+                WHERE use_date=%s AND dong=%s AND ho=%s AND item_name=%s AND qty=%s
             """, (use_date, dong, ho, item_name, qty))
             conn.commit()
             conn.close()

@@ -227,7 +227,7 @@ class InboundTab(QWidget):
         conn = database.get_db_connection()
         cursor = conn.cursor()
         
-        cursor.execute("SELECT COUNT(*) FROM material_items WHERE item_name = ?", (item_name,))
+        cursor.execute("SELECT COUNT(*) FROM material_items WHERE item_name = %s", (item_name,))
         item_exists = cursor.fetchone()[0] > 0
         
         if not item_exists:
@@ -242,7 +242,7 @@ class InboundTab(QWidget):
                 conn.close()
                 return
 
-        cursor.execute("SELECT COUNT(*) FROM material_items WHERE item_name = ? AND spec = ?", (item_name, spec))
+        cursor.execute("SELECT COUNT(*) FROM material_items WHERE item_name = %s AND spec = %s", (item_name, spec))
         pair_exists = cursor.fetchone()[0] > 0
         
         if not pair_exists:
@@ -252,7 +252,7 @@ class InboundTab(QWidget):
                 f"시스템 마스터에 없는 새로운 자재 정보입니다.\n\n"
                 f"▶ 품명: {item_name}\n"
                 f"▶ 규격: {spec}\n\n"
-                f"위 정보가 정확합니까? 확인 후 등록됩니다.",
+                f"위 정보가 정확합니까%s 확인 후 등록됩니다.",
                 QMessageBox.Yes | QMessageBox.No,
                 QMessageBox.No
             )
@@ -261,7 +261,7 @@ class InboundTab(QWidget):
                 return
             
             try:
-                cursor.execute("INSERT INTO material_items (item_name, spec) VALUES (?, ?)", (item_name, spec))
+                cursor.execute("INSERT INTO material_items (item_name, spec) VALUES (%s, %s)", (item_name, spec))
                 conn.commit()
             except sqlite3.IntegrityError:
                 pass
@@ -282,15 +282,15 @@ class InboundTab(QWidget):
         if self.is_edit_mode:
             cursor.execute("""
                 UPDATE inbound_ledger
-                SET in_date=?, discipline=?, item_name=?, spec=?, qty=?, unit_price=?, total_price=?, supplier=?, remarks=?, worker=?
-                WHERE id = ?
+                SET in_date=%s, discipline=%s, item_name=%s, spec=%s, qty=%s, unit_price=%s, total_price=%s, supplier=%s, remarks=%s, worker=%s
+                WHERE id = %s
             """, (in_date, discipline, item_name, spec, qty, unit_price, total_price, supplier, remarks, self.current_user, self.editing_row_id))
             conn.commit()
             QMessageBox.information(self, "수정 완료", "자재 입고 내역이 정상적으로 수정되었습니다.")
         else:
             cursor.execute("""
                 INSERT INTO inbound_ledger (in_date, discipline, item_name, spec, qty, unit_price, total_price, supplier, remarks, worker)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
             """, (in_date, discipline, item_name, spec, qty, unit_price, total_price, supplier, remarks, self.current_user))
             conn.commit()
             QMessageBox.information(self, "등록 완료", "입고 내역이 등록되었습니다.")
@@ -321,7 +321,7 @@ class InboundTab(QWidget):
         cursor = conn.cursor()
         cursor.execute("""
             SELECT id FROM inbound_ledger 
-            WHERE in_date=? AND item_name=? AND spec=? AND qty=? AND supplier=?
+            WHERE in_date=%s AND item_name=%s AND spec=%s AND qty=%s AND supplier=%s
             ORDER BY id DESC LIMIT 1
         """, (in_date_str, item_name, spec, int(qty), supplier))
         result = cursor.fetchone()
@@ -426,7 +426,7 @@ class InboundTab(QWidget):
         
         conn = database.get_db_connection()
         cursor = conn.cursor()
-        cursor.execute("SELECT DISTINCT spec FROM material_items WHERE item_name = ? ORDER BY spec ASC", (item_name,))
+        cursor.execute("SELECT DISTINCT spec FROM material_items WHERE item_name = %s ORDER BY spec ASC", (item_name,))
         specs = cursor.fetchall()
         conn.close()
         
@@ -478,7 +478,7 @@ class InboundTab(QWidget):
         if current_row < 0:
             QMessageBox.warning(self, "삭제 오류", "삭제할 항목을 선택해 주세요.")
             return
-        if QMessageBox.question(self, '확인', '선택한 내역을 삭제하시겠습니까?', QMessageBox.Yes | QMessageBox.No) == QMessageBox.Yes:
+        if QMessageBox.question(self, '확인', '선택한 내역을 삭제하시겠습니까%s', QMessageBox.Yes | QMessageBox.No) == QMessageBox.Yes:
             in_date = self.tableWidgetInIn.item(current_row, 0).text()
             item_name = self.tableWidgetInIn.item(current_row, 2).text() 
             spec = self.tableWidgetInIn.item(current_row, 3).text()      
@@ -488,7 +488,7 @@ class InboundTab(QWidget):
             cursor = conn.cursor()
             cursor.execute("""
                 DELETE FROM inbound_ledger 
-                WHERE in_date=? AND item_name=? AND spec=? AND qty=?
+                WHERE in_date=%s AND item_name=%s AND spec=%s AND qty=%s
             """, (in_date, item_name, spec, qty))
             conn.commit()
             conn.close()

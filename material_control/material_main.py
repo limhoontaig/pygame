@@ -9,6 +9,7 @@ from user_approval_dialog import UserApprovalDialog
 from material_usage_tab import UsageTab
 # 기존에 만든 입고 탭 모듈
 from material_inbound_tab import InboundTab 
+from material_stock_tab import StockTab
 
 class MainApp(QMainWindow):
     def __init__(self, user_name):
@@ -43,11 +44,25 @@ class MainApp(QMainWindow):
         self.tabs = QTabWidget()
         self.setCentralWidget(self.tabs)
 
-        # 1. 자재 입고 탭 추가
-        self.tabs.addTab(InboundTab(self.current_user), "자재 입고 입력")
+        # 1. 탭 객체들을 '먼저' 전부 생성합니다.
+        self.inbound_tab = InboundTab(self.current_user)
+        self.usage_tab = UsageTab(self.current_user)
+        self.stock_tab = StockTab(self.current_user)  # 이제 안전하게 생성됨
 
-        # 2. 자재 사용 탭 추가
-        self.tabs.addTab(UsageTab(self.current_user), "자재 사용 입력")
+        # 2. QTabWidget에 탭들을 추가합니다.
+        self.tabs.addTab(self.inbound_tab, "자재 입고 입력")
+        self.tabs.addTab(self.usage_tab, "자재 사용 입력")
+        self.tabs.addTab(self.stock_tab, "자재 현재고 조회")
+
+        # 5. [옵션] 사용자가 다른 탭에서 입고/출고를 입력한 후 재고 탭으로 이동했을 때 
+        # 자동으로 최신 재고가 새로고침되도록 이벤트 시그널을 연결해주면 아주 편리합니다.
+        self.tabs.currentChanged.connect(self.on_tab_changed)
+
+    def on_tab_changed(self, index):
+        """탭이 전환될 때 자동으로 데이터를 리로드하는 트리거 기능"""
+        # 만약 선택된 탭이 '자재 현재고 조회' 탭(index: 2)이라면 자동으로 리프레시 실행
+        if index == 2:
+            self.stock_tab.load_stock_data()    
 
     def check_admin_privilege(self):
         """현재 로그인한 사용자가 관리자인지 DB에서 확인하여 권한을 제어합니다."""
@@ -56,7 +71,7 @@ class MainApp(QMainWindow):
             conn = database.get_db_connection()
             cursor = conn.cursor()
             # users 테이블에서 현재 로그인한 유저의 관리자 여부(is_admin)를 조회합니다.
-            cursor.execute("SELECT is_admin FROM users WHERE username = ?", (self.current_user,))
+            cursor.execute("SELECT is_admin FROM users WHERE username = %s", (self.current_user,))
             result = cursor.fetchone()
             conn.close()
             
