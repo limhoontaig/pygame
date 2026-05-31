@@ -80,10 +80,10 @@ class UsageTab(QWidget):
         self.lbl_usage_notice.setStyleSheet("color: #1976D2; margin-top: 2px; margin-bottom: 5px;")
         grid_use.addWidget(self.lbl_usage_notice, 7, 0, 1, 2)
         
-        # (7) 현재 재고 현황 표시창 (사용수량 바로 위에 배치)
+        # (7) 현재 재고 현황 표시창
         grid_use.addWidget(QLabel("현재 재고:"), 8, 0)
         self.LE_CurrentStock = QLineEdit()
-        self.LE_CurrentStock.setReadOnly(True)  # 읽기 전용 설정
+        self.LE_CurrentStock.setReadOnly(True)  
         self.LE_CurrentStock.setStyleSheet("background-color: #ECEFF1; color: #37474F; font-weight: bold;")
         self.LE_CurrentStock.setPlaceholderText("품명/규격 선택 시 자동 계산")
         grid_use.addWidget(self.LE_CurrentStock, 8, 1)
@@ -148,26 +148,21 @@ class UsageTab(QWidget):
         main_layout.addLayout(right_layout, 3)
 
         # --------------------------------------------------
-        # 시그널 연동 정의 (정밀 조정)
+        # 시그널 연동 정의
         # --------------------------------------------------
         self.comboType.currentTextChanged.connect(self.handle_type_change)
-        self.comboDong.currentTextChanged.connect(self.sync_ho_combo)
-        
-        # 대분류 공종이 바뀌면 품명을 바인딩
+        self.comboDong.currentTextChanged.connect(self.handle_dong_change)
         self.comboDiscipline.currentTextChanged.connect(self.sync_items_by_discipline)
         
-        # 품명(CB_Item)이나 규격(CB_Spec)이 바뀔 때 실시간 재고 연쇄 동기화
         self.CB_Item.currentTextChanged.connect(self.handle_item_change)
         self.CB_Spec.currentTextChanged.connect(self.update_stock_display)
         
-        # 테이블 선택 변경 시 실시간 라인 하이라이트 효과 적용
         self.tableWidgetUse.itemSelectionChanged.connect(self.highlight_selected_row)
 
     # =================================================================
     # 실시간 재고 현황 조회 및 표시 함수
     # =================================================================
     def update_stock_display(self):
-        """현재 선택된 품명과 규격을 바탕으로 재고를 조회하여 표시"""
         item_name = self.CB_Item.currentText().strip()
         spec = self.CB_Spec.currentText().strip()
         
@@ -184,44 +179,17 @@ class UsageTab(QWidget):
     # 데이터 연동 및 동적 필터링 로직
     # =================================================================
     def init_combobox_data(self):
-        """초기 기동 시 마스터 DB에서 데이터를 읽어와 대분류(구분, 동, 공종)를 세팅합니다."""
-        self.comboDong.blockSignals(True)
-        self.comboDiscipline.blockSignals(True)
-        self.comboDong.clear()
-        self.comboDiscipline.clear()
-        
-        conn = database.get_db_connection()
-        cursor = conn.cursor()
-        
-        cursor.execute("SELECT DISTINCT dong FROM dongho_master ORDER BY CAST(dong AS INTEGER) ASC, dong ASC")
-        dongs = cursor.fetchall()
-        for d in dongs:
-            self.comboDong.addItem(str(d[0]))
-            
-        cursor.execute("SELECT DISTINCT discipline FROM inbound_ledger WHERE discipline IS NOT NULL AND discipline != '' ORDER BY discipline ASC")
-        disciplines = cursor.fetchall()
-        conn.close()
-        
-        for disp in disciplines:
-            self.comboDiscipline.addItem(str(disp[0]))
-            
-        self.comboDong.blockSignals(False)
-        self.comboDiscipline.blockSignals(False)
-        
-        # 기본값 로드 연쇄 가동
+        """초기 구동 데이터 세팅"""
         self.handle_type_change(self.comboType.currentText())
-        self.sync_items_by_discipline(self.comboDiscipline.currentText())
 
     def handle_type_change(self, current_type):
-        """구분이 변경되면 요구사항에 따라 동/호를 자동으로 초기화하지만, 목록은 유지합니다."""
+        """구분(공용/세대) 변경 시 처리"""
         if self.is_loading_row:
             return
             
         self.comboDong.blockSignals(True)
-        self.comboHo.blockSignals(True)
-        
-        # 1. DB 전체 동 리스트를 깨끗하게 다시 채웁니다.
         self.comboDong.clear()
+        
         conn = database.get_db_connection()
         cursor = conn.cursor()
         cursor.execute("SELECT DISTINCT dong FROM dongho_master ORDER BY CAST(dong AS INTEGER) ASC, dong ASC")
@@ -234,32 +202,69 @@ class UsageTab(QWidget):
         if current_type == "공용":
             if "999" not in dongs:
                 self.comboDong.addItem("999")
-            self.comboDong.setCurrentText("999")
-            
-            # [수정] 호수 목록을 강제로 999 하나로 잠그지 않고, 위의 sync_ho_combo를 호출하여 999동의 전체 목록을 로드합니다.
             self.comboDong.blockSignals(False)
-            self.sync_ho_combo("999")
+            self.comboDong.setCurrentText("999") 
+            # 강제로 로직 동기화 가동
+            self.handle_dong_change("999")
         else:
+            # 세대 선택 시: 101동이 있으면 세팅, 없으면 첫 번째 동 세팅
             index = self.comboDong.findText("101")
+            self.comboDong.blockSignals(False)
+            
             if index >= 0:
-                self.comboDong.setCurrentIndex(index)
+                self.comboDong.setCurrentIndex(index) 
             else:
                 self.comboDong.setCurrentIndex(0)
-                
-            self.comboDong.blockSignals(False)
-            self.sync_ho_combo(self.comboDong.currentText())
             
-        self.comboDong.blockSignals(False)
-        self.comboHo.blockSignals(False)
+            # [★ 버그 교정 핵심] 
+            # 텍스트 변경 시 시그널이 씹히는 문제를 방지하기 위해, 현재 세팅된 동 텍스트를 직접 가져와서 강제로 동 변화 로직을 수동 실행합니다.
+            self.handle_dong_change(self.comboDong.currentText())
+
+    def handle_dong_change(self, selected_dong):
+        """동이 변경되었을 때 호출되는 연쇄 반응 중심 함수"""
+        if not selected_dong or self.is_loading_row:
+            return
+            
+        # 1. 선택된 동에 맞는 호수 리스트 리프레시 (첫 행 자동 지정 포함)
+        self.sync_ho_combo(selected_dong)
+        
+        if selected_dong == "999":
+            self.comboDiscipline.blockSignals(True)
+            self.comboDiscipline.clear()
+            for i in range(self.comboHo.count()):
+                self.comboDiscipline.addItem(self.comboHo.itemText(i))
+            self.comboDiscipline.blockSignals(False)
+            
+            if self.comboHo.count() > 0:
+                first_ho_text = self.comboHo.itemText(0)
+                self.comboDiscipline.setCurrentText(first_ho_text)
+                self.sync_items_by_discipline(first_ho_text)
+        else:
+            self.comboDiscipline.blockSignals(True)
+            self.comboDiscipline.clear()
+            
+            conn = database.get_db_connection()
+            cursor = conn.cursor()
+            cursor.execute("SELECT DISTINCT discipline FROM inbound_ledger WHERE discipline IS NOT NULL AND discipline != '' ORDER BY discipline ASC")
+            disciplines = cursor.fetchall()
+            conn.close()
+            
+            for disp in disciplines:
+                self.comboDiscipline.addItem(str(disp[0]))
+                
+            self.comboDiscipline.blockSignals(False)
+            if self.comboDiscipline.count() > 0:
+                self.comboDiscipline.setCurrentIndex(0)
+                self.sync_items_by_discipline(self.comboDiscipline.currentText())
+
     def sync_ho_combo(self, selected_dong):
-        """선택된 동에 거주하는 호 리스트(999동의 경우 공종 명칭들)를 동적으로 바인딩합니다."""
+        """DB를 조회하여 선택된 동에 맞는 호수 리스트만 콤보에 출력"""
         if not selected_dong or self.is_loading_row:
             return
             
         self.comboHo.blockSignals(True)
         self.comboHo.clear()
         
-        # 999동이든 일반 동이든 관계없이 DB(dongho_master)에서 실제 호수 데이터만 조회합니다.
         conn = database.get_db_connection()
         cursor = conn.cursor()
         cursor.execute("""
@@ -270,19 +275,15 @@ class UsageTab(QWidget):
         hos = cursor.fetchall()
         conn.close()
         
-        # DB에서 가져온 호수(전기, 기계, 커뮤니티, 또는 일반 호수)를 콤보박스에 추가
         for h in hos:
             self.comboHo.addItem(str(h[0]))
             
-        # [삭제 완료] 호수에 999를 강제로 추가하고 세팅하던 기존의 예외 처리 조건문 줄을 제거했습니다.
-        # 이제 DB에 있는 첫 번째 공종/호수 명칭이 자동으로 초기 선택됩니다.
         if self.comboHo.count() > 0:
-            self.comboHo.setCurrentIndex(0)
+            self.comboHo.setCurrentIndex(0) 
                 
         self.comboHo.blockSignals(False)
 
     def sync_items_by_discipline(self, discipline):
-        """공종 변경 시 품명 리스트 재정렬"""
         if self.is_loading_row or not discipline:
             return
         self.CB_Item.blockSignals(True)
@@ -298,11 +299,9 @@ class UsageTab(QWidget):
             self.CB_Item.addItem(str(i[0]))
             
         self.CB_Item.blockSignals(False)
-        # 새로 채워진 첫 번째 품명 기준으로 규격 및 재고 강제 호출
         self.handle_item_change(self.CB_Item.currentText())
 
     def handle_item_change(self, item_name):
-        """품명이 바뀔 때 규격을 매칭하고 재고 현황판을 트리거합니다."""
         if self.is_loading_row or not item_name:
             self.LE_CurrentStock.clear()
             return
@@ -371,7 +370,6 @@ class UsageTab(QWidget):
             
         qty = int(qty_str)
         
-        # 재고 수량 초과 검증
         try:
             current_stock = database.get_current_stock(item_name, spec)
             if self.is_edit_mode:
@@ -450,7 +448,12 @@ class UsageTab(QWidget):
             self.comboDong.setCurrentText(dong)
             if usage_type == "공용":
                 self.comboHo.clear()
-                self.comboHo.addItem("999")
+                conn = database.get_db_connection()
+                cursor = conn.cursor()
+                cursor.execute("SELECT ho FROM dongho_master WHERE dong = '999'")
+                for h in cursor.fetchall():
+                    self.comboHo.addItem(str(h[0]))
+                conn.close()
             else:
                 self.sync_ho_combo(dong)
             self.comboHo.setCurrentText(ho)
@@ -465,8 +468,6 @@ class UsageTab(QWidget):
             self.lineEditUseRemarks.setText(remarks)
             
             self.is_loading_row = False 
-            
-            # 고정 후 강제 재고 출력
             self.update_stock_display()
             
             self.group_box_use.setTitle("⚠️ 자재 사용 내역 수정 모드")
@@ -483,10 +484,6 @@ class UsageTab(QWidget):
         self.comboType.setCurrentIndex(0)
         self.handle_type_change("공용")
         
-        if self.comboDiscipline.count() > 0:
-            self.comboDiscipline.setCurrentIndex(0)
-            self.sync_items_by_discipline(self.comboDiscipline.currentText())
-            
         self.lineEditUseQty.clear()
         self.lineEditUseRemarks.clear()
         self.LE_CurrentStock.clear()  
