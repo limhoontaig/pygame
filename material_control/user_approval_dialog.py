@@ -48,7 +48,7 @@ class UserApprovalDialog(QDialog):
         
         conn = database.get_db_connection()
         cursor = conn.cursor()
-        cursor.execute("UPDATE users SET status = 'APPROVED' WHERE username = ?", (username,))
+        cursor.execute("UPDATE users SET status = 'APPROVED' WHERE username = %s", (username,))
         conn.commit()
         conn.close()
         QMessageBox.information(self, "완료", f"'{username}' 계정이 승인되었습니다.")
@@ -61,7 +61,7 @@ class UserApprovalDialog(QDialog):
         
         conn = database.get_db_connection()
         cursor = conn.cursor()
-        cursor.execute("UPDATE users SET status = 'REJECTED' WHERE username = ?", (username,))
+        cursor.execute("UPDATE users SET status = 'REJECTED' WHERE username = %s", (username,))
         conn.commit()
         conn.close()
         QMessageBox.information(self, "완료", f"'{username}' 계정 신청을 거절했습니다.")
