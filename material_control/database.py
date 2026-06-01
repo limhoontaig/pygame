@@ -2,6 +2,7 @@
 import pymysql
 import pandas as pd
 import os
+from pathlib import Path
 import hashlib
 
 def hash_password(password):
@@ -15,7 +16,7 @@ def get_db_connection():
     conn = pymysql.connect(
         host="127.0.0.1",         # 내 PC에 설치된 DB 서버를 가리킴
         user="root",              # MariaDB 기본 최고 관리자 계정
-        password="4523",   # ⚠️ MariaDB 설치할 때 비밀번호 적어주세요!
+        password="4511",   # ⚠️ MariaDB 설치할 때 비밀번호 적어주세요!
         database="inventory_db",  # 하이디SQL에서 새로 만든 데이터베이스 이름
         port=3306,                # MariaDB 기본 포트 번호
         charset="utf8mb4",        # 한글 깨짐 방지 인코딩
@@ -114,8 +115,13 @@ def init_database():
 
     # (주의: 동호수 엑셀 로드 로직은 SQLite 문법(?)이 섞여 있을 수 있으므로 
     #  안전한 테이블 생성을 위해 우선 이 단계까지만 확실히 실행합니다.)
+
+    load_excel_to_dong_ho()  # 동호수 엑셀 데이터 주입 (테이블 생성 후 실행)
+
     conn.commit()
     conn.close()
+
+    # load_excel_to_dong_ho(None)
     print("[시스템 알림]: 모든 마스터 및 대장 테이블 스키마 초기화 완료.")
 
 def get_current_stock(item_name, spec):
@@ -135,3 +141,60 @@ def get_current_stock(item_name, spec):
     
     conn.close()
     return total_in - total_out
+
+def load_excel_to_dong_ho():
+    """
+    지정된 경로의 동호수 엑셀 파일을 읽어 MariaDB에 주입합니다.
+    엑셀 파일은 '동' 컬럼과 '호' 컬럼을 가지고 있어야 합니다.
+    """
+    # 1. 현재 실행 중인 스크립트 파일(.py)의 디렉토리 위치를 구합니다.
+    current_dir = Path(__file__).resolve().parent
+
+    # 2. 'data' 디렉토리 안의 '동호인덱스.xlsx' 경로를 조합합니다.
+    excel_path = current_dir / "data" / "동호인덱스.xlsx"
+
+    # 3. 판다스로 엑셀 파일 읽기
+    
+    
+    # 1. 테이블 선행 생성
+    # create_dong_ho_table()
+    # excel_path="data/동호인덱스.xlsx"
+    
+    if not os.path.exists(excel_path):  #
+        print(f"[시스템 경고]: '{excel_path}' 파일이 경로에 없어 동호 데이터 주입을 건너뜁니다.")
+        return False
+
+    try:
+        # 2. pandas를 이용해 엑셀 파일 로드
+        df = pd.read_excel(excel_path)
+        
+        # 데이터 정제 (공백 제거 및 문자열 변환)
+        df['dong'] = df['dong'].astype(str).str.strip()
+        df['ho'] = df['ho'].astype(str).str.strip()
+        
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        # 3. 데이터 일괄 주입 (중복 데이터는 무시하거나 업데이트)
+        sql = """
+            INSERT INTO dongho_master (dong, ho) 
+            VALUES (%s, %s)
+            ON DUPLICATE KEY UPDATE dong=VALUES(dong), ho=VALUES(ho);
+        """
+        
+        insert_data = []
+        for _, row in df.iterrows():
+            insert_data.append((row['dong'], row['ho']))
+        print(insert_data[:5])  # 첫 5개의 데이터만 출력
+            
+        # executemany를 사용해 수백 개의 동호수 데이터를 한 번에 고속 주입
+        cursor.executemany(sql, insert_data)
+        conn.commit()
+        
+        print(f"[시스템 알림]: 엑셀 자재 데이터({len(insert_data)}세대) 주입이 성공적으로 완료되었습니다.")
+        conn.close()
+        return True
+        
+    except Exception as e:
+        print(f"[시스템 에러]: 동호수 엑셀 데이터 주입 중 오류 발생: {e}")
+        return False

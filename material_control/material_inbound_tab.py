@@ -152,7 +152,20 @@ class InboundTab(QWidget):
         main_layout.addLayout(right_layout, 3)
 
         # 시그널 연결 (품명 변경 동기화 및 실시간 금액 양방향 계산)
-        self.comboBoxInName.currentTextChanged.connect(self.sync_spec_combo)
+        #self.comboBoxInName.currentTextChanged.connect(self.sync_spec_combo)
+        self.lineEditInQty.textChanged.connect(self.calculate_from_price)
+        self.lineEditInPrice.textChanged.connect(self.calculate_from_price)
+        self.lineEditInTotalPrice.textChanged.connect(self.calculate_from_total_price)
+
+        # 콤보박스 비어있을 때 보일 안내 문구(Placeholder) 세팅
+        self.comboBoxInDiscipline.setPlaceholderText("공종 입력 또는 선택")
+        self.comboBoxInName.setPlaceholderText("품명 입력 또는 선택")
+        self.comboBoxInSpec.setPlaceholderText("신규 추가 품목") # 👈 요청하신 희미한 글씨 처리
+
+        # 시그널 연결 (계층형 필터링을 위해 공종 변경 시그널 추가)
+        self.comboBoxInDiscipline.currentTextChanged.connect(self.filter_name_combo)
+        self.comboBoxInName.currentTextChanged.connect(self.filter_spec_combo)
+        
         self.lineEditInQty.textChanged.connect(self.calculate_from_price)
         self.lineEditInPrice.textChanged.connect(self.calculate_from_price)
         self.lineEditInTotalPrice.textChanged.connect(self.calculate_from_total_price)
@@ -374,24 +387,25 @@ class InboundTab(QWidget):
         self.btn_cancel_edit.setVisible(False)
 
     def refresh_all_combos(self):
-        self.comboBoxInName.blockSignals(True)
-        self.comboBoxInName.clear()
+        """[단계 1] 최초 로드 시 공종(Discipline) 목록을 먼저 채우고 첫 항목을 강제 선택합니다."""
         self.comboBoxInDiscipline.blockSignals(True)
         self.comboBoxInDiscipline.clear()
         
         conn = database.get_db_connection()
         cursor = conn.cursor()
         
-        cursor.execute("SELECT DISTINCT item_name FROM material_items ORDER BY item_name ASC")
-        items = cursor.fetchall()
-        for i in items:
-            self.comboBoxInName.addItem(str(i[0]))
-            
-        cursor.execute("SELECT DISTINCT discipline FROM inbound_ledger WHERE discipline IS NOT NULL AND discipline != '' ORDER BY discipline ASC")
+        # 모든 공종 로드
+        cursor.execute("""
+            SELECT DISTINCT discipline FROM inbound_ledger 
+            WHERE discipline IS NOT NULL AND discipline != '' 
+            ORDER BY discipline ASC
+        """)
         disciplines = cursor.fetchall()
+        
         for d in disciplines:
             self.comboBoxInDiscipline.addItem(str(d[0]))
             
+        # 마지막 입력 상태 복원 로직용 조회
         cursor.execute("""
             SELECT discipline, item_name, spec 
             FROM inbound_ledger 
@@ -400,41 +414,118 @@ class InboundTab(QWidget):
         last_entry = cursor.fetchone()
         conn.close()
         
-        self.comboBoxInName.blockSignals(False)
         self.comboBoxInDiscipline.blockSignals(False)
         
+        # 기존 저장 이력이 있다면 복원, 없다면 첫 번째 항목들로 자동 세팅
         if last_entry and not self.is_edit_mode:
             default_discipline = str(last_entry[0]) if last_entry[0] else ""
             default_item_name = str(last_entry[1]) if last_entry[1] else ""
             default_spec = str(last_entry[2]) if last_entry[2] else ""
             
             self.comboBoxInDiscipline.setEditText(default_discipline)
+            self.filter_name_combo(default_discipline)
             self.comboBoxInName.setEditText(default_item_name)
-            self.sync_spec_combo(default_item_name)
+            self.filter_spec_combo(default_item_name)
             self.comboBoxInSpec.setEditText(default_spec)
         else:
             if not self.is_edit_mode:
-                self.comboBoxInName.clearEditText()
-                self.comboBoxInDiscipline.clearEditText()
-                self.comboBoxInSpec.clear()
+                # 등록된 공종이 있다면 첫 번째 공종을 선택시켜 연쇄 반응 유도
+                if self.comboBoxInDiscipline.count() > 0:
+                    self.comboBoxInDiscipline.setCurrentIndex(0)
+                    self.filter_name_combo(self.comboBoxInDiscipline.currentText())
+                else:
+                    self.comboBoxInDiscipline.clearEditText()
+                    self.comboBoxInName.clear()
+                    self.comboBoxInName.clearEditText()
+                    self.comboBoxInSpec.clear()
+                    self.comboBoxInSpec.clearEditText()
 
-    def sync_spec_combo(self, item_name):
-        if not item_name:
-            return
-        self.comboBoxInSpec.blockSignals(True)
-        self.comboBoxInSpec.clear()
+    def filter_name_combo(self, discipline):
+        """[단계 2] 공종이 바뀌면 기존 품명을 완전히 지우고, 새로운 품명 목록의 '첫 번째 항목'을 자동 선택합니다."""
+        self.comboBoxInName.blockSignals(True)
+        self.comboBoxInName.clear() # 👈 기존에 남아있던 품목 리스트와 텍스트를 완전히 리셋
         
+        if not discipline.strip():
+            self.comboBoxInName.blockSignals(False)
+            self.filter_spec_combo("")
+            return
+
         conn = database.get_db_connection()
         cursor = conn.cursor()
-        cursor.execute("SELECT DISTINCT spec FROM material_items WHERE item_name = %s ORDER BY spec ASC", (item_name,))
+        
+        # 선택된 공종에 맞는 품명 조회
+        cursor.execute("""
+            SELECT DISTINCT item_name FROM inbound_ledger 
+            WHERE discipline = %s AND item_name IS NOT NULL AND item_name != ''
+            ORDER BY item_name ASC
+        """, (discipline.strip(),))
+        items = cursor.fetchall()
+        
+        # 이력이 없다면 전체 마스터 로드
+        if not items:
+            cursor.execute("SELECT DISTINCT item_name FROM material_items ORDER BY item_name ASC")
+            items = cursor.fetchall()
+            
+        conn.close()
+        
+        for i in items:
+            self.comboBoxInName.addItem(str(i[0]))
+            
+        self.comboBoxInName.blockSignals(False)
+        
+        # 🌟 핵심: 리스트가 채워졌다면 첫 번째 품목을 자동으로 띄워줍니다.
+        if self.comboBoxInName.count() > 0:
+            self.comboBoxInName.setCurrentIndex(0)
+        else:
+            self.comboBoxInName.clearEditText()
+            
+        # 새로 선택된 품명에 맞춰 규격 콤보박스도 즉시 동기화
+        self.filter_spec_combo(self.comboBoxInName.currentText())
+
+    def filter_spec_combo(self, item_name):
+        """[단계 3] 품명이 바뀌면 기존 규격을 지우고, 규격이 있으면 첫 항목 자동 선택 / 없으면 신규 추가 품목 문구를 띄웁니다."""
+        self.comboBoxInSpec.blockSignals(True)
+        self.comboBoxInSpec.clear() # 👈 기존 규격을 완전히 리셋
+        
+        discipline = self.comboBoxInDiscipline.currentText().strip()
+        item_name = item_name.strip()
+        
+        if not item_name:
+            self.comboBoxInSpec.blockSignals(False)
+            self.comboBoxInSpec.clearEditText()
+            return
+
+        conn = database.get_db_connection()
+        cursor = conn.cursor()
+        
+        # 공종 + 품명 조합으로 규격 조회
+        cursor.execute("""
+            SELECT DISTINCT spec FROM inbound_ledger 
+            WHERE discipline = %s AND item_name = %s AND spec IS NOT NULL AND spec != ''
+            ORDER BY spec ASC
+        """, (discipline, item_name))
         specs = cursor.fetchall()
+        
+        if not specs:
+            cursor.execute("""
+                SELECT DISTINCT spec FROM material_items 
+                WHERE item_name = %s AND spec IS NOT NULL AND spec != ''
+                ORDER BY spec ASC
+            """, (item_name,))
+            specs = cursor.fetchall()
+            
         conn.close()
         
         for s in specs:
             self.comboBoxInSpec.addItem(str(s[0]))
             
         self.comboBoxInSpec.blockSignals(False)
-        if not self.is_edit_mode:
+        
+        # 🌟 핵심: 규격 리스트가 존재하면 첫 번째 규격을 바로 보여주고, 
+        # 리스트가 비어있다면 빈칸으로 만들어 "신규 추가 품목" 희미한 글씨(Placeholder)가 나오게 합니다.
+        if self.comboBoxInSpec.count() > 0:
+            self.comboBoxInSpec.setCurrentIndex(0)
+        else:
             self.comboBoxInSpec.clearEditText()
 
     def table_display_in(self):

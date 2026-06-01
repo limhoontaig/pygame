@@ -116,7 +116,7 @@ class FifoStatusTab(QWidget):
         self.combo_item_filter.blockSignals(False)
 
     def calculate_and_display_fifo(self):
-        """핵심: 선입선출 연산 알고리즘 및 테이블 바인딩"""
+        """핵심: 선입선출 연산 알고리즘 및 테이블 바인딩 (재고 가치 평가 버그 수정 완료)"""
         start_date = self.date_start.date().toString("yyyy-MM-dd")
         end_date = self.date_end.date().toString("yyyy-MM-dd")
         
@@ -157,71 +157,89 @@ class FifoStatusTab(QWidget):
                     ORDER BY use_date ASC, id ASC
                 """, (item_name, spec, spec))
                 usages = [
-                    {"id": r[0], "date": r[1], "qty": r[2], "type": r[3], "dong": r[4], "ho": r[5]} 
+                    {"id": r[0], "date": r[1], "qty": r[2], "type": r[3], "dong": r[4], "ho": r[5], "fifo_details": []} 
                     for r in cursor.fetchall()
                 ]
 
-                # --- FIFO 선입선출 시뮬레이션 매칭 엔진 ---
-                # 모든 입고 건에 사용 수량을 순서대로 매칭하여 차감
-                for use in usages:
-                    use_qty_to_deduct = use["qty"]
-                    use_details = [] # 어떤 단가에서 몇 개가 빠졌는지 기록하기 위함
-
-                    for inbound in inbounds:
-                        if inbound["remained"] <= 0:
-                            continue
-                        
-                        if inbound["remained"] >= use_qty_to_deduct:
-                            # 현재 입고 건에서 전부 차감 가능한 경우
-                            inbound["remained"] -= use_qty_to_deduct
-                            use_details.append({"price": inbound["price"], "qty": use_qty_to_deduct})
-                            use_qty_to_deduct = 0
-                            break
-                        else:
-                            # 현재 입고 건을 전부 소진하고 다음 건으로 넘어가야 하는 경우
-                            use_details.append({"price": inbound["price"], "qty": inbound["remained"]})
-                            use_qty_to_deduct -= inbound["remained"]
-                            inbound["remained"] = 0
-                    
-                    use["fifo_details"] = use_details
-                    # 만약 입고 수량보다 사용 수량이 많은 역전 현상(과출고) 처리
-                    if use_qty_to_deduct > 0:
-                        use["fifo_details"].append({"price": 0, "qty": use_qty_to_deduct, "shortage": True})
-
-                # --- 타임라인 통합 및 재고 이력 구성 ---
-                running_stock = 0
-                
-                # 각 품목의 개별 이력을 시계열로 변환
+                # --- 🌟 [핵심 개선] 통합 시뮬레이션을 위한 타임라인 재구성 🌟 ---
+                # 입고와 출고를 실제 발생한 '날짜와 ID' 순서대로 정렬하여 실시간으로 재고를 추적합니다.
+                combined_events = []
                 for ib in inbounds:
-                    running_stock += ib["qty"]
-                    # 재고 가치 및 적용 단가는 남은 입고 건 중 가장 오래된 건 기준
-                    current_applied_price = ib["price"]
-                    all_timeline_data.append({
-                        "date": ib["date"], "type": "입고", "item_name": item_name, "spec": spec,
-                        "in_qty": ib["qty"], "in_price": ib["price"], "use_qty": 0,
-                        "running_stock": running_stock, "applied_price": current_applied_price,
-                        "valuation": running_stock * current_applied_price, "remarks": ib["remarks"]
-                    })
-
+                    combined_events.append({"type": "입고", "date": ib["date"], "id": ib["id"], "raw_data": ib})
                 for us in usages:
-                    running_stock -= us["qty"]
-                    # 사용 시점 적용 단가 산출 (가장 많이 깎인 단가 혹은 남은 입고 건의 첫 단가)
-                    main_price = us["fifo_details"][0]["price"] if us["fifo_details"] else 0
-                    loc_info = f"[{us['type']}] {us['dong']}동 {us['ho']}호" if us['dong'] else f"[{us['type']}]"
-                    
-                    # 사용 후 남은 입고 자재 중 가장 최선입(오래된) 건의 단가 확인
-                    next_applied_price = 0
-                    for ib in inbounds:
-                        if ib["remained"] > 0:
-                            next_applied_price = ib["price"]
-                            break
+                    combined_events.append({"type": "사용", "date": us["date"], "id": us["id"], "raw_data": us})
+                
+                # 날짜 순 정렬 (날짜가 같으면 입고를 먼저 처리하거나 ID 순으로 정렬)
+                combined_events.sort(key=lambda x: (x["date"], 0 if x["type"] == "입고" else 1, x["id"]))
 
-                    all_timeline_data.append({
-                        "date": us["date"], "type": "사용", "item_name": item_name, "spec": spec,
-                        "in_qty": 0, "in_price": 0, "use_qty": us["qty"],
-                        "running_stock": running_stock, "applied_price": next_applied_price,
-                        "valuation": running_stock * next_applied_price, "remarks": loc_info
-                    })
+                # 실시간 추적용 가상 창고 배열 (현재 남아있는 입고 배치들을 담아둠)
+                warehouse_stock = []
+                running_stock = 0
+
+                for event in combined_events:
+                    if event["type"] == "입고":
+                        ib = event["raw_data"]
+                        # 창고 입고 처리
+                        warehouse_stock.append({"price": ib["price"], "remained": ib["qty"]})
+                        running_stock += ib["qty"]
+
+                        # 🌟 [버그 수정] 입고 시점의 정확한 자재별 합산 재고 금액 산출
+                        current_valuation = sum(stock["remained"] * stock["price"] for stock in warehouse_stock)
+                        # 적용 단가는 직관성을 위해 이번에 새로 들어온 입고 단가를 표기
+                        current_applied_price = ib["price"]
+
+                        all_timeline_data.append({
+                            "date": ib["date"], "type": "입고", "item_name": item_name, "spec": spec,
+                            "in_qty": ib["qty"], "in_price": ib["price"], "use_qty": 0,
+                            "running_stock": running_stock, "applied_price": current_applied_price,
+                            "valuation": current_valuation, "remarks": ib["remarks"]
+                        })
+
+                    elif event["type"] == "사용":
+                        us = event["raw_data"]
+                        use_qty_to_deduct = us["qty"]
+                        running_stock -= us["qty"]
+                        
+                        # 선입선출(FIFO) 차감 엔진 가동
+                        for stock in warehouse_stock:
+                            if use_qty_to_deduct <= 0:
+                                break
+                            if stock["remained"] <= 0:
+                                continue
+
+                            if stock["remained"] >= use_qty_to_deduct:
+                                stock["remained"] -= use_qty_to_deduct
+                                use_qty_to_deduct = 0
+                                break
+                            else:
+                                use_qty_to_deduct -= stock["remained"]
+                                stock["remained"] = 0
+
+                        # 창고에서 수량이 0이 된 바구니는 필터링해서 정리해도 되지만, 
+                        # 가치 평가 계산을 위해 0인 상태로 남겨두어도 무방합니다.
+                        
+                        # 🌟 [버그 수정] 사용 시점에 창고에 진짜 "남아있는" 자재들의 단가와 수량을 각각 곱해서 합산!
+                        current_valuation = sum(stock["remained"] * stock["price"] for stock in warehouse_stock)
+                        
+                        # 가출고(입고보다 출고가 많음) 발생 시 예외 처리
+                        if use_qty_to_deduct > 0:
+                            current_valuation -= (use_qty_to_deduct * 0) # 부족분은 0원 처리
+
+                        # 현재 창고에서 가장 오래된(선입) 자재의 단가를 '현재 적용 단가' 필드에 대표로 노출
+                        next_applied_price = 0
+                        for stock in warehouse_stock:
+                            if stock["remained"] > 0:
+                                next_applied_price = stock["price"]
+                                break
+
+                        loc_info = f"[{us['type']}] {us['dong']}동 {us['ho']}호" if us['dong'] else f"[{us['type']}]"
+
+                        all_timeline_data.append({
+                            "date": us["date"], "type": "사용", "item_name": item_name, "spec": spec,
+                            "in_qty": 0, "in_price": 0, "use_qty": us["qty"],
+                            "running_stock": running_stock, "applied_price": next_applied_price,
+                            "valuation": current_valuation, "remarks": loc_info
+                        })
 
             conn.close()
 
@@ -248,7 +266,6 @@ class FifoStatusTab(QWidget):
 
                 self.table_status.setItem(row_idx, 0, make_item(data["date"]))
                 
-                # 구분에 따른 텍스트 색상 분기 처리 (입고: 파랑 / 사용: 빨강)
                 type_item = make_item(data["type"])
                 if data["type"] == "입고":
                     type_item.setForeground(Qt.blue)
@@ -273,4 +290,6 @@ class FifoStatusTab(QWidget):
             self.table_status.resizeColumnsToContents()
 
         except Exception as e:
+            import traceback
+            traceback.print_exc()
             QMessageBox.critical(self, "FIFO 연산 오류", f"선입선출 재고 산출 중 시스템 오류 발생:\n{str(e)}")
