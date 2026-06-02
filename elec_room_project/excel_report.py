@@ -216,49 +216,52 @@ def generate_excel_report(selected_date, target_dir=None):
                 elif val_strip == "5.7300000000000182": cell.value = diff_mwh
 
     # =========================================================================
-    # 🆕 [파트 3-2] 수동 검침(manual_meter_logs) 데이터 연동 구역 (C27 ~ J35 범위)
+    # 💡 [최종 수정본] 수동 검침(manual_meter_logs) 안전 데이터 연동 구역 (C27 ~ J35)
     # =========================================================================
-    create_manual_meter_table() # 테이블 검증
+    create_manual_meter_table()
     
-    # 전일 및 전월 동기 날짜 계산
+    # 전일 날짜 계산
     prev_day = (dt - timedelta(days=1)).strftime('%Y-%m-%d')
-    try:
-        # 한 달 전 같은 날짜 계산 (예: 5월 22일 -> 4월 22일)
-        prev_month_dt = dt.replace(month=dt.month - 1) if dt.month > 1 else dt.replace(year=dt.year - 1, month=12)
-        prev_month = prev_month_dt.strftime('%Y-%m-%d')
-    except ValueError:
-        # 말일 유효성 예외 처리 (예: 3월 31일의 한달 전은 2월 28일/29일)
-        prev_month = (dt.replace(day=1) - timedelta(days=1)).strftime('%Y-%m-%d')
+    
+    # 전월 마지막 날 계산 (고정)
+    first_day_of_current_month = dt.replace(day=1)
+    last_day_of_prev_month_dt = first_day_of_current_month - timedelta(days=1)
+    prev_month_last_day = last_day_of_prev_month_dt.strftime('%Y-%m-%d')
+    
+    print(f"[DEBUG-METER] 금일: {selected_date}, 전일: {prev_day}, 전월마지막날: {prev_month_last_day}")
 
-    # 금일, 전일, 전월 데이터 로드
-    meter_data = {}
-    for label, target_d in [("금일", selected_date), ("전일", prev_day), ("전월", prev_month)]:
+    # 금일, 전일, 전월 데이터 각각 독립적으로 로드 (서로 에러 간섭 없도록 분리)
+    meter_data = {"금일": {}, "전일": {}, "전월": {}}
+    
+    for label, target_d in [("금일", selected_date), ("전일", prev_day), ("전월", prev_month_last_day)]:
         fields_str = ", ".join(METER_FIELDS)
         c.execute(f'SELECT {fields_str} FROM manual_meter_logs WHERE log_date = ?', (target_d,))
         res = c.fetchone()
         
-        # 필드별 데이터 매핑 (데이터가 없으면 빈 문자열 또는 수식 유지를 위해 None)
         if res:
             meter_data[label] = {field: res[idx] for idx, field in enumerate(METER_FIELDS)}
+            print(f"[DEBUG-METER] ✅ {label}({target_d}) 데이터 로드 성공")
         else:
             meter_data[label] = {field: None for field in METER_FIELDS}
+            print(f"[DEBUG-METER] ⚠️ {label}({target_d}) 데이터가 DB에 없습니다. (공백 처리)")
 
-    # C27부터 J35 영역 스캔 및 매칭 치환
+    # C27부터 J35 영역 스캔 및 안전하게 치환
     for row in ws_summary.iter_rows(min_row=27, max_row=35, min_col=3, max_col=10):
         for cell in row:
             if cell.value and isinstance(cell.value, str):
                 val_strip = cell.value.strip().replace(" ", "")
                 
-                # 패턴 매칭 예시: "금일("main_active")" 또는 "전일("ind_max")"
-                # 따옴표 유무에 유연하게 대처하기 위해 정규식(re) 활용
                 match = re.match(r'(금일|전일|전월)\(["\']?([a-zA-Z0-9_]+)["\']?\)', val_strip)
                 if match:
                     time_type = match.group(1)   # 금일 / 전일 / 전월
                     field_name = match.group(2)  # main_active 등
                     
                     if field_name in METER_FIELDS:
-                        db_val = meter_data[time_type][field_name]
-                        # DB 값이 존재하면 실수형(float)으로 입력, 없으면 공백 처리
+                        # 🔥 안전 무력화 방어 조치: 해당 구조나 필드가 비어있어도 프로그램이 튕기거나 멈추지 않습니다.
+                        target_dict = meter_data.get(time_type, {})
+                        db_val = target_dict.get(field_name, None)
+                        
+                        # 데이터가 있으면 실수형 숫자로 채우고, 없으면 빈칸("") 처리하여 다음 셀로 넘어감
                         cell.value = float(db_val) if db_val is not None else ""
 
     # =================================================================
