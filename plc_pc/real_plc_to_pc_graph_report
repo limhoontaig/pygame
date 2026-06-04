@@ -1,0 +1,540 @@
+import sys
+import serial
+import threading
+import sqlite3
+import struct
+import time
+import pandas as pd
+from datetime import datetime, timedelta
+
+from PyQt5.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, 
+                             QPushButton, QTableWidget, QTableWidgetItem, QLabel, QHBoxLayout, 
+                             QDateEdit, QComboBox, QGroupBox, QSplitter, QStackedWidget, QMessageBox)
+from PyQt5.QtCore import QTimer, QDate, Qt
+
+import matplotlib.pyplot as plt
+from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
+from matplotlib.figure import Figure
+
+# 엑셀 제어용 라이브러리 (pip install openpyxl 필수)
+from openpyxl import Workbook
+from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
+from openpyxl.utils import get_column_letter
+
+plt.rcParams['font.family'] = 'Malgun Gothic'
+plt.rcParams['axes.unicode_minus'] = False
+
+# ==========================================
+# 1. 통신 및 데이터 설정 (총 50개 워드 체계)
+# ==========================================
+COM_PORT = 'COM3'         
+BAUD_RATE = 19200         
+MY_SLAVE_ID = 5           
+NUM_WORDS = 50            
+DB_NAME = "plc_logging_real.db"
+
+DATA_LABELS = [
+    "실내온도", "외기온도", "SF운전시간", "EF운전시간",
+    "KEP_A_R", "KEP_A_S", "KEP_A_T", 
+    "KEP_V_R", "KEP_V_S", "KEP_V_T", "KEP_V_R_S", "KEP_V_S_T", "KEP_V_T_R", 
+    "KEP_frequency",  
+    "KEP_P_kW",       
+    "KEP_P_mWh",      
+    "Tr1_A_R", "Tr1_A_S", "Tr1_A_T", "Tr1_V_R", "Tr1_V_S", "Tr1_V_T", "Tr1_V_R_S", "Tr1_V_S_T", "Tr1_V_T_R", "Tr1_P_kW", "Tr1_Temp",
+    "Tr2_A_R", "Tr2_A_S", "Tr2_A_T", "Tr2_V_R", "Tr2_V_S", "Tr2_V_T", "Tr2_V_R_S", "Tr2_V_S_T", "Tr2_V_T_R", "Tr2_P_kW", "Tr2_Temp",
+    "Tr3_A_R", "Tr3_A_S", "Tr3_A_T", "Tr3_V_R", "Tr3_V_S", "Tr3_V_T", "Tr3_V_R_S", "Tr3_V_S_T", "Tr3_V_T_R", "Tr3_P_kW", "Tr3_Temp"
+]
+
+COLUMN_LABELS = ["날짜", "시간/구분"] + DATA_LABELS
+
+# ==========================================
+# 2. 유틸리티 및 데이터베이스 함수
+# ==========================================
+def calculate_crc(data):
+    crc = 0xFFFF
+    for byte in data:
+        crc ^= byte
+        for _ in range(8):
+            if crc & 0x0001:
+                crc = (crc >> 1) ^ 0xA001
+            else:
+                crc >>= 1
+    return struct.pack('<H', crc)
+
+def verify_crc(data):
+    if len(data) < 4: return False
+    body = data[:-2]
+    recv_crc = data[-2:]
+    calc_crc = calculate_crc(body)
+    return recv_crc == calc_crc or recv_crc == calc_crc[::-1]
+
+def init_db():
+    conn = sqlite3.connect(DB_NAME)
+    c = conn.cursor()
+    cols = ", ".join([f'"{name}" REAL' for name in DATA_LABELS])
+    
+    c.execute(f'CREATE TABLE IF NOT EXISTS raw_data (log_date DATE, log_time TIME, {cols})')
+    c.execute(f'CREATE TABLE IF NOT EXISTS hourly_avg (log_date DATE, log_time TIME, {cols})')
+    c.execute(f'''CREATE TABLE IF NOT EXISTS daily_extremes (
+                    log_date DATE, extreme_type TEXT, {cols}, PRIMARY KEY (log_date, extreme_type))''')
+    conn.commit()
+    conn.close()
+
+def insert_raw_data(values):
+    if len(values) < len(DATA_LABELS):
+        return
+    try:
+        conn = sqlite3.connect(DB_NAME)
+        c = conn.cursor()
+        now = datetime.now()
+        l_date = now.strftime('%Y-%m-%d')
+        l_time = now.strftime('%H:%M:%S')
+        
+        DIV_BY_10 = {"실내온도", "외기온도", "SF운전시간", "EF운전시간", "Tr1_Temp", "Tr2_Temp", "Tr3_Temp"}
+        DIV_BY_100 = {"KEP_A_R", "KEP_A_S", "KEP_A_T", "KEP_frequency", "KEP_V_R", "KEP_V_S", "KEP_V_T", "KEP_V_R_S", "KEP_V_S_T", "KEP_V_T_R", "KEP_P_mWh"}
+        
+        adjusted_values = []
+        for label, val in zip(DATA_LABELS, values):
+            if label in DIV_BY_10: adjusted_values.append(val / 10.0)
+            elif label in DIV_BY_100: adjusted_values.append(val / 100.0)
+            else: adjusted_values.append(float(val))
+
+        placeholders = ", ".join(["?"] * len(adjusted_values))
+        col_names = ", ".join([f'"{name}"' for name in DATA_LABELS])
+        query = f"INSERT INTO raw_data (log_date, log_time, {col_names}) VALUES (?, ?, {placeholders})"
+        c.execute(query, [l_date, l_time] + adjusted_values)
+        conn.commit()
+        conn.close()
+    except Exception as e:
+        print(f"DB 저장 오류: {e}")
+
+# ==========================================
+# 3. 데이터 분석 연산부
+# ==========================================
+def calculate_hourly_avg():
+    try:
+        conn = sqlite3.connect(DB_NAME, timeout=30)
+        c = conn.cursor()
+        now = datetime.now()
+        last_hour = (now - timedelta(hours=1))
+        target_date = last_hour.strftime('%Y-%m-%d')
+        target_hour = last_hour.strftime('%H')
+        
+        avg_select = ", ".join([f'AVG("{name}")' for name in DATA_LABELS])
+        col_names = ", ".join([f'"{name}"' for name in DATA_LABELS])
+        
+        query = f"SELECT {avg_select} FROM raw_data WHERE log_date = ? AND log_time LIKE ?"
+        c.execute(query, (target_date, f"{target_hour}:%"))
+        result = c.fetchone()
+
+        if result and result[0] is not None:
+            rounded_result = [round(val, 1) for val in result]
+            placeholders = ", ".join(["?"] * len(DATA_LABELS))
+            insert_query = f"INSERT INTO hourly_avg (log_date, log_time, {col_names}) VALUES (?, ?, {placeholders})"
+            c.execute(insert_query, [target_date, f"{target_hour}:00:00"] + rounded_result)
+            conn.commit()
+    except Exception as e:
+        print(f"평균 계산 오류: {e}")
+    finally:
+        conn.close()
+
+def calculate_daily_extremes(target_date):
+    try:
+        conn = sqlite3.connect(DB_NAME, timeout=30)
+        c = conn.cursor()
+        max_select = ", ".join([f'MAX("{name}")' for name in DATA_LABELS])
+        min_select = ", ".join([f'MIN("{name}")' for name in DATA_LABELS])
+        col_names = ", ".join([f'"{name}"' for name in DATA_LABELS])
+        placeholders = ", ".join(["?"] * len(DATA_LABELS))
+        
+        c.execute(f'SELECT {max_select} FROM raw_data WHERE log_date = ?', (target_date,))
+        max_res = c.fetchone()
+        if max_res and max_res[0] is not None:
+            c.execute(f'INSERT OR REPLACE INTO daily_extremes (log_date, extreme_type, {col_names}) VALUES (?, ?, {placeholders})',
+                      [target_date, 'MAX'] + list(max_res))
+            
+        c.execute(f'SELECT {min_select} FROM raw_data WHERE log_date = ?', (target_date,))
+        min_res = c.fetchone()
+        if min_res and min_res[0] is not None:
+            c.execute(f'INSERT OR REPLACE INTO daily_extremes (log_date, extreme_type, {col_names}) VALUES (?, ?, {placeholders})',
+                      [target_date, 'MIN'] + list(min_res))
+        conn.commit()
+    except Exception as e:
+        print(f"최고/최저 계산 오류: {e}")
+    finally:
+        conn.close()
+
+# ==========================================
+# 4. 정밀 시리얼 수신 엔진
+# ==========================================
+def serial_receive_thread():
+    try:
+        ser = serial.Serial(port=COM_PORT, baudrate=BAUD_RATE, timeout=0.1)
+        print(f"통신 엔진 가동 완료: {COM_PORT} @ {BAUD_RATE}")
+    except Exception as e:
+        print(f"시리얼 포트 개방 실패: {e}")
+        return
+
+    buffer = b""
+    while True:
+        try:
+            if ser.in_waiting > 0:
+                buffer += ser.read(ser.in_waiting)
+                while len(buffer) >= 7:
+                    if buffer[0] != MY_SLAVE_ID:
+                        buffer = buffer[1:]
+                        continue
+                    func_code = buffer[1]
+                    if func_code == 0x10:
+                        expected_len = 7 + (NUM_WORDS * 2) + 2 
+                        if len(buffer) < expected_len: break 
+                        packet = buffer[:expected_len]
+                        
+                        if verify_crc(packet):
+                            raw_values = packet[7:7+(NUM_WORDS * 2)]
+                            raw_words = struct.unpack(f'>{NUM_WORDS}h', raw_values)
+                            word_1 = raw_words[15]   
+                            word_2 = raw_words[16]   
+                            u_word1 = word_1 if word_1 >= 0 else word_1 + 65536
+                            u_word2 = word_2 if word_2 >= 0 else word_2 + 65536
+                            
+                            dint_mwh = (u_word1 << 16) + u_word2
+                            if dint_mwh & 0x80000000: dint_mwh -= 0x100000000
+                                
+                            values = list(raw_words[:15]) + [dint_mwh] + list(raw_words[17:])      
+                            insert_raw_data(values)
+                            buffer = buffer[expected_len:] 
+                        else:
+                            buffer = buffer[1:]
+                    else:
+                        buffer = buffer[1:]
+            time.sleep(0.01)
+        except Exception as e:
+            print(f"시리얼 수신 스레드 예외 발생: {e}")
+            break
+
+# ==========================================
+# 5. GUI 및 엑셀 출력 가동 클래스 (PyQt5)
+# ==========================================
+class SCADAWindow(QMainWindow):
+    def __init__(self):
+        super().__init__()
+        self.initUI()
+        self.timer = QTimer(self)
+        self.timer.timeout.connect(self.auto_refresh)
+        self.timer.start(10000) 
+        self.last_hour = datetime.now().hour
+
+    def initUI(self):
+        self.setWindowTitle("변전실 데이터 통합 관리 시스템 및 운영일지 출력 엔진")
+        self.resize(1400, 900)
+        
+        central_widget = QWidget()
+        self.setCentralWidget(central_widget)
+        main_layout = QVBoxLayout(central_widget)
+
+        top_ctrl = QGroupBox("운영 제어 센터")
+        top_layout = QHBoxLayout(top_ctrl)
+        
+        self.qdate = QDateEdit(QDate.currentDate())
+        self.qdate.setCalendarPopup(True)
+        top_layout.addWidget(QLabel("선택 날짜:"))
+        top_layout.addWidget(self.qdate)
+        
+        self.btn_show_table = QPushButton("종합 데이터 표")
+        self.btn_show_graph = QPushButton("부하 변동 그래프")
+        
+        # [추가] 엑셀 내보내기 자동화 연동 버튼
+        self.btn_export_excel = QPushButton("엑셀 운영일지 출력")
+        self.btn_export_excel.setStyleSheet("background-color: #27ae60; color: white; font-weight: bold;")
+        
+        top_layout.addWidget(self.btn_show_table)
+        top_layout.addWidget(self.btn_show_graph)
+        top_layout.addWidget(self.btn_export_excel)
+        main_layout.addWidget(top_ctrl)
+
+        self.stack = QStackedWidget()
+        main_layout.addWidget(self.stack)
+
+        # 페이지 1: 테이블 통합 화면
+        self.page_table = QWidget()
+        table_layout = QVBoxLayout(self.page_table)
+        splitter = QSplitter(Qt.Vertical)
+        
+        self.raw_table = QTableWidget()
+        self.raw_table.setColumnCount(len(COLUMN_LABELS))
+        self.raw_table.setHorizontalHeaderLabels(COLUMN_LABELS)
+        
+        self.avg_table = QTableWidget()
+        self.avg_table.setColumnCount(len(COLUMN_LABELS))
+        self.avg_table.setHorizontalHeaderLabels(COLUMN_LABELS)
+
+        self.extreme_table = QTableWidget()
+        self.extreme_table.setColumnCount(len(COLUMN_LABELS))
+        self.extreme_table.setHorizontalHeaderLabels(COLUMN_LABELS)
+
+        splitter.addWidget(QLabel("● 실시간 계측 데이터 로그 (최근 50개 항목)"))
+        splitter.addWidget(self.raw_table)
+        splitter.addWidget(QLabel("● 시간별 평균 전력 추이"))
+        splitter.addWidget(self.avg_table)
+        splitter.addWidget(QLabel("● 일일 최고(MAX) / 최저(MIN) 값 설비 통계 요약"))
+        splitter.addWidget(self.extreme_table)
+        
+        table_layout.addWidget(splitter)
+        self.stack.addWidget(self.page_table)
+
+        # 페이지 2: 그래프 화면
+        self.page_graph = QWidget()
+        graph_layout = QVBoxLayout(self.page_graph)
+        
+        graph_ctrl = QHBoxLayout()
+        self.data_selector = QComboBox()
+        self.data_selector.addItems(DATA_LABELS)
+        self.period_selector = QComboBox()
+        self.period_selector.addItems(["일간 (실시간 데이터)", "주간 (시간별 평균)", "월간 (시간별 평균)"])
+        
+        graph_ctrl.addWidget(QLabel("시각화 필드:"))
+        graph_ctrl.addWidget(self.data_selector)
+        graph_ctrl.addWidget(QLabel("조회 기간:"))
+        graph_ctrl.addWidget(self.period_selector)
+        graph_layout.addLayout(graph_ctrl)
+
+        self.canvas = FigureCanvas(Figure(figsize=(8, 5)))
+        self.ax = self.canvas.figure.add_subplot(111)
+        graph_layout.addWidget(self.canvas)
+        self.stack.addWidget(self.page_graph)
+
+        self.btn_show_table.clicked.connect(lambda: self.stack.setCurrentIndex(0))
+        self.btn_show_graph.clicked.connect(lambda: self.stack.setCurrentIndex(1))
+        
+        # 엑셀 다운로드 클릭 시 이벤트 맵 매핑
+        self.btn_export_excel.clicked.connect(self.export_to_excel)
+        
+        self.qdate.dateChanged.connect(self.auto_refresh)
+        self.data_selector.currentIndexChanged.connect(self.update_graph)
+        self.period_selector.currentIndexChanged.connect(self.update_graph)
+
+        self.load_data()
+
+    def load_data(self):
+        selected_date = self.qdate.date().toString("yyyy-MM-dd")
+        calculate_daily_extremes(selected_date)
+        
+        try:
+            conn = sqlite3.connect(DB_NAME)
+            c = conn.cursor()
+            
+            query_raw = f"SELECT log_date, log_time, {', '.join([f'\"{n}\"' for n in DATA_LABELS])} FROM raw_data WHERE log_date = ? ORDER BY log_time DESC LIMIT 50"
+            c.execute(query_raw, (selected_date,))
+            rows_raw = c.fetchall()
+            self.display_table(self.raw_table, rows_raw)
+            
+            query_avg = f"SELECT log_date, log_time, {', '.join([f'\"{n}\"' for n in DATA_LABELS])} FROM hourly_avg WHERE log_date = ? ORDER BY log_time ASC"
+            c.execute(query_avg, (selected_date,))
+            rows_avg = c.fetchall()
+            self.display_table(self.avg_table, rows_avg)
+            
+            query_ext = f"SELECT log_date, extreme_type, {', '.join([f'\"{n}\"' for n in DATA_LABELS])} FROM daily_extremes WHERE log_date = ? ORDER BY extreme_type DESC"
+            c.execute(query_ext, (selected_date,))
+            rows_ext = c.fetchall()
+            self.display_table(self.extreme_table, rows_ext, is_extreme=True)
+            
+            conn.close()
+        except Exception as e:
+            print(f"UI 데이터 로딩 실패: {e}")
+
+    def update_graph(self):
+        if self.stack.currentIndex() != 1: return
+        target_col = self.data_selector.currentText()
+        period = self.period_selector.currentText()
+        selected_date = self.qdate.date().toPyDate()
+
+        conn = sqlite3.connect(DB_NAME)
+        if "일간" in period:
+            query = f'SELECT log_time, "{target_col}" FROM raw_data WHERE log_date = ? ORDER BY log_time ASC'
+            params = (selected_date.strftime('%Y-%m-%d'),)
+        else:
+            days = 7 if "주간" in period else 30
+            start_date = selected_date - timedelta(days=days)
+            query = f'SELECT log_date || \' \' || SUBSTR(log_time,1,5) as dt, "{target_col}" FROM hourly_avg WHERE log_date BETWEEN ? AND ? ORDER BY log_date, log_time'
+            params = (start_date.strftime('%Y-%m-%d'), selected_date.strftime('%Y-%m-%d'))
+
+        df = pd.read_sql_query(query, conn, params=params)
+        conn.close()
+
+        self.ax.clear()
+        if not df.empty:
+            x_col = 'log_time' if "일간" in period else 'dt'
+            self.ax.plot(df[x_col], df[target_col], marker='o', markersize=2, color='blue', linestyle='-')
+            import matplotlib.ticker as ticker
+            self.ax.xaxis.set_major_locator(ticker.MaxNLocator(nbins=10))
+            self.ax.set_title(f"[{target_col}] {period} 데이터 추이 분석")
+            self.ax.grid(True, linestyle='--', alpha=0.7)
+            self.canvas.figure.autofmt_xdate() 
+        else:
+            self.ax.text(0.5, 0.5, "해당 기간의 데이터가 존재하지 않습니다.", ha='center')
+        self.canvas.draw()
+
+    def display_table(self, table, rows, is_extreme=False):
+        table.setRowCount(len(rows))
+        for r_idx, row in enumerate(rows):
+            for c_idx, val in enumerate(row):
+                txt = f"{val:.1f}" if isinstance(val, float) else str(val)
+                item = QTableWidgetItem(txt)
+                if is_extreme and c_idx > 1:
+                    if row[1] == 'MAX': item.setForeground(Qt.red)
+                    elif row[1] == 'MIN': item.setForeground(Qt.blue)
+                table.setItem(r_idx, c_idx, item)
+
+    def auto_refresh(self):
+        curr_hour = datetime.now().hour
+        if curr_hour != self.last_hour:
+            calculate_hourly_avg()
+            self.last_hour = curr_hour
+        self.load_data()
+        self.update_graph()
+
+    # ==========================================
+    # [신규 기능] 엑셀 운영일지 서식 자동 생성 양식 채움 로직
+    # ==========================================
+    def export_to_excel(self):
+        selected_date = self.qdate.date().toString("yyyy-MM-dd")
+        file_name = f"{selected_date}_전기실_운영일지.xlsx"
+        
+        conn = sqlite3.connect(DB_NAME)
+        
+        # 1. 엑셀 워크북 기본 생성
+        wb = Workbook()
+        
+        # -----------------------------------------------------------------
+        # 시트 1: 상세내역 빌드 및 시간당 데이터 매핑
+        # -----------------------------------------------------------------
+        ws_detail = wb.active
+        ws_detail.title = "상세내역"
+        ws_detail.views.sheetView[0].showGridLines = True
+        
+        # 상세내역 전체 헤더 라벨 구성
+        headers = ["시간", "실내온도", "외기온도", "급기휀 운전", "배기휀 운전"]
+        headers += ["한전 R상 전류", "한전 S상 전류", "한전 T상 전류", "한전 R상 전압", "한전 S상 전압", "한전 T상 전압", "한전 R-S 전압", "한전 S-T 전압", "한전 T-R 전압", "한전 주파수", "한전 전력(kW)", "한전 누적전력량"]
+        headers += [f"Tr1_{x}" for x in ["R상전류", "S상전류", "T상전류", "R상전압", "S상전압", "T상전압", "R-S전압", "S-T전압", "T-R전압", "전력(kW)", "온도"]]
+        headers += [f"Tr2_{x}" for x in ["R상전류", "S상전류", "T상전류", "R상전압", "S상전압", "T상전압", "R-S전압", "S-T전압", "T-R전압", "전력(kW)", "온도"]]
+        headers += [f"Tr3_{x}" for x in ["R상전류", "S상전류", "T상전류", "R상전압", "S상전압", "T상전압", "R-S전압", "S-T전압", "T-R전압", "전력(kW)", "온도"]]
+        
+        ws_detail.append([f"일자 : {selected_date} 전력설비 운영 상세 데이터"])
+        ws_detail.append([]) # 공백
+        ws_detail.append(headers)
+        
+        # 0시부터 23시까지의 시간 정시 데이터 쿼리
+        for h in range(24):
+            time_str = f"{h:02d}:%"
+            q = f"SELECT {', '.join([f'\"{n}\"' for n in DATA_LABELS])} FROM raw_data WHERE log_date = ? AND log_time LIKE ? ORDER BY log_time ASC LIMIT 1"
+            df_hour = pd.read_sql_query(q, conn, params=(selected_date, time_str))
+            
+            if not df_hour.empty:
+                row_data = [f"{h}시"] + list(df_hour.iloc[0])
+            else:
+                row_data = [f"{h}시"] + [""] * len(DATA_LABELS)
+            ws_detail.append(row_data)
+
+        # -----------------------------------------------------------------
+        # 시트 2: 전력설비_운영현황 통계 연산 빌드
+        # -----------------------------------------------------------------
+        ws_summary = wb.create_sheet(title="전력설비_운영현황")
+        ws_summary.views.sheetView[0].showGridLines = True
+        
+        ws_summary["A1"] = "전력설비 운영 현황 분석자료"
+        ws_summary["A2"] = f"일시 : {selected_date}"
+        
+        # 통계 항목 테이블 틀 빌드
+        sum_headers = ["구분", "상", "한전 최고값", "한전 최저값", "변압기1 최고", "변압기1 최저", "변압기2 최고", "변압기2 최저", "변압기3 최고", "변압기3 최저"]
+        ws_summary.append([]) # 3행 공백
+        ws_summary.append(sum_headers) # 4행
+        
+        # 통계 쿼리 도출
+        c = conn.cursor()
+        
+        def get_stat(func, col):
+            c.execute(f'SELECT {func}("{col}") FROM raw_data WHERE log_date = ?', (selected_date,))
+            res = c.fetchone()[0]
+            return round(res, 1) if res is not None else "-"
+
+        stat_rows = [
+            ["상전압", "R", get_stat("MAX", "KEP_V_R"), get_stat("MIN", "KEP_V_R"), get_stat("MAX", "Tr1_V_R"), get_stat("MIN", "Tr1_V_R"), get_stat("MAX", "Tr2_V_R"), get_stat("MIN", "Tr2_V_R"), get_stat("MAX", "Tr3_V_R"), get_stat("MIN", "Tr3_V_R")],
+            ["상전압", "S", get_stat("MAX", "KEP_V_S"), get_stat("MIN", "KEP_V_S"), get_stat("MAX", "Tr1_V_S"), get_stat("MIN", "Tr1_V_S"), get_stat("MAX", "Tr2_V_S"), get_stat("MIN", "Tr2_V_S"), get_stat("MAX", "Tr3_V_S"), get_stat("MIN", "Tr3_V_S")],
+            ["상전압", "T", get_stat("MAX", "KEP_V_T"), get_stat("MIN", "KEP_V_T"), get_stat("MAX", "Tr1_V_T"), get_stat("MIN", "Tr1_V_T"), get_stat("MAX", "Tr2_V_T"), get_stat("MIN", "Tr2_V_T"), get_stat("MAX", "Tr3_V_T"), get_stat("MIN", "Tr3_V_T")],
+            ["선간전압", "R-S", get_stat("MAX", "KEP_V_R_S"), get_stat("MIN", "KEP_V_R_S"), get_stat("MAX", "Tr1_V_R_S"), get_stat("MIN", "Tr1_V_R_S"), get_stat("MAX", "Tr2_V_R_S"), get_stat("MIN", "Tr2_V_R_S"), get_stat("MAX", "Tr3_V_R_S"), get_stat("MIN", "Tr3_V_R_S")],
+            ["선간전압", "S-T", get_stat("MAX", "KEP_V_S_T"), get_stat("MIN", "KEP_V_S_T"), get_stat("MAX", "Tr1_V_S_T"), get_stat("MIN", "Tr1_V_S_T"), get_stat("MAX", "Tr2_V_S_T"), get_stat("MIN", "Tr2_V_S_T"), get_stat("MAX", "Tr3_V_S_T"), get_stat("MIN", "Tr3_V_S_T")],
+            ["선간전압", "T-R", get_stat("MAX", "KEP_V_T_R"), get_stat("MIN", "KEP_V_T_R"), get_stat("MAX", "Tr1_V_T_R"), get_stat("MIN", "Tr1_V_T_R"), get_stat("MAX", "Tr2_V_T_R"), get_stat("MIN", "Tr2_V_T_R"), get_stat("MAX", "Tr3_V_T_R"), get_stat("MIN", "Tr3_V_T_R")],
+            ["전류", "R", get_stat("MAX", "KEP_A_R"), get_stat("MIN", "KEP_A_R"), get_stat("MAX", "Tr1_A_R"), get_stat("MIN", "Tr1_A_R"), get_stat("MAX", "Tr2_A_R"), get_stat("MIN", "Tr2_A_R"), get_stat("MAX", "Tr3_A_R"), get_stat("MIN", "Tr3_A_R")],
+            ["전류", "S", get_stat("MAX", "KEP_A_S"), get_stat("MIN", "KEP_A_S"), get_stat("MAX", "Tr1_A_S"), get_stat("MIN", "Tr1_A_S"), get_stat("MAX", "Tr2_A_S"), get_stat("MIN", "Tr2_A_S"), get_stat("MAX", "Tr3_A_S"), get_stat("MIN", "Tr3_A_S")],
+            ["전류", "T", get_stat("MAX", "KEP_A_T"), get_stat("MIN", "KEP_A_T"), get_stat("MAX", "Tr1_A_T"), get_stat("MIN", "Tr1_A_T"), get_stat("MAX", "Tr2_A_T"), get_stat("MIN", "Tr2_A_T"), get_stat("MAX", "Tr3_A_T"), get_stat("MIN", "Tr3_A_T")],
+            ["역률/주파수", "Hz", get_stat("MAX", "KEP_frequency"), get_stat("MIN", "KEP_frequency"), "-", "-", "-", "-", "-", "-"],
+            ["부하전력", "kW", get_stat("MAX", "KEP_P_kW"), get_stat("MIN", "KEP_P_kW"), get_stat("MAX", "Tr1_P_kW"), get_stat("MIN", "Tr1_P_kW"), get_stat("MAX", "Tr2_P_kW"), get_stat("MIN", "Tr2_P_kW"), get_stat("MAX", "Tr3_P_kW"), get_stat("MIN", "Tr3_P_kW")],
+            ["설비온도", "°C", "-", "-", get_stat("MAX", "Tr1_Temp"), get_stat("MIN", "Tr1_Temp"), get_stat("MAX", "Tr2_Temp"), get_stat("MIN", "Tr2_Temp"), get_stat("MAX", "Tr3_Temp"), get_stat("MIN", "Tr3_Temp")]
+        ]
+        
+        for row in stat_rows:
+            ws_summary.append(row)
+            
+        # 하단 적산 유효전력량 현황 레이아웃 추가 연산
+        ws_summary.append([])
+        ws_summary.append(["● 전력량계 전력 적산 현황 요약"])
+        
+        # 금일 지침 및 전일 지침 값 추출 계산
+        today_mwh = get_stat("MAX", "KEP_P_mWh")
+        # 전일 날짜 연산 계산
+        prev_date = (datetime.strptime(selected_date, "%Y-%m-%d") - timedelta(days=1)).strftime("%Y-%m-%d")
+        c.execute('SELECT MAX("KEP_P_mWh") FROM raw_data WHERE log_date = ?', (prev_date,))
+        prev_mwh_res = c.fetchone()[0]
+        prev_mwh = round(prev_mwh_res, 1) if prev_mwh_res is not None else "-"
+        
+        if today_mwh != "-" and prev_mwh != "-":
+            diff_mwh = round(today_mwh - prev_mwh, 2)
+        else:
+            diff_mwh = "-"
+            
+        ws_summary.append(["구분", "금일 지침", "전일 지침", "지침 차이 사용량"])
+        ws_summary.append(["한전 메인 유효전력량(mWh)", today_mwh, prev_mwh, diff_mwh])
+
+        # -----------------------------------------------------------------
+        # 전체 셀 스타일 시각화 보정 디자인 가공 (테두리 및 정렬 자동 조정)
+        # -----------------------------------------------------------------
+        thin_border = Border(left=Side(style='thin', color='CCCCCC'),
+                             right=Side(style='thin', color='CCCCCC'),
+                             top=Side(style='thin', color='CCCCCC'),
+                             bottom=Side(style='thin', color='CCCCCC'))
+        
+        for ws in [ws_detail, ws_summary]:
+            for row in ws.iter_rows(min_row=3):
+                for cell in row:
+                    cell.border = thin_border
+                    cell.alignment = Alignment(horizontal="center", vertical="center")
+            
+            # 셀 너비 자동 최적화 맞춤
+            for col in ws.columns:
+                max_len = max(len(str(cell.value or '')) for cell in col)
+                col_letter = get_column_letter(col[0].column)
+                ws.column_dimensions[col_letter].width = max(max_len + 3, 12)
+
+        conn.close()
+        
+        # 파일 물리 저장 및 완료 알림
+        try:
+            wb.save(file_name)
+            QMessageBox.information(self, "출력 완료", f"[{file_name}] 파일이 작업 폴더에 성공적으로 저장되었습니다.")
+        except Exception as e:
+            QMessageBox.critical(self, "출력 실패", f"엑셀 저장 중 에러가 발생했습니다:\n{e}")
+
+# ==========================================
+# 6. 메인 실행부
+# ==========================================
+if __name__ == "__main__":
+    init_db()
+    
+    t = threading.Thread(target=serial_receive_thread, daemon=True)
+    t.start()
+    
+    app = QApplication(sys.argv)
+    win = SCADAWindow()
+    win.show()
+    sys.exit(app.exec_())
