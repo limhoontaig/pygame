@@ -135,7 +135,7 @@ class SCADAWindow(QMainWindow):
             c.execute(query_raw, (selected_date,))
             self.display_table(self.raw_table, c.fetchall())
             
-            query_avg = f"SELECT log_date, log_time, {', '.join([f'\"{n}\"' for n in db_manager.DATA_LABELS])} FROM hourly_avg WHERE log_date = ? ORDER BY log_time ASC"
+            query_avg = f"SELECT log_date, log_time, {', '.join([f'\"{n}\"' for n in db_manager.DATA_LABELS])} FROM hourly_avg WHERE log_date = ? ORDER BY log_time DESC"
             c.execute(query_avg, (selected_date,))
             self.display_table(self.avg_table, c.fetchall())
             
@@ -222,8 +222,8 @@ class SCADAWindow(QMainWindow):
     def auto_refresh(self):
         curr_hour = datetime.now().hour
         if curr_hour != self.last_hour:
-            db_manager.calculate_hourly_avg()
             self.last_hour = curr_hour
+            db_manager.calculate_hourly_avg()
         self.load_data()
         self.graph_manager.update_graph() # 분리한 객체의 함수 호출
 
