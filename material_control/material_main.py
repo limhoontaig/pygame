@@ -41,8 +41,19 @@ class MainApp(QMainWindow):
         self.admin_menu.addAction(self.action_approval)
         # --------------------------------------------------
 
+        # --------------------------------------------------
+        # [상태 표시줄 추가] 현재 어떤 작업을 하고 있는지 하단에 명시
+        # --------------------------------------------------
+        self.statusbar = self.statusBar()
+        self.statusbar.showMessage("시스템이 준비되었습니다. 작업을 선택하세요.")
+        # --------------------------------------------------
+
         # 중앙 탭 위젯 설정
         self.tabs = QTabWidget()
+        
+        # [디자인 업그레이드] 스타일시트(QSS) 적용으로 현재 운영 중인 탭을 확실하게 강조
+        self.apply_tab_style()
+        
         self.setCentralWidget(self.tabs)
 
         # 1. 탭 객체들을 '먼저' 전부 생성합니다.
@@ -60,9 +71,52 @@ class MainApp(QMainWindow):
         # 5. [옵션] 사용자가 다른 탭에서 입고/출고를 입력한 후 재고 탭으로 이동했을 때 
         # 자동으로 최신 재고가 새로고침되도록 이벤트 시그널을 연결해주면 아주 편리합니다.
         self.tabs.currentChanged.connect(self.on_tab_changed)
+        
+        # 프로그램 시작 시 첫 번째 탭 안내 문구 출력
+        self.update_status_message(0)
+
+    def apply_tab_style(self):
+        """탭 위젯의 시각적 식별성을 높이기 위한 스타일시트 적용"""
+        tab_style = """
+            QTabWidget::pane { 
+                border: 1px solid #C4C4C4; 
+                background: white;
+            }
+            QTabBar::tab {
+                background: #E1E1E1;
+                color: #333333;
+                border: 1px solid #C4C4C4;
+                border-bottom-color: none; /* 본문과 연결되도록 아래 테두리 제거 */
+                border-top-left-radius: 6px;
+                border-top-right-radius: 6px;
+                padding: 10px 20px;
+                font-size: 13px;
+                font-weight: normal;
+                min-width: 120px;
+            }
+            QTabBar::tab:hover {
+                background: #D2D2D2;
+            }
+            /* 현재 활성화된(운영 중인) 탭 스타일 - 진한 파란색 계열 배경과 흰색 글씨로 강조 */
+            QTabBar::tab:selected {
+                background: #2B579A; 
+                color: white;
+                font-weight: bold;
+                border-color: #2B579A;
+            }
+        """
+        self.tabs.setStyleSheet(tab_style)
+
+    def update_status_message(self, index):
+        """현재 선택된 탭에 맞춰 하단 상태 표시줄 메시지를 변경합니다."""
+        tab_text = self.tabs.tabText(index)
+        self.statusbar.showMessage(f"현재 작업 공간: [{tab_text}] — 데이터를 입력하거나 조회하는 중입니다.")
 
     def on_tab_changed(self, index):
-        """탭이 전환될 때 자동으로 데이터를 리로드하는 트리거 기능"""
+        """탭이 전환될 때 자동으로 데이터를 리로드하고 상태창을 변경하는 트리거 기능"""
+        # 하단 상태창 문구 업데이트
+        self.update_status_message(index)
+
         # 만약 선택된 탭이 '자재 현재고 조회' 탭(index: 2)이라면 자동으로 리프레시 실행
         if index == 2:
             self.stock_tab.load_stock_data()
