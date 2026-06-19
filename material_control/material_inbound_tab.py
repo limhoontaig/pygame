@@ -1,13 +1,13 @@
 # material_inbound_tab.py
 
-# material_inbound_tab.py
-
 import sys
+import os
 import sqlite3
 from PyQt5.QtWidgets import *
 from PyQt5.QtCore import QDate, Qt
 from PyQt5.QtGui import QColor, QFont
 import database
+import pandas as pd # 최상단에 없다면 추가
 
 class InboundTab(QWidget):
     def __init__(self, user_name="미인증"):
@@ -18,6 +18,14 @@ class InboundTab(QWidget):
         self.is_edit_mode = False
         self.editing_row_id = None  
         self.is_calculating = False  # 양방향 계산 오작동 방지용 플래그
+
+        # 🌟 사진 저장을 위한 별도 디렉토리 설정 (DB 파일 위치 기준 또는 현재 실행 경로 기준)
+        self.image_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "inbound_images")
+        if not os.path.exists(self.image_dir):
+            os.makedirs(self.image_dir)
+
+        # 개별 사진 경로를 임시 저장할 변수 리스트
+        self.selected_photos = [None, None, None]
 
         self.init_ui()
         self.refresh_all_combos() # 콤보박스 전체 초기 로드 (Default 값 자동 세팅 포함)
@@ -101,6 +109,8 @@ class InboundTab(QWidget):
         grid_in.addWidget(QLabel("비고:"), 10, 0)
         self.lineEditInRemarks = QLineEdit()
         grid_in.addWidget(self.lineEditInRemarks, 10, 1)
+
+
         
         # (10) 버튼 영역
         button_layout = QHBoxLayout()
@@ -135,6 +145,12 @@ class InboundTab(QWidget):
         self.btn_delete_in.setStyleSheet("background-color: #D32F2F; color: white; font-weight: bold; padding: 6px 12px;")
         self.btn_delete_in.clicked.connect(self.delete_selected_row)
         top_bar.addWidget(self.btn_delete_in)
+
+        # 🌟 [추가] 엑셀 다운로드 버튼 추가
+        self.btn_export_excel = QPushButton("엑셀 내보내기 (Report)")
+        self.btn_export_excel.setStyleSheet("background-color: #2E7D32; color: white; font-weight: bold; padding: 6px 12px;")
+        self.btn_export_excel.clicked.connect(self.export_to_excel)
+        top_bar.addWidget(self.btn_export_excel)
         
         top_bar.addStretch()
         right_layout.addLayout(top_bar)
@@ -564,29 +580,97 @@ class InboundTab(QWidget):
             current_width = self.tableWidgetInIn.columnWidth(col)
             self.tableWidgetInIn.setColumnWidth(col, current_width + 25)
 
+    # 🌟 고유 ID 조건 기반의 안전한 내역 삭제 및 물리 파일 제거 로직 (누락 복원 및 업그레이드)
     def delete_selected_row(self):
         current_row = self.tableWidgetInIn.currentRow()
         if current_row < 0:
             QMessageBox.warning(self, "삭제 오류", "삭제할 항목을 선택해 주세요.")
             return
-        if QMessageBox.question(self, '확인', '선택한 내역을 삭제하시겠습니까%s', QMessageBox.Yes | QMessageBox.No) == QMessageBox.Yes:
-            in_date = self.tableWidgetInIn.item(current_row, 0).text()
-            item_name = self.tableWidgetInIn.item(current_row, 2).text() 
-            spec = self.tableWidgetInIn.item(current_row, 3).text()      
-            qty = int(self.tableWidgetInIn.item(current_row, 4).text().replace(",", "")) 
             
-            conn = database.get_db_connection()
-            cursor = conn.cursor()
-            cursor.execute("""
-                DELETE FROM inbound_ledger 
-                WHERE in_date=%s AND item_name=%s AND spec=%s AND qty=%s
-            """, (in_date, item_name, spec, qty))
-            conn.commit()
-            conn.close()
+        if QMessageBox.question(self, '확인', '선택한 내역을 삭제하시겠습니까?', QMessageBox.Yes | QMessageBox.No) == QMessageBox.Yes:
+            row_id = self.tableWidgetInIn.item(current_row, 0).data(Qt.UserRole + 1)
             
-            if self.is_edit_mode:
-                self.clear_input_fields()
+            # 물리 삭제용 타겟 리스트 생성
+            photos_to_delete = []
+            for i in range(3):
+                p_name = self.tableWidgetInIn.item(current_row, 8 + i).data(Qt.UserRole)
+                if p_name: 
+                    photos_to_delete.append(p_name)
+            
+            try:
+                conn = database.get_db_connection()
+                cursor = conn.cursor()
+                cursor.execute("DELETE FROM inbound_ledger WHERE id=%s", (row_id,))
+                conn.commit()
+                conn.close()
                 
-            self.table_display_in()
-            self.refresh_all_combos() 
-            QMessageBox.information(self, "성공", "선택한 내역이 삭제되었습니다.")
+                # 이미지 저장소 파일 삭제 처리
+                for p_name in photos_to_delete:
+                    target_file = os.path.join(self.image_dir, p_name)
+                    if os.path.exists(target_file):
+                        os.remove(target_file)
+                
+                QMessageBox.information(self, "삭제 완료", "데이터와 연결된 현장 사진이 안전하게 파기되었습니다.")
+                self.clear_inputs()
+                self.table_display_in()
+                
+            except Exception as e:
+                QMessageBox.critical(self, "삭제 실패", f"데이터베이스 삭제 중 에러 발생:\n{e}")
+
+    def export_to_excel(self):
+        """현재 테이블에 조회된 입고 현황을 엑셀 파일로 추출합니다."""
+        row_count = self.tableWidgetInIn.rowCount()
+        column_count = self.tableWidgetInIn.columnCount()
+        
+        if row_count == 0:
+            QMessageBox.warning(self, "추출 실패", "엑셀로 내보낼 데이터가 없습니다.")
+            return
+            
+        # 1. 엑셀 파일 저장 경로 선택창 띄우기
+        default_filename = f"자재입고현황_레포트.xlsx"
+        file_path, _ = QFileDialog.getSaveFileName(
+            self, "엑셀 파일 저장", default_filename, "Excel Files (*.xlsx)"
+        )
+        
+        if not file_path:
+            return # 취소 시 리턴
+
+        try:
+            # 2. QTableWidget에서 헤더(컬럼명) 가져오기
+            headers = []
+            for col in range(column_count):
+                headers.append(self.tableWidgetInIn.horizontalHeaderItem(col).text())
+                
+            # 3. 테이블 내부 데이터 추출하기
+            table_data = []
+            for row in range(row_count):
+                row_data = []
+                for col in range(column_count):
+                    item = self.tableWidgetInIn.item(row, col)
+                    val = item.text() if item else ""
+                    # 수량, 단가, 총금액의 콤마(,) 제거 후 숫자로 변환하여 저장 (엑셀 수식 계산 연동 위함)
+                    if col in [4, 5, 6]:
+                        val = val.replace(",", "")
+                        val = int(val) if val.isdigit() else 0
+                    row_data.append(val)
+                table_data.append(row_data)
+                
+            # 4. Pandas DataFrame 생성 및 엑셀 저장
+            df = pd.DataFrame(table_data, columns=headers)
+            
+            # 엑셀 엔진을 활용해 서식(Style)을 조금 더 깔끔하게 인쇄용으로 지정 가능
+            with pd.ExcelWriter(file_path, engine='openpyxl') as writer:
+                df.to_excel(writer, index=False, sheet_name="입고내역_Report")
+                
+                # [선택] openpyxl 서식 지정 (셀 너비 자동 최적화)
+                workbook = writer.book
+                worksheet = writer.sheets["입고내역_Report"]
+                for col in worksheet.columns:
+                    max_len = max(len(str(cell.value or '')) for cell in col)
+                    col_letter = col[0].column_letter
+                    worksheet.column_dimensions[col_letter].width = max(max_len + 3, 12)
+
+            QMessageBox.information(self, "추출 완료", f"성공적으로 엑셀 레포트가 생성되었습니다.\n경로: {file_path}")
+            
+        except Exception as e:
+            QMessageBox.critical(self, "시스템 에러", f"엑셀 변환 중 오류가 발생했습니다:\n{e}")
