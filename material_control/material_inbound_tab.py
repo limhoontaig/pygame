@@ -2,12 +2,13 @@
 
 import sys
 import os
-import sqlite3
+import shutil
+import time
 from PyQt5.QtWidgets import *
 from PyQt5.QtCore import QDate, Qt
 from PyQt5.QtGui import QColor, QFont
 import database
-import pandas as pd # 최상단에 없다면 추가
+import pandas as pd
 
 class InboundTab(QWidget):
     def __init__(self, user_name="미인증"):
@@ -19,12 +20,12 @@ class InboundTab(QWidget):
         self.editing_row_id = None  
         self.is_calculating = False  # 양방향 계산 오작동 방지용 플래그
 
-        # 🌟 사진 저장을 위한 별도 디렉토리 설정 (DB 파일 위치 기준 또는 현재 실행 경로 기준)
+        # 🌟 사진 저장을 위한 별도 디렉토리 설정
         self.image_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "inbound_images")
         if not os.path.exists(self.image_dir):
             os.makedirs(self.image_dir)
 
-        # 개별 사진 경로를 임시 저장할 변수 리스트
+        # 개별 사진 경로를 임시 저장할 변수 리스트 (경로 문자열 또는 None)
         self.selected_photos = [None, None, None]
 
         self.init_ui()
@@ -43,7 +44,6 @@ class InboundTab(QWidget):
         grid_in = QGridLayout()
         self.group_box_in.setLayout(grid_in)
         
-        # 안내 문구용 공통 폰트 스타일 정의
         notice_font = QFont()
         notice_font.setPointSize(9)
         notice_font.setItalic(True)
@@ -73,7 +73,7 @@ class InboundTab(QWidget):
         self.comboBoxInSpec.setEditable(True)
         grid_in.addWidget(self.comboBoxInSpec, 3, 1)
         
-        # [추가] 콤보박스 하단 신규 품목 직접 입력 안내 문구 (4행 전체 병합)
+        # 콤보박스 하단 안내 문구
         self.lbl_combo_notice = QLabel("※ 리스트에 없는 신규 품종(품명, 규격, 공종)은\n    콤보박스에 직접 타이핑하여 입력하시면 됩니다.")
         self.lbl_combo_notice.setFont(notice_font)
         self.lbl_combo_notice.setStyleSheet("color: #1976D2; margin-top: 2px; margin-bottom: 8px; line-height: 140%;")
@@ -89,7 +89,7 @@ class InboundTab(QWidget):
         self.lineEditInPrice = QLineEdit()
         grid_in.addWidget(self.lineEditInPrice, 6, 1)
         
-        # [추가] 단가와 총금액 사이 양방향 계산 기능 안내 문구 (7행 전체 병합)
+        # 단가와 총금액 사이 양방향 계산 기능 안내 문구
         self.lbl_price_notice = QLabel("💡 단가 또는 총금액 중 '하나만 입력'하셔도\n    수량에 맞춰 나머지 금액이 자동 역산됩니다.")
         self.lbl_price_notice.setFont(notice_font)
         self.lbl_price_notice.setStyleSheet("color: #2E7D32; margin-top: 4px; margin-bottom: 4px; line-height: 140%;")
@@ -110,9 +110,36 @@ class InboundTab(QWidget):
         self.lineEditInRemarks = QLineEdit()
         grid_in.addWidget(self.lineEditInRemarks, 10, 1)
 
-
+        # 🌟 (10) [신규 추가] 현장 사진 등록 등록 UI 영역 (3장)
+        grid_in.addWidget(QLabel("현장 사진:"), 11, 0)
+        photo_main_layout = QVBoxLayout()
         
-        # (10) 버튼 영역
+        self.photo_widgets = [] # 사진 등록 제어를 위한 UI 구성요소 저장 리스트
+        for i in range(3):
+            p_layout = QHBoxLayout()
+            lbl_status = QLabel(f"사진 {i+1}: 등록되지 않음")
+            lbl_status.setStyleSheet("color: gray;")
+            
+            btn_add = QPushButton("등록")
+            btn_add.setFixedWidth(50)
+            btn_add.clicked.connect(lambda checked, idx=i: self.select_photo_file(idx))
+            
+            btn_del = QPushButton("X")
+            btn_del.setFixedWidth(25)
+            btn_del.setStyleSheet("background-color: #757575; color: white; font-weight: bold;")
+            btn_del.clicked.connect(lambda checked, idx=i: self.remove_photo_selection(idx))
+            
+            p_layout.addWidget(lbl_status, 1)
+            p_layout.addWidget(btn_add)
+            p_layout.addWidget(btn_del)
+            photo_main_layout.addLayout(p_layout)
+            
+            # 참조를 위해 딕셔너리로 보관
+            self.photo_widgets.append({"label": lbl_status, "btn_add": btn_add, "btn_del": btn_del})
+            
+        grid_in.addLayout(photo_main_layout, 11, 1)
+        
+        # (11) 버튼 영역
         button_layout = QHBoxLayout()
         self.btn_save_in = QPushButton("입고 내역 등록")
         self.btn_save_in.setStyleSheet("background-color: #4CAF50; color: white; font-weight: bold; height: 35px;")
@@ -125,7 +152,7 @@ class InboundTab(QWidget):
         self.btn_cancel_edit.clicked.connect(self.clear_input_fields)
         button_layout.addWidget(self.btn_cancel_edit)
         
-        grid_in.addLayout(button_layout, 11, 0, 1, 2)
+        grid_in.addLayout(button_layout, 12, 0, 1, 2)
         
         left_layout.addWidget(self.group_box_in)
         left_layout.addStretch()
@@ -146,7 +173,7 @@ class InboundTab(QWidget):
         self.btn_delete_in.clicked.connect(self.delete_selected_row)
         top_bar.addWidget(self.btn_delete_in)
 
-        # 🌟 [추가] 엑셀 다운로드 버튼 추가
+        # 엑셀 다운로드 버튼
         self.btn_export_excel = QPushButton("엑셀 내보내기 (Report)")
         self.btn_export_excel.setStyleSheet("background-color: #2E7D32; color: white; font-weight: bold; padding: 6px 12px;")
         self.btn_export_excel.clicked.connect(self.export_to_excel)
@@ -156,35 +183,80 @@ class InboundTab(QWidget):
         right_layout.addLayout(top_bar)
         
         self.tableWidgetInIn = QTableWidget()
-        self.tableWidgetInIn.setColumnCount(10)
+        self.tableWidgetInIn.setColumnCount(13) # 🌟 사진 3개 컬럼 반영하여 10 -> 13 확장
         self.tableWidgetInIn.setHorizontalHeaderLabels([
-            "입고일자", "공종", "품명", "규격", "수량", "단가", "총금액", "공급처", "비고", "입력자"
+            "입고일자", "공종", "품명", "규격", "수량", "단가", "총금액", "공급처", "비고", "사진1", "사진2", "사진3", "입력자"
         ])
         self.tableWidgetInIn.setSelectionBehavior(QAbstractItemView.SelectRows)
         self.tableWidgetInIn.setEditTriggers(QAbstractItemView.NoEditTriggers)
         right_layout.addWidget(self.tableWidgetInIn)
+
+        # =================================================================
+        # 🌟 [신규 추가] 테이블 선택 행 사진 미리보기 영역 (테이블 하단 배치)
+        # =================================================================
+        self.preview_group = QGroupBox("선택 자재 사진 미리보기")
+        preview_layout = QHBoxLayout(self.preview_group)
+        self.preview_group.setFixedHeight(190)  # 하단 영역 높이 고정
+        
+        self.lbl_previews = []
+        for i in range(3):
+            lbl_img = QLabel(f"사진 {i+1} 없음")
+            lbl_img.setAlignment(Qt.AlignCenter)
+            # 깔끔하게 테두리와 배경색을 주어 사진틀 느낌을 내줍니다.
+            lbl_img.setStyleSheet("""
+                border: 1px dashed #BDBDBD; 
+                background-color: #FAFAFA; 
+                color: #9E9E9E;
+                font-size: 11px;
+            """)
+            lbl_img.setFixedSize(220, 150)  # 이미지 액자 크기 설정
+            preview_layout.addWidget(lbl_img)
+            self.lbl_previews.append(lbl_img)
+            
+        preview_layout.addStretch() # 사진들이 왼쪽에 조밀하게 붙도록 우측 여백 배치
+        right_layout.addWidget(self.preview_group) # 우측 메인 레이아웃에 추가
+        
+        # 메인 레이아웃 구성 마무리 (기존 코드)
+        main_layout.addLayout(left_layout, 1)
+        main_layout.addLayout(right_layout, 3)
+
+        # 🌟 테이블 클릭 시 사진을 띄워줄 이벤트 시그널 바인딩 추가
+        self.tableWidgetInIn.cellClicked.connect(self.show_photo_preview_from_table)
         
         main_layout.addLayout(left_layout, 1)
         main_layout.addLayout(right_layout, 3)
 
-        # 시그널 연결 (품명 변경 동기화 및 실시간 금액 양방향 계산)
-        #self.comboBoxInName.currentTextChanged.connect(self.sync_spec_combo)
+        # 금액 자동 역산 바인딩
         self.lineEditInQty.textChanged.connect(self.calculate_from_price)
         self.lineEditInPrice.textChanged.connect(self.calculate_from_price)
         self.lineEditInTotalPrice.textChanged.connect(self.calculate_from_total_price)
 
-        # 콤보박스 비어있을 때 보일 안내 문구(Placeholder) 세팅
+        # Placeholder 세팅
         self.comboBoxInDiscipline.setPlaceholderText("공종 입력 또는 선택")
         self.comboBoxInName.setPlaceholderText("품명 입력 또는 선택")
-        self.comboBoxInSpec.setPlaceholderText("신규 추가 품목") # 👈 요청하신 희미한 글씨 처리
+        self.comboBoxInSpec.setPlaceholderText("신규 추가 품목")
 
-        # 시그널 연결 (계층형 필터링을 위해 공종 변경 시그널 추가)
+        # 계층형 필터링 시그널
         self.comboBoxInDiscipline.currentTextChanged.connect(self.filter_name_combo)
         self.comboBoxInName.currentTextChanged.connect(self.filter_spec_combo)
-        
-        self.lineEditInQty.textChanged.connect(self.calculate_from_price)
-        self.lineEditInPrice.textChanged.connect(self.calculate_from_price)
-        self.lineEditInTotalPrice.textChanged.connect(self.calculate_from_total_price)
+
+    # =================================================================
+    # 🌟 사진 첨부 인터페이스 핸들러
+    # =================================================================
+    def select_photo_file(self, idx):
+        file_path, _ = QFileDialog.getOpenFileName(
+            self, f"사진 {idx+1} 선택", "", "Image Files (*.png *.jpg *.jpeg *.bmp)"
+        )
+        if file_path:
+            self.selected_photos[idx] = file_path
+            filename = os.path.basename(file_path)
+            self.photo_widgets[idx]["label"].setText(filename)
+            self.photo_widgets[idx]["label"].setStyleSheet("color: #2E7D32; font-weight: bold;")
+
+    def remove_photo_selection(self, idx):
+        self.selected_photos[idx] = None
+        self.photo_widgets[idx]["label"].setText(f"사진 {idx+1}: 등록되지 않음")
+        self.photo_widgets[idx]["label"].setStyleSheet("color: gray;")
 
     # =================================================================
     # 금액/단가 실시간 양방향 자동 계산 로직
@@ -281,7 +353,7 @@ class InboundTab(QWidget):
                 f"시스템 마스터에 없는 새로운 자재 정보입니다.\n\n"
                 f"▶ 품명: {item_name}\n"
                 f"▶ 규격: {spec}\n\n"
-                f"위 정보가 정확합니까%s 확인 후 등록됩니다.",
+                f"위 정보가 정확합니까? 확인 후 등록됩니다.",
                 QMessageBox.Yes | QMessageBox.No,
                 QMessageBox.No
             )
@@ -292,10 +364,46 @@ class InboundTab(QWidget):
             try:
                 cursor.execute("INSERT INTO material_items (item_name, spec) VALUES (%s, %s)", (item_name, spec))
                 conn.commit()
-            except sqlite3.IntegrityError:
+            except Exception:
                 pass
 
-        conn.close()
+        # 🌟 [사진 파일 처리 저장/수정 핵심 로직]
+        final_photo_names = [None, None, None]
+        
+        # 만약 수정모드라면 기존 DB에 등록되어 있던 이미지 파일명을 먼저 확보함
+        if self.is_edit_mode:
+            cursor.execute("SELECT photo1, photo2, photo3 FROM inbound_ledger WHERE id = %s", (self.editing_row_id,))
+            old_photos = cursor.fetchone()
+            if old_photos:
+                final_photo_names = list(old_photos)
+
+        for i in range(3):
+            file_src = self.selected_photos[i]
+            if file_src: # 새 파일이 탐색기에서 선택된 상태인 경우
+                # 기존에 파일이 존재했다면 충돌 방지 및 용량 최적화를 위해 먼저 삭제
+                if final_photo_names[i]:
+                    old_path = os.path.join(self.image_dir, final_photo_names[i])
+                    if os.path.exists(old_path):
+                        os.remove(old_path)
+                
+                # 타임스탬프 결합형 고유 파일명 생성
+                ext = os.path.splitext(file_src)[1]
+                new_filename = f"img_{int(time.time())}_{i+1}{ext}"
+                file_dest = os.path.join(self.image_dir, new_filename)
+                
+                try:
+                    shutil.copy(file_src, file_dest)
+                    final_photo_names[i] = new_filename # 새 파일명으로 갱신
+                except Exception as e:
+                    QMessageBox.critical(self, "사진 복사 에러", f"사진 {i+1}을 저장소에 복사하지 못했습니다.\n{e}")
+            else:
+                # 사용자가 X 버튼을 눌러 명시적으로 비운 상태라면 기존 파일 파기
+                if self.is_edit_mode and self.photo_widgets[i]["label"].text() == f"사진 {i+1}: 등록되지 않음":
+                    if final_photo_names[i]:
+                        old_path = os.path.join(self.image_dir, final_photo_names[i])
+                        if os.path.exists(old_path):
+                            os.remove(old_path)
+                        final_photo_names[i] = None
 
         qty = int(qty_str)
         total_price = int(total_price_str) if total_price_str.isdigit() else 0
@@ -305,22 +413,22 @@ class InboundTab(QWidget):
         remarks = self.lineEditInRemarks.text().strip()
         in_date = self.dateEditIn.date().toString("yyyy-MM-dd")
         
-        conn = database.get_db_connection()
-        cursor = conn.cursor()
-        
         if self.is_edit_mode:
             cursor.execute("""
                 UPDATE inbound_ledger
-                SET in_date=%s, discipline=%s, item_name=%s, spec=%s, qty=%s, unit_price=%s, total_price=%s, supplier=%s, remarks=%s, worker=%s
+                SET in_date=%s, discipline=%s, item_name=%s, spec=%s, qty=%s, unit_price=%s, total_price=%s, 
+                    supplier=%s, remarks=%s, photo1=%s, photo2=%s, photo3=%s, worker=%s
                 WHERE id = %s
-            """, (in_date, discipline, item_name, spec, qty, unit_price, total_price, supplier, remarks, self.current_user, self.editing_row_id))
+            """, (in_date, discipline, item_name, spec, qty, unit_price, total_price, 
+                  supplier, remarks, final_photo_names[0], final_photo_names[1], final_photo_names[2], self.current_user, self.editing_row_id))
             conn.commit()
             QMessageBox.information(self, "수정 완료", "자재 입고 내역이 정상적으로 수정되었습니다.")
         else:
             cursor.execute("""
-                INSERT INTO inbound_ledger (in_date, discipline, item_name, spec, qty, unit_price, total_price, supplier, remarks, worker)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-            """, (in_date, discipline, item_name, spec, qty, unit_price, total_price, supplier, remarks, self.current_user))
+                INSERT INTO inbound_ledger (in_date, discipline, item_name, spec, qty, unit_price, total_price, supplier, remarks, photo1, photo2, photo3, worker)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            """, (in_date, discipline, item_name, spec, qty, unit_price, total_price, supplier, remarks, 
+                  final_photo_names[0], final_photo_names[1], final_photo_names[2], self.current_user))
             conn.commit()
             QMessageBox.information(self, "등록 완료", "입고 내역이 등록되었습니다.")
             
@@ -336,43 +444,49 @@ class InboundTab(QWidget):
             QMessageBox.warning(self, "선택 오류", "수정할 입고 내역 행을 테이블에서 선택해 주세요.")
             return
             
-        in_date_str = self.tableWidgetInIn.item(current_row, 0).text()
-        discipline = self.tableWidgetInIn.item(current_row, 1).text()
-        item_name = self.tableWidgetInIn.item(current_row, 2).text()
-        spec = self.tableWidgetInIn.item(current_row, 3).text()
-        qty = self.tableWidgetInIn.item(current_row, 4).text().replace(",", "")
-        unit_price = self.tableWidgetInIn.item(current_row, 5).text().replace(",", "")
-        total_price = self.tableWidgetInIn.item(current_row, 6).text().replace(",", "")
-        supplier = self.tableWidgetInIn.item(current_row, 7).text()
-        remarks = self.tableWidgetInIn.item(current_row, 8).text()
-        
+        # 🌟 중요: table_display_in에서 숨겨둔 고유 식별 ID 추출
+        row_id = self.tableWidgetInIn.item(current_row, 0).data(Qt.UserRole + 1)
+        if not row_id:
+            QMessageBox.critical(self, "에러", "해당 행의 고유 ID를 조회하지 못했습니다.")
+            return
+
         conn = database.get_db_connection()
         cursor = conn.cursor()
         cursor.execute("""
-            SELECT id FROM inbound_ledger 
-            WHERE in_date=%s AND item_name=%s AND spec=%s AND qty=%s AND supplier=%s
-            ORDER BY id DESC LIMIT 1
-        """, (in_date_str, item_name, spec, int(qty), supplier))
+            SELECT in_date, discipline, item_name, spec, qty, unit_price, total_price, supplier, remarks, photo1, photo2, photo3 
+            FROM inbound_ledger WHERE id = %s
+        """, (row_id,))
         result = cursor.fetchone()
         conn.close()
         
         if result:
             self.is_edit_mode = True
-            self.editing_row_id = result[0]
+            self.editing_row_id = row_id
             
-            self.dateEditIn.setDate(QDate.fromString(in_date_str, "yyyy-MM-dd"))
-            self.comboBoxInDiscipline.setEditText(discipline)
-            self.comboBoxInName.setEditText(item_name)
-            self.comboBoxInSpec.setEditText(spec)
+            self.dateEditIn.setDate(QDate.fromString(str(result[0]), "yyyy-MM-dd"))
+            self.comboBoxInDiscipline.setEditText(str(result[1]) if result[1] else "")
+            self.comboBoxInName.setEditText(str(result[2]))
+            self.comboBoxInSpec.setEditText(str(result[3]) if result[3] else "")
             
             self.is_calculating = True
-            self.lineEditInQty.setText(qty)
-            self.lineEditInPrice.setText(unit_price)
-            self.lineEditInTotalPrice.setText(total_price)
+            self.lineEditInQty.setText(str(result[4]))
+            self.lineEditInPrice.setText(str(result[5]))
+            self.lineEditInTotalPrice.setText(str(result[6]))
             self.is_calculating = False
             
-            self.lineEditInSupplier.setText(supplier)
-            self.lineEditInRemarks.setText(remarks)
+            self.lineEditInSupplier.setText(str(result[7]) if result[7] else "")
+            self.lineEditInRemarks.setText(str(result[8]) if result[8] else "")
+            
+            # 🌟 사진 상태 로드 및 동기화
+            self.selected_photos = [None, None, None]
+            for i in range(3):
+                p_name = result[9 + i]
+                if p_name:
+                    self.photo_widgets[i]["label"].setText(str(p_name))
+                    self.photo_widgets[i]["label"].setStyleSheet("color: #1976D2; font-weight: bold;")
+                else:
+                    self.photo_widgets[i]["label"].setText(f"사진 {i+1}: 등록되지 않음")
+                    self.photo_widgets[i]["label"].setStyleSheet("color: gray;")
             
             self.group_box_in.setTitle("⚠️ 자재 입고 내역 수정 중")
             self.btn_save_in.setText("수정 완료 저장")
@@ -396,21 +510,76 @@ class InboundTab(QWidget):
         
         self.lineEditInSupplier.clear()
         self.lineEditInRemarks.clear()
+
+        # 사진 데이터 초기화
+        self.selected_photos = [None, None, None]
+        for i in range(3):
+            self.photo_widgets[i]["label"].setText(f"사진 {i+1}: 등록되지 않음")
+            self.photo_widgets[i]["label"].setStyleSheet("color: gray;")
+        
+        # 🌟 [신규 추가] 하단 미리보기 액자도 초기화
+        for i in range(3):
+            self.lbl_previews[i].clear()
+            self.lbl_previews[i].setText(f"사진 {i+1} 없음")
+            self.lbl_previews[i].setStyleSheet("""
+                border: 1px dashed #BDBDBD; 
+                background-color: #FAFAFA; 
+                color: #9E9E9E;
+                font-size: 11px;
+            """)
         
         self.group_box_in.setTitle("자재 입고(등록) 입력")
         self.btn_save_in.setText("입고 내역 등록")
         self.btn_save_in.setStyleSheet("background-color: #4CAF50; color: white; font-weight: bold; height: 35px;")
         self.btn_cancel_edit.setVisible(False)
 
+    # =================================================================
+    # 🌟 [신규 추가] 테이블 행 클릭 시 하단에 실제 사진 표시 로직
+    # =================================================================
+    from PyQt5.QtGui import QPixmap  # 파일 최상단에 없다면 함수 내부나 상단에 임포트 필수
+    
+    def show_photo_preview_from_table(self, row, column):
+        # 현재 선택된 행의 9, 10, 11번 컬럼이 각각 사진1, 사진2, 사진3 파일명 텍스트입니다.
+        for i in range(3):
+            col_idx = 9 + i
+            item = self.tableWidgetInIn.item(row, col_idx)
+            file_name = item.text().strip() if item else ""
+            
+            # 파일명이 DB에 기록되어 있고, 실제 폴더에 존재할 때
+            if file_name and file_name != "None" and "img_" in file_name:
+                full_path = os.path.join(self.image_dir, file_name)
+                
+                if os.path.exists(full_path):
+                    pixmap = self.QPixmap(full_path)
+                    if not pixmap.isNull():
+                        # 액자 크기(220x150)에 맞춰 이미지 비율을 유지(KeepAspectRatio)하며 부드럽게(SmoothTransformation) 축소/확대
+                        scaled_pixmap = pixmap.scaled(
+                            self.lbl_previews[i].width(), 
+                            self.lbl_previews[i].height(), 
+                            Qt.KeepAspectRatio, 
+                            Qt.SmoothTransformation
+                        )
+                        self.lbl_previews[i].setPixmap(scaled_pixmap)
+                        self.lbl_previews[i].setStyleSheet("border: 1px solid #4CAF50; background-color: #FFFFFF;") # 성공 시 초록 테두리
+                        continue
+                        
+            # 사진 파일이 없거나 유효하지 않은 경우 원상복구
+            self.lbl_previews[i].clear()
+            self.lbl_previews[i].setText(f"사진 {i+1} 없음")
+            self.lbl_previews[i].setStyleSheet("""
+                border: 1px dashed #BDBDBD; 
+                background-color: #FAFAFA; 
+                color: #9E9E9E;
+                font-size: 11px;
+            """)
+
     def refresh_all_combos(self):
-        """[단계 1] 최초 로드 시 공종(Discipline) 목록을 먼저 채우고 첫 항목을 강제 선택합니다."""
         self.comboBoxInDiscipline.blockSignals(True)
         self.comboBoxInDiscipline.clear()
         
         conn = database.get_db_connection()
         cursor = conn.cursor()
         
-        # 모든 공종 로드
         cursor.execute("""
             SELECT DISTINCT discipline FROM inbound_ledger 
             WHERE discipline IS NOT NULL AND discipline != '' 
@@ -421,7 +590,6 @@ class InboundTab(QWidget):
         for d in disciplines:
             self.comboBoxInDiscipline.addItem(str(d[0]))
             
-        # 마지막 입력 상태 복원 로직용 조회
         cursor.execute("""
             SELECT discipline, item_name, spec 
             FROM inbound_ledger 
@@ -432,7 +600,6 @@ class InboundTab(QWidget):
         
         self.comboBoxInDiscipline.blockSignals(False)
         
-        # 기존 저장 이력이 있다면 복원, 없다면 첫 번째 항목들로 자동 세팅
         if last_entry and not self.is_edit_mode:
             default_discipline = str(last_entry[0]) if last_entry[0] else ""
             default_item_name = str(last_entry[1]) if last_entry[1] else ""
@@ -445,7 +612,6 @@ class InboundTab(QWidget):
             self.comboBoxInSpec.setEditText(default_spec)
         else:
             if not self.is_edit_mode:
-                # 등록된 공종이 있다면 첫 번째 공종을 선택시켜 연쇄 반응 유도
                 if self.comboBoxInDiscipline.count() > 0:
                     self.comboBoxInDiscipline.setCurrentIndex(0)
                     self.filter_name_combo(self.comboBoxInDiscipline.currentText())
@@ -457,9 +623,8 @@ class InboundTab(QWidget):
                     self.comboBoxInSpec.clearEditText()
 
     def filter_name_combo(self, discipline):
-        """[단계 2] 공종이 바뀌면 기존 품명을 완전히 지우고, 새로운 품명 목록의 '첫 번째 항목'을 자동 선택합니다."""
         self.comboBoxInName.blockSignals(True)
-        self.comboBoxInName.clear() # 👈 기존에 남아있던 품목 리스트와 텍스트를 완전히 리셋
+        self.comboBoxInName.clear() 
         
         if not discipline.strip():
             self.comboBoxInName.blockSignals(False)
@@ -469,7 +634,6 @@ class InboundTab(QWidget):
         conn = database.get_db_connection()
         cursor = conn.cursor()
         
-        # 선택된 공종에 맞는 품명 조회
         cursor.execute("""
             SELECT DISTINCT item_name FROM inbound_ledger 
             WHERE discipline = %s AND item_name IS NOT NULL AND item_name != ''
@@ -477,7 +641,6 @@ class InboundTab(QWidget):
         """, (discipline.strip(),))
         items = cursor.fetchall()
         
-        # 이력이 없다면 전체 마스터 로드
         if not items:
             cursor.execute("SELECT DISTINCT item_name FROM material_items ORDER BY item_name ASC")
             items = cursor.fetchall()
@@ -489,19 +652,16 @@ class InboundTab(QWidget):
             
         self.comboBoxInName.blockSignals(False)
         
-        # 🌟 핵심: 리스트가 채워졌다면 첫 번째 품목을 자동으로 띄워줍니다.
         if self.comboBoxInName.count() > 0:
             self.comboBoxInName.setCurrentIndex(0)
         else:
             self.comboBoxInName.clearEditText()
             
-        # 새로 선택된 품명에 맞춰 규격 콤보박스도 즉시 동기화
         self.filter_spec_combo(self.comboBoxInName.currentText())
 
     def filter_spec_combo(self, item_name):
-        """[단계 3] 품명이 바뀌면 기존 규격을 지우고, 규격이 있으면 첫 항목 자동 선택 / 없으면 신규 추가 품목 문구를 띄웁니다."""
         self.comboBoxInSpec.blockSignals(True)
-        self.comboBoxInSpec.clear() # 👈 기존 규격을 완전히 리셋
+        self.comboBoxInSpec.clear() 
         
         discipline = self.comboBoxInDiscipline.currentText().strip()
         item_name = item_name.strip()
@@ -514,7 +674,6 @@ class InboundTab(QWidget):
         conn = database.get_db_connection()
         cursor = conn.cursor()
         
-        # 공종 + 품명 조합으로 규격 조회
         cursor.execute("""
             SELECT DISTINCT spec FROM inbound_ledger 
             WHERE discipline = %s AND item_name = %s AND spec IS NOT NULL AND spec != ''
@@ -537,8 +696,6 @@ class InboundTab(QWidget):
             
         self.comboBoxInSpec.blockSignals(False)
         
-        # 🌟 핵심: 규격 리스트가 존재하면 첫 번째 규격을 바로 보여주고, 
-        # 리스트가 비어있다면 빈칸으로 만들어 "신규 추가 품목" 희미한 글씨(Placeholder)가 나오게 합니다.
         if self.comboBoxInSpec.count() > 0:
             self.comboBoxInSpec.setCurrentIndex(0)
         else:
@@ -550,8 +707,10 @@ class InboundTab(QWidget):
         
         conn = database.get_db_connection()
         cursor = conn.cursor()
+        # 🌟 고유 ID 및 사진 컬럼을 포함하여 SELECT 쿼리문 수정
         cursor.execute("""
-            SELECT in_date, discipline, item_name, spec, qty, unit_price, total_price, supplier, remarks, worker 
+            SELECT in_date, discipline, item_name, spec, qty, unit_price, total_price, 
+                   supplier, remarks, photo1, photo2, photo3, worker, id 
             FROM inbound_ledger 
             ORDER BY id DESC
         """)
@@ -562,7 +721,8 @@ class InboundTab(QWidget):
             self.tableWidgetInIn.insertRow(row_idx)
             bg_color = QColor(245, 247, 250) if (row_idx % 4) in [2, 3] else QColor(255, 255, 255)
             
-            for col_idx, value in enumerate(row_data):
+            # row_data[:-1]을 돌며 UI에 바인딩 (id 컬럼 제외)
+            for col_idx, value in enumerate(row_data[:-1]):
                 if col_idx in [4, 5, 6]: 
                     formatted_val = f"{value:,}" if isinstance(value, (int, float)) else str(value)
                     item = QTableWidgetItem(formatted_val)
@@ -573,6 +733,9 @@ class InboundTab(QWidget):
                 
                 item.setBackground(bg_color)
                 self.tableWidgetInIn.setItem(row_idx, col_idx, item)
+            
+            # 🌟 [중요 보완] 행의 첫 번째 텍스트 아이템 데이터 영역에 고유 Primary Key ID(row_data[-1]) 정보를 바인딩 및 숨김 처리
+            self.tableWidgetInIn.item(row_idx, 0).setData(Qt.UserRole + 1, row_data[-1])
                 
         self.tableWidgetInIn.setSortingEnabled(True)
         self.tableWidgetInIn.resizeColumnsToContents()
@@ -580,7 +743,6 @@ class InboundTab(QWidget):
             current_width = self.tableWidgetInIn.columnWidth(col)
             self.tableWidgetInIn.setColumnWidth(col, current_width + 25)
 
-    # 🌟 고유 ID 조건 기반의 안전한 내역 삭제 및 물리 파일 제거 로직 (누락 복원 및 업그레이드)
     def delete_selected_row(self):
         current_row = self.tableWidgetInIn.currentRow()
         if current_row < 0:
@@ -588,14 +750,19 @@ class InboundTab(QWidget):
             return
             
         if QMessageBox.question(self, '확인', '선택한 내역을 삭제하시겠습니까?', QMessageBox.Yes | QMessageBox.No) == QMessageBox.Yes:
+            # 🌟 숨겨진 고유 ID 안전하게 취득
             row_id = self.tableWidgetInIn.item(current_row, 0).data(Qt.UserRole + 1)
             
-            # 물리 삭제용 타겟 리스트 생성
+            if not row_id:
+                QMessageBox.critical(self, "삭제 실패", "선택된 행의 고유 ID 정보를 식별할 수 없습니다.")
+                return
+
+            # 물리 삭제용 타겟 리스트 생성 (테이블 9, 10, 11번 컬럼이 사진1, 2, 3)
             photos_to_delete = []
             for i in range(3):
-                p_name = self.tableWidgetInIn.item(current_row, 8 + i).data(Qt.UserRole)
-                if p_name: 
-                    photos_to_delete.append(p_name)
+                p_item = self.tableWidgetInIn.item(current_row, 9 + i)
+                if p_item and p_item.text().strip() and "img_" in p_item.text():
+                    photos_to_delete.append(p_item.text().strip())
             
             try:
                 conn = database.get_db_connection()
@@ -604,21 +771,20 @@ class InboundTab(QWidget):
                 conn.commit()
                 conn.close()
                 
-                # 이미지 저장소 파일 삭제 처리
+                # 이미지 저장소의 물리적 파일 삭제 처리
                 for p_name in photos_to_delete:
                     target_file = os.path.join(self.image_dir, p_name)
                     if os.path.exists(target_file):
                         os.remove(target_file)
                 
                 QMessageBox.information(self, "삭제 완료", "데이터와 연결된 현장 사진이 안전하게 파기되었습니다.")
-                self.clear_inputs()
+                self.clear_input_fields()
                 self.table_display_in()
                 
             except Exception as e:
                 QMessageBox.critical(self, "삭제 실패", f"데이터베이스 삭제 중 에러 발생:\n{e}")
 
     def export_to_excel(self):
-        """현재 테이블에 조회된 입고 현황을 엑셀 파일로 추출합니다."""
         row_count = self.tableWidgetInIn.rowCount()
         column_count = self.tableWidgetInIn.columnCount()
         
@@ -626,43 +792,36 @@ class InboundTab(QWidget):
             QMessageBox.warning(self, "추출 실패", "엑셀로 내보낼 데이터가 없습니다.")
             return
             
-        # 1. 엑셀 파일 저장 경로 선택창 띄우기
         default_filename = f"자재입고현황_레포트.xlsx"
         file_path, _ = QFileDialog.getSaveFileName(
             self, "엑셀 파일 저장", default_filename, "Excel Files (*.xlsx)"
         )
         
         if not file_path:
-            return # 취소 시 리턴
+            return 
 
         try:
-            # 2. QTableWidget에서 헤더(컬럼명) 가져오기
             headers = []
             for col in range(column_count):
                 headers.append(self.tableWidgetInIn.horizontalHeaderItem(col).text())
                 
-            # 3. 테이블 내부 데이터 추출하기
             table_data = []
             for row in range(row_count):
                 row_data = []
                 for col in range(column_count):
                     item = self.tableWidgetInIn.item(row, col)
                     val = item.text() if item else ""
-                    # 수량, 단가, 총금액의 콤마(,) 제거 후 숫자로 변환하여 저장 (엑셀 수식 계산 연동 위함)
                     if col in [4, 5, 6]:
                         val = val.replace(",", "")
                         val = int(val) if val.isdigit() else 0
                     row_data.append(val)
                 table_data.append(row_data)
                 
-            # 4. Pandas DataFrame 생성 및 엑셀 저장
             df = pd.DataFrame(table_data, columns=headers)
             
-            # 엑셀 엔진을 활용해 서식(Style)을 조금 더 깔끔하게 인쇄용으로 지정 가능
             with pd.ExcelWriter(file_path, engine='openpyxl') as writer:
                 df.to_excel(writer, index=False, sheet_name="입고내역_Report")
                 
-                # [선택] openpyxl 서식 지정 (셀 너비 자동 최적화)
                 workbook = writer.book
                 worksheet = writer.sheets["입고내역_Report"]
                 for col in worksheet.columns:
