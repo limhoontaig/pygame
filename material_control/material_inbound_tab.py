@@ -43,6 +43,11 @@ class InboundTab(QWidget):
         self.btn_delete_in.clicked.connect(self.presenter.delete_selected_row)
         self.btn_export_excel.clicked.connect(self.presenter.export_to_excel)
 
+        # 🌟 [신규 추가] 상단 기간 조건 조회 관련 버튼 시그널 바인딩
+        self.btn_search_range.clicked.connect(self.presenter.search_by_date_range)
+        self.btn_search_month.clicked.connect(self.presenter.search_by_month)
+        self.btn_search_clear.clicked.connect(lambda: self.table_display_in()) # 조건 없이 원상복구
+
         # 실시간 자동 계산 바인딩
         self.lineEditInQty.textChanged.connect(self.presenter.calculate_from_price)
         self.lineEditInPrice.textChanged.connect(self.presenter.calculate_from_price)

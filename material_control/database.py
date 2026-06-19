@@ -69,6 +69,9 @@ def init_database():
             spec VARCHAR(200),
             qty INT DEFAULT 0,
             remarks TEXT,
+            photo1 VARCHAR(255) NULL,  -- 🌟 [추가] 사진 1 파일명 저장
+            photo2 VARCHAR(255) NULL,  -- 🌟 [추가] 사진 2 파일명 저장
+            photo3 VARCHAR(255) NULL,   -- 🌟 [추가] 사진 3 파일명 저장
             worker VARCHAR(50) NOT NULL,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )

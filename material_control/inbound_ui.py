@@ -124,6 +124,34 @@ class InboundUI:
         widget.btn_delete_in.setStyleSheet("background-color: #D32F2F; color: white; font-weight: bold; padding: 6px 12px;")
         top_bar.addWidget(widget.btn_delete_in)
 
+        # 🌟 [신규 추가] 기간 설정 UI 컴포넌트들 수평 배치
+        top_bar.addWidget(QLabel(" |  기간:"))
+        widget.dateEditStart = QDateEdit()
+        widget.dateEditStart.setCalendarPopup(True)
+        widget.dateEditStart.setDate(QDate.currentDate().addMonths(-1)) # 기본값: 한 달 전
+        widget.dateEditStart.setFixedWidth(105)
+        top_bar.addWidget(widget.dateEditStart)
+        
+        top_bar.addWidget(QLabel("~"))
+        
+        widget.dateEditEnd = QDateEdit()
+        widget.dateEditEnd.setCalendarPopup(True)
+        widget.dateEditEnd.setDate(QDate.currentDate())                 # 기본값: 오늘 날짜
+        widget.dateEditEnd.setFixedWidth(105)
+        top_bar.addWidget(widget.dateEditEnd)
+        
+        widget.btn_search_range = QPushButton("기간조회")
+        widget.btn_search_range.setStyleSheet("background-color: #0288D1; color: white; font-weight: bold; padding: 6px 10px;")
+        top_bar.addWidget(widget.btn_search_range)
+        
+        widget.btn_search_month = QPushButton("월간보고")
+        widget.btn_search_month.setStyleSheet("background-color: #673AB7; color: white; font-weight: bold; padding: 6px 10px;")
+        top_bar.addWidget(widget.btn_search_month)
+        
+        widget.btn_search_clear = QPushButton("전체해제")
+        widget.btn_search_clear.setStyleSheet("background-color: #607D8B; color: white; padding: 6px 8px;")
+        top_bar.addWidget(widget.btn_search_clear)
+
         widget.btn_export_excel = QPushButton("엑셀 내보내기 (Report)")
         widget.btn_export_excel.setStyleSheet("background-color: #2E7D32; color: white; font-weight: bold; padding: 6px 12px;")
         top_bar.addWidget(widget.btn_export_excel)

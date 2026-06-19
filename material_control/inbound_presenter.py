@@ -52,6 +52,33 @@ class InboundPresenter:
         elif not total_str:
             self.view.is_calculating = True; self.view.lineEditInPrice.clear(); self.view.is_calculating = False
 
+    # 🌟 [신규 추가] 기간조회 액션 함수
+    def search_by_date_range(self):
+        start_date = self.view.dateEditStart.date().toString("yyyy-MM-dd")
+        end_date = self.view.dateEditEnd.date().toString("yyyy-MM-dd")
+        
+        if start_date > end_date:
+            QMessageBox.warning(self.view, "조회 오류", "시작날짜가 끝날짜보다 늦을 수 없습니다.")
+            return
+            
+        # 테이블 리스트를 기간 조건 조건절로 다시 조회 및 갱신
+        self.table_display_in(mode="range", p1=start_date, p2=end_date)
+
+    # 🌟 [신규 추가] 월간보고 액션 함수 (시작 날짜의 '연도-월' 기준)
+    def search_by_month(self):
+        target_date = self.view.dateEditStart.date()
+        year = target_date.year()
+        month = target_date.month()
+        
+        # 시작 날짜의 월의 1일과 말일 계산하여 범위 지정
+        start_date = f"{year}-{month:02d}-01"
+        # 종료 처리를 간편하게 SQL의 LIKE 'YYYY-MM%' 구문으로 처리하도록 Presenter 레벨 조율
+        self.table_display_in(mode="month", p1=f"{year}-{month:02d}%")
+        
+        # 직관성을 위해 UI 종료 날짜 칸도 해당 월의 마지막 날로 동기화 업데이트 해줌
+        last_day = target_date.addMonths(1).addDays(-target_date.day())
+        self.view.dateEditEnd.setDate(last_day)
+
     def process_inbound_save(self):
         view = self.view
         discipline = view.comboBoxInDiscipline.currentText().strip()
@@ -244,17 +271,45 @@ class InboundPresenter:
         if view.comboBoxInSpec.count() > 0: view.comboBoxInSpec.setCurrentIndex(0)
         else: view.comboBoxInSpec.clearEditText()
 
-    def table_display_in(self):
-        view = self.view
-        view.tableWidgetInIn.setRowCount(0); view.tableWidgetInIn.setSortingEnabled(False)
+    # 🌟 [기능 확장] 메인 테이블 그리드 출력 로직 (조회 모드 추가 분기 반영)
+    def table_display_in(self, mode="all", p1=None, p2=None):
+        self.view.tableWidgetInIn.setRowCount(0)
+        self.view.tableWidgetInIn.setSortingEnabled(False)
+        
         conn = database.get_db_connection()
         cursor = conn.cursor()
-        cursor.execute("SELECT in_date, discipline, item_name, spec, qty, unit_price, total_price, supplier, remarks, photo1, photo2, photo3, worker, id FROM inbound_ledger ORDER BY id DESC")
+        
+        # 모드별 조건절 분기
+        if mode == "range":
+            query = """
+                SELECT in_date, discipline, item_name, spec, qty, unit_price, total_price, supplier, remarks, photo1, photo2, photo3, worker, id 
+                FROM inbound_ledger 
+                WHERE in_date BETWEEN %s AND %s
+                ORDER BY in_date DESC, id DESC
+            """
+            cursor.execute(query, (p1, p2))
+        elif mode == "month":
+            query = """
+                SELECT in_date, discipline, item_name, spec, qty, unit_price, total_price, supplier, remarks, photo1, photo2, photo3, worker, id 
+                FROM inbound_ledger 
+                WHERE in_date LIKE %s
+                ORDER BY in_date DESC, id DESC
+            """
+            cursor.execute(query, (p1,))
+        else:
+            # 전체 조회 기본 모드
+            query = """
+                SELECT in_date, discipline, item_name, spec, qty, unit_price, total_price, supplier, remarks, photo1, photo2, photo3, worker, id 
+                FROM inbound_ledger 
+                ORDER BY id DESC
+            """
+            cursor.execute(query)
+            
         rows = cursor.fetchall()
         conn.close()
         
         for row_idx, row_data in enumerate(rows):
-            view.tableWidgetInIn.insertRow(row_idx)
+            self.view.tableWidgetInIn.insertRow(row_idx)
             bg_color = QColor(245, 247, 250) if (row_idx % 4) in [2, 3] else QColor(255, 255, 255)
             for col_idx, value in enumerate(row_data[:-1]):
                 if col_idx in [4, 5, 6]: 
@@ -265,12 +320,13 @@ class InboundPresenter:
                     item = QTableWidgetItem(str(value) if value is not None else "")
                     item.setTextAlignment(Qt.AlignCenter)
                 item.setBackground(bg_color)
-                view.tableWidgetInIn.setItem(row_idx, col_idx, item)
-            view.tableWidgetInIn.item(row_idx, 0).setData(Qt.UserRole + 1, row_data[-1])
+                self.view.tableWidgetInIn.setItem(row_idx, col_idx, item)
+            self.view.tableWidgetInIn.item(row_idx, 0).setData(Qt.UserRole + 1, row_data[-1])
                 
-        view.tableWidgetInIn.setSortingEnabled(True); view.tableWidgetInIn.resizeColumnsToContents()
-        for col in range(view.tableWidgetInIn.columnCount()):
-            view.tableWidgetInIn.setColumnWidth(col, view.tableWidgetInIn.columnWidth(col) + 25)
+        self.view.tableWidgetInIn.setSortingEnabled(True)
+        self.view.tableWidgetInIn.resizeColumnsToContents()
+        for col in range(self.view.tableWidgetInIn.columnCount()):
+            self.view.tableWidgetInIn.setColumnWidth(col, self.view.tableWidgetInIn.columnWidth(col) + 25)
 
     def show_photo_preview_from_table(self, row, column):
         view = self.view
