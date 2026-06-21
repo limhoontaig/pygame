@@ -1,9 +1,9 @@
 # main.py
 import sys
 from PyQt5.QtWidgets import QApplication, QDialog
-import database
-from login_dialog import LoginDialog
-from material_main import MainApp
+from common import database
+from auth.login_dialog import LoginDialog
+from common.material_main import MainApp
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)
