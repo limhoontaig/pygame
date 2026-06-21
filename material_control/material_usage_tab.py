@@ -17,7 +17,7 @@ class UsageTab(QWidget):
         self.is_edit_mode = False
         self.editing_row_id = None
         self.is_loading_row = False 
-        self.is_syncing_ho_disp = False # [추가] 공용 상태 양방향 연동 무한루프 방지 플래그
+        self.is_syncing_ho_disp = False # 공용 상태 양방향 연동 무한루프 방지 플래그
 
         # 🌟 사진 저장을 위한 별도 디렉토리 설정 (usage_images)
         self.image_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "usage_images")
@@ -42,14 +42,17 @@ class UsageTab(QWidget):
         self.comboType = self.ui.comboType
         self.comboDong = self.ui.comboDong
         self.comboHo = self.ui.comboHo
-        self.chkFloorCorridor = self.ui.chkFloorCorridor # 🌟 참조 추가
-        self.lblFloorStatus = self.ui.lblFloorStatus     # 🌟 참조 추가
+        self.chkFloorCorridor = self.ui.chkFloorCorridor 
+        self.lblFloorStatus = self.ui.lblFloorStatus     
         self.comboDiscipline = self.ui.comboDiscipline
-        self.CB_Item = self.ui.CB_Item
-        self.CB_Spec = self.ui.CB_Spec
-        self.LE_CurrentStock = self.ui.LE_CurrentStock
-        self.lineEditUseQty = self.ui.lineEditUseQty
-        self.lineEditUseRemarks = self.ui.lineEditUseRemarks
+        
+        # UI 스킨 파일(material_usage_ui.py)의 변수명과 일치시킴
+        self.CB_Item = self.ui.comboItemName
+        self.CB_Spec = self.ui.comboSpec
+        self.LE_CurrentStock = QLabel() # UI 레이아웃에 없으므로 임시 더미 생성
+        self.lineEditUseQty = self.ui.lineEditQty
+        self.lineEditUseRemarks = self.ui.lineEditRemarks
+        
         self.tableWidgetUse = self.ui.tableWidgetUse
         self.group_box_use = self.ui.group_box_use
         self.btn_save_use = self.ui.btn_save_use
@@ -58,26 +61,31 @@ class UsageTab(QWidget):
         self.photo_widgets = self.ui.photo_widgets
         self.lbl_previews = self.ui.lbl_previews # 하단 액자 참조 추가
 
-    # 🌟 [신규 추가] 층 복도 체크박스 핵심 알고리즘 함수
-    def update_floor_corridor_logic(self):
+    def get_calculated_floor_text(self):
+        """현재 선택된 호수를 기반으로 'X층 복도 작업' 문자열을 반환하는 헬퍼 함수"""
         ho_text = self.comboHo.currentText().strip()
-        
-        # 체크박스가 켜져있을 때만 층 복도 분석 작동
+        if ho_text.isdigit() and len(ho_text) >= 3:
+            floor = ho_text[:-2]
+            return f"{floor}층 복도 작업"
+        return "(호수 입력 필요)"
+
+    def update_floor_corridor_logic(self):
+        """층 복도 체크박스 실시간 레이블 표시 알고리즘"""
+        if self.is_loading_row:
+            return
+
         if self.chkFloorCorridor.isChecked():
-            # 구분 값을 자동으로 '공용'으로 스위칭해 줍니다.
             self.comboType.setCurrentText("공용")
-            
-            if ho_text.isdigit() and len(ho_text) >= 3:
-                # 3자리(예: 302 -> 3층), 4자리(예: 1903 -> 19층) 앞부분 추출
-                floor = ho_text[:-2]
-                self.lblFloorStatus.setText(f"➔ {floor}층 복도 작업")
+            floor_text = self.get_calculated_floor_text()
+            if floor_text != "(호수 입력 필요)":
+                self.lblFloorStatus.setText(f"➔ {floor_text}")
             else:
                 self.lblFloorStatus.setText("➔ (호수 입력 필요)")
         else:
             self.lblFloorStatus.setText("")
 
-    # 🌟 [신규 추가] 사진 선택 및 해제 핸들러
     def select_photo_file(self, idx):
+        """파일 탐색기 연동 사진 등록 기능"""
         file_path, _ = QFileDialog.getOpenFileName(
             self, f"사진 {idx+1} 선택", "", "Image Files (*.png *.jpg *.jpeg *.bmp)"
         )
@@ -87,6 +95,7 @@ class UsageTab(QWidget):
             self.photo_widgets[idx]["label"].setStyleSheet("color: #2196F3; font-weight: bold;")
 
     def remove_photo_selection(self, idx):
+        """사진 등록 해제 기능"""
         self.selected_photos[idx] = None
         self.photo_widgets[idx]["label"].setText(f"사진 {idx+1}: 등록되지 않음")
         self.photo_widgets[idx]["label"].setStyleSheet("color: gray;")
@@ -96,7 +105,7 @@ class UsageTab(QWidget):
         self.comboType.currentTextChanged.connect(self.handle_type_change)
         self.comboDong.currentTextChanged.connect(self.handle_dong_change)
         
-        # [수정] 호수와 공종의 변경 감지 시그널을 상호 연동 핸들러 함수로 연결
+        # 호수와 공종의 변경 감지 시그널을 상호 연동 핸들러 함수로 연결
         self.comboHo.currentTextChanged.connect(self.handle_ho_change)
         self.comboDiscipline.currentTextChanged.connect(self.handle_discipline_change)
         
@@ -113,49 +122,18 @@ class UsageTab(QWidget):
         # 층 복도 관련 시그널
         self.comboHo.currentTextChanged.connect(self.update_floor_corridor_logic)
         self.chkFloorCorridor.stateChanged.connect(self.update_floor_corridor_logic)
-
-        self.comboDong.currentTextChanged.connect(self.filter_ho_by_dong)
-        self.comboItemName.currentTextChanged.connect(self.filter_spec_by_item)
         
-        # 🌟 [신규 추가] UI 상의 사진 등록/X 버튼 수동 이벤트 결합 (유실 차단)
+        # 사진 등록/X 버튼 수동 이벤트 결합
         for i in range(3):
             self.photo_widgets[i]["btn_add"].clicked.connect(lambda checked, idx=i: self.select_photo_file(idx))
             self.photo_widgets[i]["btn_del"].clicked.connect(lambda checked, idx=i: self.remove_photo_selection(idx))
 
-        # 🌟 [신규 추가] 테이블 행 클릭 시 하단에 미리보기가 뜨도록 바인딩
+        # 테이블 행 클릭 시 하단에 미리보기가 뜨도록 바인딩
         self.tableWidgetUse.cellClicked.connect(self.show_photo_preview_from_table)
 
-    def update_floor_corridor_logic(self):
-        ho_text = self.comboHo.currentText().strip()
-        if self.chkFloorCorridor.isChecked():
-            self.comboType.setCurrentText("공용")
-            if ho_text.isdigit() and len(ho_text) >= 3:
-                floor = ho_text[:-2]
-                self.lblFloorStatus.setText(f"➔ {floor}층 복도 작업")
-            else:
-                self.lblFloorStatus.setText("➔ (호수 입력 필요)")
-        else:
-            self.lblFloorStatus.setText("")
-
-    # 파일 탐색기 연동 사진 등록 기능
-    def select_photo_file(self, idx):
-        file_path, _ = QFileDialog.getOpenFileName(
-            self, f"사진 {idx+1} 선택", "", "Image Files (*.png *.jpg *.jpeg *.bmp)"
-        )
-        if file_path:
-            self.selected_photos[idx] = file_path
-            self.photo_widgets[idx]["label"].setText(os.path.basename(file_path))
-            self.photo_widgets[idx]["label"].setStyleSheet("color: #2196F3; font-weight: bold;")
-
-    def remove_photo_selection(self, idx):
-        self.selected_photos[idx] = None
-        self.photo_widgets[idx]["label"].setText(f"사진 {idx+1}: 등록되지 않음")
-        self.photo_widgets[idx]["label"].setStyleSheet("color: gray;")
-
-    # 🌟 [신규 추가] 테이블 클릭 시 하단 레이블에 이미지를 비율 맞춰 채우는 함수
     def show_photo_preview_from_table(self, row, column):
+        """테이블 클릭 시 하단 레이블에 이미지를 비율 맞춰 채우는 함수"""
         for i in range(3):
-            # 사용 테이블에서 9, 10, 11번 셀이 각각 사진1, 사진2, 사진3 정보입니다.
             item = self.tableWidgetUse.item(row, 9 + i)
             file_name = item.text().strip() if item else ""
             
@@ -174,14 +152,10 @@ class UsageTab(QWidget):
                         self.lbl_previews[i].setStyleSheet("border: 1px solid #2196F3; background-color: #FFFFFF;")
                         continue
                         
-            # 매칭 사진이 없으면 액자 초기화
             self.lbl_previews[i].clear()
             self.lbl_previews[i].setText(f"사진 {i+1} 없음")
             self.lbl_previews[i].setStyleSheet("border: 1px dashed #BDBDBD; background-color: #FAFAFA; color: #9E9E9E; font-size: 11px;")
 
-    # =================================================================
-    # 비즈니스 데이터 처리 및 연동 로직 코드
-    # =================================================================
     def update_stock_display(self):
         item_name = self.CB_Item.currentText().strip()
         spec = self.CB_Spec.currentText().strip()
@@ -261,7 +235,6 @@ class UsageTab(QWidget):
                 self.comboDiscipline.setCurrentIndex(0)
                 self.sync_items_by_discipline(self.comboDiscipline.currentText())
 
-    # [핵심 기능 수정] 호수 변경 시 공종 양방향 동기화
     def handle_ho_change(self, selected_ho):
         if not selected_ho or self.is_loading_row or self.is_syncing_ho_disp:
             return
@@ -272,7 +245,6 @@ class UsageTab(QWidget):
             self.is_syncing_ho_disp = False
             self.sync_items_by_discipline(selected_ho)
 
-    # [핵심 기능 수정] 공종 변경 시 호수 양방향 동기화
     def handle_discipline_change(self, selected_disp):
         if not selected_disp or self.is_loading_row or self.is_syncing_ho_disp:
             return
@@ -311,7 +283,11 @@ class UsageTab(QWidget):
         
         conn = database.get_db_connection()
         cursor = conn.cursor()
-        cursor.execute("SELECT DISTINCT item_name FROM inbound_ledger WHERE discipline = %s ORDER BY item_name ASC", (discipline,))
+        # '층 복도 작업' 형태로 들어오는 공종을 조회하기 위해 조건 분기 처리
+        if "복도 작업" in discipline:
+            cursor.execute("SELECT DISTINCT item_name FROM inbound_ledger ORDER BY item_name ASC")
+        else:
+            cursor.execute("SELECT DISTINCT item_name FROM inbound_ledger WHERE discipline = %s ORDER BY item_name ASC", (discipline,))
         items = cursor.fetchall()
         conn.close()
         
@@ -336,10 +312,13 @@ class UsageTab(QWidget):
         
         conn = database.get_db_connection()
         cursor = conn.cursor()
-        cursor.execute("""
-            SELECT DISTINCT spec FROM inbound_ledger 
-            WHERE discipline = %s AND item_name = %s ORDER BY spec ASC
-        """, (self.comboDiscipline.currentText(), item_name))
+        if "복도 작업" in self.comboDiscipline.currentText():
+            cursor.execute("SELECT DISTINCT spec FROM inbound_ledger WHERE item_name = %s ORDER BY spec ASC", (item_name,))
+        else:
+            cursor.execute("""
+                SELECT DISTINCT spec FROM inbound_ledger 
+                WHERE discipline = %s AND item_name = %s ORDER BY spec ASC
+            """, (self.comboDiscipline.currentText(), item_name))
         specs = cursor.fetchall()
         conn.close()
         
@@ -380,8 +359,14 @@ class UsageTab(QWidget):
             return
             
         qty = int(qty_str)
+
+        # 🌟 [핵심 변경] 복도 체크박스가 선택되어 있다면 호수와 공종을 명칭으로 대체하여 저장
+        if self.chkFloorCorridor.isChecked():
+            floor_text = self.get_calculated_floor_text()
+            if floor_text != "(호수 입력 필요)":
+                ho = floor_text
+                discipline = floor_text
         
-        # 🌟 사진 파일 처리 및 보관 복사
         conn = database.get_db_connection()
         cursor = conn.cursor()
         
@@ -436,44 +421,6 @@ class UsageTab(QWidget):
         self.clear_usage_fields()
         self.table_display_usage()
 
-        try:
-            current_stock = database.get_current_stock(item_name, spec)
-            if self.is_edit_mode:
-                conn = database.get_db_connection()
-                cursor = conn.cursor()
-                cursor.execute("SELECT qty FROM usage_ledger WHERE id = %s", (self.editing_row_id,))
-                old_qty_res = cursor.fetchone()
-                conn.close()
-                if old_qty_res: current_stock += old_qty_res[0]
-
-            if qty > current_stock:
-                QMessageBox.warning(self, "재고 부족", f"현재 남은 재고({current_stock}개)보다 출고 수량({qty}개)이 더 많습니다.")
-                return
-        except:
-            pass
-        
-        conn = database.get_db_connection()
-        cursor = conn.cursor()
-        if self.is_edit_mode:
-            cursor.execute("""
-                UPDATE usage_ledger
-                SET use_date=%s, usage_type=%s, dong=%s, ho=%s, discipline=%s, item_name=%s, spec=%s, qty=%s, remarks=%s, worker=%s
-                WHERE id = %s
-            """, (use_date, usage_type, dong, ho, discipline, item_name, spec, qty, remarks, self.current_user, self.editing_row_id))
-            conn.commit()
-            QMessageBox.information(self, "수정 성공", "자재 출고/사용 내역 수정이 완료되었습니다.")
-        else:
-            cursor.execute("""
-                INSERT INTO usage_ledger (use_date, usage_type, dong, ho, discipline, item_name, spec, qty, remarks, worker)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-            """, (use_date, usage_type, dong, ho, discipline, item_name, spec, qty, remarks, self.current_user))
-            conn.commit()
-            QMessageBox.information(self, "등록 성공", "자재 사용 내역이 대장에 기록되었습니다.")
-        conn.close()
-        
-        self.clear_usage_fields()
-        self.table_display_usage()
-
     def load_selected_use_row(self):
         current_row = self.tableWidgetUse.currentRow()
         if current_row < 0:
@@ -493,7 +440,7 @@ class UsageTab(QWidget):
         conn = database.get_db_connection()
         cursor = conn.cursor()
         cursor.execute("""
-            SELECT id FROM usage_ledger 
+            SELECT id, photo1, photo2, photo3 FROM usage_ledger 
             WHERE use_date=%s AND usage_type=%s AND dong=%s AND ho=%s AND item_name=%s AND qty=%s
             ORDER BY id DESC LIMIT 1
         """, (use_date_str, usage_type, dong, ho, item_name, int(qty)))
@@ -508,18 +455,36 @@ class UsageTab(QWidget):
             self.dateEditUse.setDate(QDate.fromString(use_date_str, "yyyy-MM-dd"))
             self.comboType.setCurrentText(usage_type)
             self.comboDong.setCurrentText(dong)
-            if usage_type == "공용":
-                self.comboHo.clear()
-                conn = database.get_db_connection()
-                cursor = conn.cursor()
-                cursor.execute("SELECT ho FROM dongho_master WHERE dong = '999'")
-                for h in cursor.fetchall(): self.comboHo.addItem(str(h[0]))
-                conn.close()
-            else:
-                self.sync_ho_combo(dong)
-            self.comboHo.setCurrentText(ho)
             
-            self.comboDiscipline.setCurrentText(discipline)
+            # 🌟 [수정 모드 보완] 데이터가 복도 작업으로 저장되어 들어온 경우 역추적 처리
+            if "복도 작업" in ho:
+                self.chkFloorCorridor.setChecked(True)
+                self.lblFloorStatus.setText(f"➔ {ho}")
+                
+                # 콤보박스에 강제로 텍스트를 주입해 목록 깨짐 방지
+                self.comboHo.blockSignals(True)
+                self.comboHo.clear()
+                self.comboHo.addItem(ho)
+                self.comboHo.blockSignals(False)
+                
+                self.comboDiscipline.blockSignals(True)
+                self.comboDiscipline.clear()
+                self.comboDiscipline.addItem(discipline)
+                self.comboDiscipline.blockSignals(False)
+            else:
+                self.chkFloorCorridor.setChecked(False)
+                if usage_type == "공용":
+                    self.comboHo.clear()
+                    conn = database.get_db_connection()
+                    cursor = conn.cursor()
+                    cursor.execute("SELECT ho FROM dongho_master WHERE dong = '999'")
+                    for h in cursor.fetchall(): self.comboHo.addItem(str(h[0]))
+                    conn.close()
+                else:
+                    self.sync_ho_combo(dong)
+                self.comboHo.setCurrentText(ho)
+                self.comboDiscipline.setCurrentText(discipline)
+            
             self.sync_items_by_discipline(discipline)
             self.CB_Item.setCurrentText(item_name)
             self.sync_specs_by_item(item_name)
@@ -531,7 +496,7 @@ class UsageTab(QWidget):
             # 사진 데이터 역로드
             self.selected_photos = [None, None, None]
             for i in range(3):
-                p_name = result[9 + i]
+                p_name = result[1 + i]
                 if p_name:
                     self.photo_widgets[i]["label"].setText(str(p_name))
                     self.photo_widgets[i]["label"].setStyleSheet("color: #1976D2; font-weight: bold;")
@@ -552,6 +517,7 @@ class UsageTab(QWidget):
         self.editing_row_id = None
         self.is_loading_row = False
         
+        self.chkFloorCorridor.setChecked(False) # 체크박스 해제 추가
         self.dateEditUse.setDate(QDate.currentDate())
         self.comboType.setCurrentIndex(0)
         self.handle_type_change("공용")
@@ -580,7 +546,7 @@ class UsageTab(QWidget):
             QMessageBox.warning(self, "삭제 오류", "삭제 처리할 행 데이터를 리스트에서 선택해 주세요.")
             return
             
-        if QMessageBox.question(self, '최종 확인', '선택한 사용 내역 기록을 영구 삭제하시겠습니까%s', QMessageBox.Yes | QMessageBox.No) == QMessageBox.Yes:
+        if QMessageBox.question(self, '최종 확인', '선택한 사용 내역 기록을 영구 삭제하시겠습니까?', QMessageBox.Yes | QMessageBox.No) == QMessageBox.Yes:
             use_date = self.tableWidgetUse.item(current_row, 0).text()
             dong = self.tableWidgetUse.item(current_row, 2).text()
             ho = self.tableWidgetUse.item(current_row, 3).text()
@@ -606,7 +572,6 @@ class UsageTab(QWidget):
         
         conn = database.get_db_connection()
         cursor = conn.cursor()
-        # 🌟 사진 파일 컬럼(photo1, 2, 3)을 포함하도록 쿼리 확장
         cursor.execute("""
             SELECT use_date, usage_type, dong, ho, discipline, item_name, spec, qty, remarks, photo1, photo2, photo3, worker, id 
             FROM usage_ledger ORDER BY id DESC
