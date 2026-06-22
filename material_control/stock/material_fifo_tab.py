@@ -7,7 +7,7 @@ from PyQt5.QtWidgets import (
 )
 from PyQt5.QtCore import QDate, Qt
 from PyQt5.QtGui import QColor
-import database
+import common.database as database
 
 class FifoStatusTab(QWidget):
     def __init__(self, current_user="미인증"):

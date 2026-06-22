@@ -4,8 +4,8 @@ from PyQt5.QtWidgets import QWidget
 from PyQt5.QtCore import QDate
 
 # 분리한 UI 파일과 기능 로직 파일을 임포트합니다.
-from inbound_ui import InboundUI
-from inbound_presenter import InboundPresenter
+from inbound.inbound_ui import InboundUI
+from inbound.inbound_presenter import InboundPresenter
 
 class InboundTab(QWidget):
     def __init__(self, user_name="미인증"):

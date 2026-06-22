@@ -4,7 +4,7 @@ import sys
 from PyQt5.QtWidgets import *
 from PyQt5.QtCore import QDate, Qt
 from PyQt5.QtGui import QColor  # 행 색상 변경을 위해 추가
-import database
+import pygame.material_control.z_old_files.database as database
 
 class MatWindow(QMainWindow):
     def __init__(self, user_name="미인증"):

@@ -4,7 +4,7 @@ import time
 import shutil
 from PyQt5.QtWidgets import QMessageBox
 from PyQt5.QtCore import QDate
-import database
+import common.database as database
 
 class UsageDataManager:
     def __init__(self, parent_tab):

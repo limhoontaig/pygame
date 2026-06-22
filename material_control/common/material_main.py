@@ -3,14 +3,14 @@
 import sys
 from PyQt5.QtWidgets import *
 from PyQt5.QtCore import Qt
-import database
+from common import database
 
-from user_approval_dialog import UserApprovalDialog
-from material_usage_tab import UsageTab
+from auth.user_approval_dialog import UserApprovalDialog
+from usage.material_usage_tab import UsageTab
 # 기존에 만든 입고 탭 모듈
-from material_inbound_tab import InboundTab 
-from material_stock_tab import StockTab
-from material_fifo_tab import FifoStatusTab
+from inbound.material_inbound_tab import InboundTab 
+from stock.material_stock_tab import StockTab
+from stock.material_fifo_tab import FifoStatusTab
 
 class MainApp(QMainWindow):
     def __init__(self, user_name):

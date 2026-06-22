@@ -7,7 +7,7 @@ from PyQt5.QtWidgets import (
     QGroupBox, QLabel, QComboBox, QDateEdit
 )
 from PyQt5.QtCore import Qt, QDate
-import database  # 기존 데이터베이스 모듈 연동
+import common.database as database  # 기존 데이터베이스 모듈 연동
 
 class StockTab(QWidget):
     def __init__(self, current_user):

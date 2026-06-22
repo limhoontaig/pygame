@@ -1,7 +1,7 @@
 # user_approve_dialog.py
 
 from PyQt5.QtWidgets import *
-import database
+import common.database as database
 
 class UserApprovalDialog(QDialog):
     def __init__(self):

@@ -4,13 +4,13 @@ import os
 from PyQt5.QtWidgets import *
 from PyQt5.QtCore import QDate, Qt
 from PyQt5.QtGui import QColor, QPixmap
-import database
-from material_usage_ui import UsageTabUI
+import common.database as database
+from usage.material_usage_ui import UsageTabUI
 
 # 분리된 하위 모듈 가져오기
-from usage_data_manager import UsageDataManager
-from usage_event_handler import UsageEventHandler
-from usage_printer import UsagePrinter
+from usage.usage_data_manager import UsageDataManager
+from usage.usage_event_handler import UsageEventHandler
+from usage.usage_printer import UsagePrinter
 
 class UsageTab(QWidget):
     def __init__(self, user_name="미인증"):

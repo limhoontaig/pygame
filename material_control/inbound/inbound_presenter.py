@@ -6,7 +6,7 @@ import pandas as pd
 from PyQt5.QtWidgets import QMessageBox, QTableWidgetItem, QFileDialog
 from PyQt5.QtCore import QDate, Qt
 from PyQt5.QtGui import QColor, QPixmap
-import database
+import common.database as database
 
 class InboundPresenter:
     def __init__(self, view):

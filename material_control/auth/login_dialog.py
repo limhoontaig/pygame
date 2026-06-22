@@ -2,7 +2,7 @@
 
 from PyQt5.QtWidgets import *
 from PyQt5.QtCore import Qt
-import database
+import common.database as database
 
 class LoginDialog(QDialog):
     def __init__(self):

@@ -1,5 +1,5 @@
 # usage_event_handler.py
-import database
+import common.database as database
 
 class UsageEventHandler:
     def __init__(self, parent_tab):
