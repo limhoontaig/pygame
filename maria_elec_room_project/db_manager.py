@@ -3,6 +3,7 @@ import os
 import struct
 from datetime import datetime, timedelta
 import pymysql  # 💡 라이브러리 변경
+from sqlalchemy import create_engine
 
 # 💡 excel_report.py와의 호환성을 위해 기존 폴더 경로 정의를 다시 추가합니다.
 DB_DIR = os.path.join(os.environ['LOCALAPPDATA'], 'ElecRoomSCADA')
@@ -32,8 +33,17 @@ DATA_LABELS = [
 
 COLUMN_LABELS = ["날짜", "시간/구분"] + DATA_LABELS
 
+_db_url = f"mysql+pymysql://{DB_CONFIG['user']}:{DB_CONFIG['password']}@{DB_CONFIG['host']}:{DB_CONFIG['port']}/{DB_CONFIG['database']}"
+_engine = create_engine(_db_url)
+
 def get_db_connection():
-    """PyMySQL 커넥션을 반환하는 공통 함수"""
+    """[방법 A] 판다스(그래프) 전용 함수"""
+    # 🌟 pymysql.connect가 아니라, 미리 만든 SQLAlchemy '엔진' 객체를 리턴합니다!
+    # 이 객체를 pandas에 넘겨줘야 UserWarning 경고가 발생하지 않습니다.
+    return _engine
+
+def get_db_raw_connection():
+    """기존의 순수한 pymysql connection 객체가 강제로 필요한 경우 사용하는 보조 함수"""
     return pymysql.connect(
         host=DB_CONFIG['host'],
         user=DB_CONFIG['user'],
@@ -44,7 +54,7 @@ def get_db_connection():
     )
 
 def init_db():
-    conn = get_db_connection()
+    conn = get_db_raw_connection()
     c = conn.cursor()
     cols = ", ".join([f'`{name}` REAL' for name in DATA_LABELS])
     
@@ -67,7 +77,7 @@ def init_db():
 
 def calculate_hourly_avg():
     try:
-        conn = get_db_connection()
+        conn = get_db_raw_connection()
         c = conn.cursor()
         now = datetime.now()
         last_hour = (now - timedelta(hours=1))
@@ -98,7 +108,7 @@ def calculate_hourly_avg():
 
 def calculate_daily_extremes(target_date):
     try:
-        conn = get_db_connection()
+        conn = get_db_raw_connection()
         c = conn.cursor()
         max_select = ", ".join([f'MAX(`{name}`)' for name in DATA_LABELS])
         min_select = ", ".join([f'MIN(`{name}`)' for name in DATA_LABELS])
@@ -129,7 +139,7 @@ def calculate_daily_extremes(target_date):
 METER_FIELDS = ["main_active", "main_reactive", "ind_mid", "ind_max", "ind_light", "street_mid", "street_max", "street_light", "geo_1", "geo_2", "geo_3"]
 
 def create_manual_meter_table():
-    conn = get_db_connection()
+    conn = get_db_raw_connection()
     c = conn.cursor()
     c.execute('''
         CREATE TABLE IF NOT EXISTS manual_meter_logs (
@@ -144,7 +154,7 @@ def create_manual_meter_table():
 
 def get_manual_meter_data(target_date):
     create_manual_meter_table()
-    conn = get_db_connection()
+    conn = get_db_raw_connection()
     c = conn.cursor()
     fields_str = ", ".join([f"`{f}`" for f in METER_FIELDS])
     c.execute(f'SELECT {fields_str} FROM manual_meter_logs WHERE log_date = %s', (target_date,))
@@ -160,7 +170,7 @@ def get_manual_meter_data(target_date):
 
 def save_manual_meter_data(target_date, data_dict):
     create_manual_meter_table()
-    conn = get_db_connection()
+    conn = get_db_raw_connection()
     c = conn.cursor()
     fields_str = "log_date, " + ", ".join([f"`{f}`" for f in METER_FIELDS])
     placeholders = ", ".join(["%s"] * (len(METER_FIELDS) + 1))
@@ -177,7 +187,7 @@ def save_manual_meter_data(target_date, data_dict):
 
 def get_manual_meter_log_for_table(target_date):
     create_manual_meter_table()
-    conn = get_db_connection()
+    conn = get_db_raw_connection()
     c = conn.cursor()
     fields_str = ", ".join([f"`{f}`" for f in METER_FIELDS])
     c.execute(f"SELECT log_date, {fields_str} FROM manual_meter_logs WHERE log_date = %s", (target_date,))
@@ -191,7 +201,7 @@ def get_manual_meter_log_for_table(target_date):
         return [target_date] + ["-"] * len(METER_FIELDS)
 
 def create_field_inspection_table():
-    conn = get_db_connection()
+    conn = get_db_raw_connection()
     c = conn.cursor()
     c.execute('''
         CREATE TABLE IF NOT EXISTS field_inspection (
@@ -208,7 +218,7 @@ def create_field_inspection_table():
 
 def save_field_inspection(target_date, round_val, inspector_name):
     create_field_inspection_table()
-    conn = get_db_connection()
+    conn = get_db_raw_connection()
     c = conn.cursor()
     try:
         # 💡 SQLite 전용 datetime('now', 'localtime') -> NOW() 변경
@@ -227,7 +237,7 @@ def save_field_inspection(target_date, round_val, inspector_name):
 
 def get_field_inspections_for_date(target_date):
     create_field_inspection_table()
-    conn = get_db_connection()
+    conn = get_db_raw_connection()
     c = conn.cursor()
     c.execute('''
         SELECT inspection_round, inspector_name, DATE_FORMAT(inspected_at, '%%H:%%M') 

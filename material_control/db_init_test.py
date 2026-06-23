@@ -1,5 +1,5 @@
 # db_init_test.py (테이블 강제 생성용 임시 파일)
-import database
+import common.database as database
 
 print("1. 마리아DB 연결 및 테이블 생성을 시작합니다...")
 try:

@@ -128,21 +128,25 @@ class SCADAWindow(QMainWindow):
         db_manager.calculate_daily_extremes(selected_date)
         
         try:
-            conn = sqlite3.connect(db_manager.DB_NAME)
+            conn = db_manager.get_db_raw_connection()
             c = conn.cursor()
             
-            query_raw = f"SELECT log_date, log_time, {', '.join([f'\"{n}\"' for n in db_manager.DATA_LABELS])} FROM raw_data WHERE log_date = %s ORDER BY log_time DESC"
+            # 💡 [핵심 수정] % 기호를 %%로 두 번씩 적어줍니다 (Python 문자열 포맷팅 충돌 방지)
+            query_raw = f"SELECT DATE_FORMAT(log_date, '%%Y-%%m-%%d'), TIME_FORMAT(log_time, '%%H:%%i:%%s'), {', '.join([f'`{n}`' for n in db_manager.DATA_LABELS])} FROM raw_data WHERE log_date = %s ORDER BY log_time DESC"
             c.execute(query_raw, (selected_date,))
             self.display_table(self.raw_table, c.fetchall())
             
-            query_avg = f"SELECT log_date, log_time, {', '.join([f'\"{n}\"' for n in db_manager.DATA_LABELS])} FROM hourly_avg WHERE log_date = %s ORDER BY log_time DESC"
+            # 💡 [핵심 수정] 여기도 %%Y, %%m, %%d, %%H, %%i, %%s로 변경
+            query_avg = f"SELECT DATE_FORMAT(log_date, '%%Y-%%m-%%d'), TIME_FORMAT(log_time, '%%H:%%i:%%s'), {', '.join([f'`{n}`' for n in db_manager.DATA_LABELS])} FROM hourly_avg WHERE log_date = %s ORDER BY log_time DESC"
             c.execute(query_avg, (selected_date,))
             self.display_table(self.avg_table, c.fetchall())
             
-            query_ext = f"SELECT log_date, extreme_type, {', '.join([f'\"{n}\"' for n in db_manager.DATA_LABELS])} FROM daily_extremes WHERE log_date = %s ORDER BY extreme_type DESC"
+            # 💡 [핵심 수정] 여기도 %%Y, %%m, %%d로 변경
+            query_ext = f"SELECT DATE_FORMAT(log_date, '%%Y-%%m-%%d'), extreme_type, {', '.join([f'`{n}`' for n in db_manager.DATA_LABELS])} FROM daily_extremes WHERE log_date = %s ORDER BY extreme_type DESC"
             c.execute(query_ext, (selected_date,))
             self.display_table(self.extreme_table, c.fetchall(), is_extreme=True)
             
+            c.close()
             conn.close()
 
             if hasattr(db_manager, 'get_manual_meter_log_for_table'):

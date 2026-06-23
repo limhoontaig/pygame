@@ -3,8 +3,8 @@ import serial
 import struct
 import time
 from datetime import datetime, timedelta
-import sqlite3 # 💡 DB 직접 삽입을 위해 추가
-from db_manager import DATA_LABELS  # 💡 db_manager에서는 경로와 라벨만 가져옴
+
+from db_manager import DATA_LABELS, get_db_connection  # 💡 db_manager에서는 경로와 라벨만 가져옴
 
 COM_PORT = 'COM3'         
 BAUD_RATE = 19200         
@@ -80,7 +80,7 @@ def serial_receive_thread():
 def insert_raw_data(values):
     if len(values) < len(DATA_LABELS): return
     try:
-        conn = sqlite3.connect(DB_NAME)
+        conn = get_db_connection()
         c = conn.cursor()
         now = datetime.now()
         l_date, l_time = now.strftime('%Y-%m-%d'), now.strftime('%H:%M:%S')
@@ -94,9 +94,12 @@ def insert_raw_data(values):
             elif label in DIV_BY_100: adjusted_values.append(val / 100.0)
             else: adjusted_values.append(float(val))
 
-        placeholders = ", ".join(["?"] * len(adjusted_values))
-        col_names = ", ".join([f'"{name}"' for name in DATA_LABELS])
-        c.execute(f"INSERT INTO raw_data (log_date, log_time, {col_names}) VALUES (?, ?, {placeholders})", [l_date, l_time] + adjusted_values)
+        placeholders = ", ".join(["%s"] * len(adjusted_values))
+        
+        col_names = ", ".join([f"`{name}`" for name in DATA_LABELS])
+        
+        query = f"INSERT INTO raw_data (log_date, log_time, {col_names}) VALUES (%s, %s, {placeholders})"
+        c.execute(query, [l_date, l_time] + adjusted_values)
         conn.commit()
         conn.close()
     except Exception as e:
