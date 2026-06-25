@@ -26,15 +26,17 @@ DATA_LABELS = [
     "KEP_V_R", "KEP_V_S", "KEP_V_T", "KEP_V_R_S", "KEP_V_S_T", "KEP_V_T_R", 
     "KEP_A_R", "KEP_A_S", "KEP_A_T", 
     "KEP_frequency", "KEP_P_kW", "KEP_P_kWh", 
-    "Tr1_A_R", "Tr1_A_S", "Tr1_A_T", "Tr1_V_R", "Tr1_V_S", "Tr1_V_T", "Tr1_V_R_S", "Tr1_V_S_T", "Tr1_V_T_R", "Tr1_kw", "Tr1_Temp", 
-    "Tr2_A_R", "Tr2_A_S", "Tr2_A_T", "Tr2_V_R", "Tr2_V_S", "Tr2_V_T", "Tr2_V_R_S", "Tr2_V_S_T", "Tr2_V_T_R", "Tr2_kw", "Tr2_Temp", 
-    "Tr3_A_R", "Tr3_A_S", "Tr3_A_T", "Tr3_V_R", "Tr3_V_S", "Tr3_V_T", "Tr3_V_R_S", "Tr3_V_S_T", "Tr3_V_T_R", "Tr3_kw", "Tr3_Temp"
+    "Tr1_A_R", "Tr1_A_S", "Tr1_A_T", "Tr1_V_R", "Tr1_V_S", "Tr1_V_T", "Tr1_V_R_S", "Tr1_V_S_T", "Tr1_V_T_R", "Tr1_P_kW", "Tr1_Temp",
+    "Tr2_A_R", "Tr2_A_S", "Tr2_A_T", "Tr2_V_R", "Tr2_V_S", "Tr2_V_T", "Tr2_V_R_S", "Tr2_V_S_T", "Tr2_V_T_R", "Tr2_P_kW", "Tr2_Temp",
+    "Tr3_A_R", "Tr3_A_S", "Tr3_A_T", "Tr3_V_R", "Tr3_V_S", "Tr3_V_T", "Tr3_V_R_S", "Tr3_V_S_T", "Tr3_V_T_R", "Tr3_P_kW", "Tr3_Temp"
 ]
 
 # 수동 검침용 10개 필드 정의
 METER_FIELDS = [
-    "main_kepco", "rectifier", "fire_power", "light_power", 
-    "water_pump", "machinery", "elevator", "tr1_temp", "tr2_temp", "tr3_temp"
+    "main_active", "main_reactive", 
+    "ind_mid", "ind_max", "ind_light", 
+    "street_mid", "street_max", "street_light", 
+    "geo_1", "geo_2", "geo_3"
 ]
 
 # =========================================================================
@@ -82,17 +84,18 @@ def init_db():
     # 3. 수동 검침 데이터 manual_meter_logs 테이블 생성
     c.execute('''
         CREATE TABLE IF NOT EXISTS manual_meter_logs (
-            log_date VARCHAR(10) PRIMARY KEY,
-            main_kepco DOUBLE DEFAULT 0,
-            rectifier DOUBLE DEFAULT 0,
-            fire_power DOUBLE DEFAULT 0,
-            light_power DOUBLE DEFAULT 0,
-            water_pump DOUBLE DEFAULT 0,
-            machinery DOUBLE DEFAULT 0,
-            elevator DOUBLE DEFAULT 0,
-            tr1_temp DOUBLE DEFAULT 0,
-            tr2_temp DOUBLE DEFAULT 0,
-            tr3_temp DOUBLE DEFAULT 0
+            log_date DATE PRIMARY KEY,
+            main_active REAL,
+            main_reactive REAL,
+            ind_mid REAL,
+            ind_max REAL,
+            ind_light REAL,
+            street_mid REAL,
+            street_max REAL,
+            street_light REAL,
+            geo_1 REAL,
+            geo_2 REAL,
+            geo_3 REAL
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
     ''')
 
