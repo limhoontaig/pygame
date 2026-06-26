@@ -11,7 +11,7 @@ DB_DIR = os.path.join(os.environ['LOCALAPPDATA'], 'ElecRoomSCADA')
 # 💡 MariaDB 접속 정보 설정 (본인 환경에 맞게 수정)
 DB_CONFIG = {
     'host': 'localhost',
-    'user': 'scada_user',        # 💡 새로 만든 계정으로 변경
+    'user': 'root',        # 💡 새로 만든 계정으로 변경
     'password': 'scada1234',     # 💡 새로 설정한 비밀번호로 변경
     'database': 'elecroomscada',
     'port': 3306,
