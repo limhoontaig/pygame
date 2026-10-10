@@ -30,14 +30,14 @@ class WaterCalcApp(QMainWindow):
         self.save_dir_path = f'D:/과장/1 1 부과자료/{yyyy}년/{yyyymm}/xperp_감면자료'
 
     def init_ui(self):
-        self.setWindowTitle('강남데시앙파크 아파트 관리사무소 수도감면 세대 관리 프로그램')
+        self.setWindowTitle('래미안개포루체하임아파트 세대 수도감면 관리 프로그램')
         self.resize(900, 730)
         
         central_widget = QWidget(self)
         self.setCentralWidget(central_widget)
 
         # 타이틀 라벨
-        self.label_title = QLabel('강남데시앙파크 아파트 관리사무소 수도감면 세대 관리 프로그램', central_widget)
+        self.label_title = QLabel('래미안개포루체하임아파트 세대 수도감면 관리 프로그램', central_widget)
         self.label_title.setGeometry(100, 10, 700, 50)
         font_title = self.label_title.font()
         font_title.setFamily('HY헤드라인M')
@@ -109,7 +109,7 @@ class WaterCalcApp(QMainWindow):
                 lbl.setGeometry(x, y, w, h)
 
         # 하단 버튼 및 정보
-        self.lbl_developer = QLabel('프로그램 작성 : 임훈택 Rev 1.3, 2026.10 Issued', central_widget)
+        self.lbl_developer = QLabel('프로그램 작성 : 임훈택 Rev 1.6, 2026.10 Issued', central_widget)
         self.lbl_developer.setGeometry(30, 665, 350, 30)
 
         self.btn_verify = QPushButton('자료 검증', central_widget)
@@ -141,27 +141,30 @@ class WaterCalcApp(QMainWindow):
         dname = QFileDialog.getExistingDirectory(self, '저장 경로 선택')
         if dname: self.le_file4.setText(dname)
 
-    def load_code_mapping(self, code_file):
-        """조견표 파일에서 수도 감면 종류와 코드를 동적으로 읽어옴[cite: 6]"""
-        df = pd.read_excel(code_file, sheet_name=0, skiprows=1)
+    def load_water_code_mapping(self, code_file):
+        """조견표 파일의 하단 수도 감면 영역(D21~D25 범위, 0-indexed 행 20~24)만 정확히 읽어옴"""
+        df = pd.read_excel(code_file, sheet_name=0, header=None)
         mapping = {}
-        for _, row in df.iterrows():
-            val_cat = row.iloc[2]  # 종류
-            val_code = row.iloc[3] # 코드
+        for idx in range(20, min(25, len(df))):
+            row = df.iloc[idx]
+            val_cat = row.iloc[2]  # 종류 (기초생활, 다자녀, 유공자, 중증장애, 중복할인1)
+            val_code = row.iloc[3] # 코드 (3, I, 2, T, V)
             if pd.notna(val_cat) and pd.notna(val_code):
                 mapping[str(val_cat).strip()] = str(val_code).strip()
+        print(f"[DEBUG 수도 조견표 매핑]: {mapping}")
         return mapping
 
     def get_mapped_code(self, cat_name, code_mapping):
-        """상세조회 파일의 감면 카테고리명을 조견표 키워드와 매칭[cite: 6]"""
-        if '기초생활' in cat_name:
+        """상세조회 파일의 감면 카테고리명을 정확히 매칭"""
+        cat_str = str(cat_name)
+        if '기초생활' in cat_str:
             return code_mapping.get('기초생활', '3')
-        elif '다자녀' in cat_name:
+        elif '다자녀' in cat_str:
             return code_mapping.get('다자녀', 'I')
-        elif '독립유공' in cat_name or '유공자' in cat_name:
+        elif '독립유공' in cat_str or '유공자' in cat_str:
             return code_mapping.get('유공자', '2')
-        elif '중증장애' in cat_name:
-            return code_mapping.get('중증장애', '4')
+        elif '중증장애' in cat_str:
+            return code_mapping.get('중증장애', 'T')
         return ''
 
     def start_calculation(self):
@@ -175,8 +178,7 @@ class WaterCalcApp(QMainWindow):
             return
 
         try:
-            # 조견표 파일에서 코드 동적 로드[cite: 6]
-            code_mapping = self.load_code_mapping(f3)
+            code_mapping = self.load_water_code_mapping(f3)
 
             df_detail_parsed, summary_stats = self.parse_detail_file(f1)
             
@@ -188,7 +190,6 @@ class WaterCalcApp(QMainWindow):
             self.summary_inputs['le_overlap'].setText(f"{summary_stats.get('중복', 0):>10,}")
             self.summary_inputs['le_total'].setText(f"{summary_stats.get('총합', 0):>10,}")
 
-            # 템플릿 파일 매핑 및 저장 (헤더 제외)
             self.apply_to_template(f2, f4, df_detail_parsed, code_mapping)
 
             QMessageBox.information(self, "완료", "수도감면 계산 및 업로드 파일 생성이 성공적으로 완료되었습니다!")
