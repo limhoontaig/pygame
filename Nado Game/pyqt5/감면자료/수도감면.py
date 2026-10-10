@@ -5,7 +5,7 @@ import pandas as pd
 from datetime import datetime
 from PyQt5.QtWidgets import (
     QApplication, QMainWindow, QWidget, QLabel, QLineEdit, QPushButton,
-    QGroupBox, QMessageBox, QFileDialog, QVBoxLayout, QHBoxLayout, QGridLayout, QListWidget
+    QGroupBox, QMessageBox, QFileDialog, QVBoxLayout, QHBoxLayout, QGridLayout, QListWidget, QSizePolicy
 )
 from PyQt5.QtCore import Qt
 
@@ -30,7 +30,7 @@ class WaterCalcApp(QMainWindow):
 
     def init_ui(self):
         self.setWindowTitle('래미안개포루체하임아파트 세대 수도감면 관리 프로그램')
-        self.resize(900, 720)  # 적정 창 크기 유지
+        self.resize(900, 700)
         
         central_widget = QWidget(self)
         self.setCentralWidget(central_widget)
@@ -41,6 +41,7 @@ class WaterCalcApp(QMainWindow):
 
         # 타이틀 라벨
         self.label_title = QLabel('래미안개포루체하임아파트 세대 수도감면 관리 프로그램')
+        self.label_title.setFixedHeight(45)
         font_title = self.label_title.font()
         font_title.setFamily('HY헤드라인M')
         font_title.setPointSize(14)
@@ -53,11 +54,13 @@ class WaterCalcApp(QMainWindow):
         def create_file_group(title, line_edit, btn_text, slot_func):
             gb = QGroupBox(title)
             layout = QHBoxLayout()
-            layout.setContentsMargins(10, 5, 10, 5)
+            layout.setContentsMargins(10, 6, 10, 6)
             line_edit.setReadOnly(False)
+            line_edit.setFixedHeight(26)
             layout.addWidget(line_edit)
             btn = QPushButton(btn_text)
             btn.setFixedWidth(110)
+            btn.setFixedHeight(26)
             btn.clicked.connect(slot_func)
             layout.addWidget(btn)
             gb.setLayout(layout)
@@ -78,8 +81,8 @@ class WaterCalcApp(QMainWindow):
         def create_summary_group(title, prefix):
             gb = QGroupBox(title)
             grid = QGridLayout()
-            grid.setContentsMargins(10, 4, 10, 4)
-            grid.setSpacing(4)
+            grid.setContentsMargins(10, 6, 10, 6)
+            grid.setSpacing(6)
             
             items = [
                 ('다자녀감면', 0, 0), (f'{prefix}_dajanya', 0, 1),
@@ -95,6 +98,7 @@ class WaterCalcApp(QMainWindow):
                 if name.startswith('le_'):
                     le = QLineEdit()
                     le.setReadOnly(True)
+                    le.setFixedHeight(26)
                     le.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
                     grid.addWidget(le, r, c)
                     inputs[name] = le
@@ -110,40 +114,42 @@ class WaterCalcApp(QMainWindow):
         gb_act, self.act_inputs = create_summary_group('공제 종류별 총 공제요금 합계액 현황표 [실제 반영 기준]', 'le_act')
         main_layout.addWidget(gb_act)
 
-        # 미반영(누락) 세대 내역 리스트박스 그룹 (높이 고정으로 여백 문제 해결)
+        # 미반영(누락) 세대 내역 리스트박스 그룹 (높이 고정 및 확장 방지 정책 설정)
         gb_unapplied = QGroupBox('템플릿 미반영(누락) 세대 내역 확인창')
+        gb_unapplied.setFixedHeight(85)
+        gb_unapplied.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
         unapplied_layout = QVBoxLayout()
-        unapplied_layout.setContentsMargins(10, 4, 10, 4)
+        unapplied_layout.setContentsMargins(8, 4, 8, 4)
         self.list_unapplied = QListWidget()
-        self.list_unapplied.setFixedHeight(65)
+        self.list_unapplied.setFixedHeight(50)
         unapplied_layout.addWidget(self.list_unapplied)
         gb_unapplied.setLayout(unapplied_layout)
         main_layout.addWidget(gb_unapplied)
 
         # 하단 버튼 및 정보 레이아웃
         bottom_layout = QHBoxLayout()
-        bottom_layout.setContentsMargins(0, 2, 0, 0)
+        bottom_layout.setContentsMargins(0, 5, 0, 0)
         
-        self.lbl_developer = QLabel('프로그램 작성 : 임훈택 Rev 2.4, 2026.10 Issued')
+        self.lbl_developer = QLabel('프로그램 작성 : 임훈택 Rev 2.8, 2026.10 Issued')
         bottom_layout.addWidget(self.lbl_developer)
         bottom_layout.addStretch()
 
         self.btn_verify = QPushButton('자료 검증')
         self.btn_verify.setFixedWidth(110)
-        self.btn_verify.setFixedHeight(32)
+        self.btn_verify.setFixedHeight(34)
         self.btn_verify.clicked.connect(lambda: QMessageBox.information(self, "안내", "계산 시작을 통해 검증이 반영됩니다."))
         bottom_layout.addWidget(self.btn_verify)
 
         self.btn_start = QPushButton('계산 시작')
         self.btn_start.setFixedWidth(130)
-        self.btn_start.setFixedHeight(32)
+        self.btn_start.setFixedHeight(34)
         self.btn_start.setStyleSheet("font-weight: bold; color: blue;")
         self.btn_start.clicked.connect(self.start_calculation)
         bottom_layout.addWidget(self.btn_start)
 
         self.btn_close = QPushButton('종     료')
         self.btn_close.setFixedWidth(110)
-        self.btn_close.setFixedHeight(32)
+        self.btn_close.setFixedHeight(34)
         self.btn_close.clicked.connect(self.close)
         bottom_layout.addWidget(self.btn_close)
 
@@ -203,23 +209,23 @@ class WaterCalcApp(QMainWindow):
 
             bill_stats, df_detail_parsed = self.parse_detail_file(f1)
             
-            self.bill_inputs['le_bill_dajanya'].setText(f"{bill_stats['다자녀감면']['cnt']}세대 / {int(bill_stats['다자녀감면']['amt']):>9,}")
-            self.bill_inputs['le_bill_kicho'].setText(f"{bill_stats['기초생활']['cnt']}세대 / {int(bill_stats['기초생활']['amt']):>9,}")
-            self.bill_inputs['le_bill_jungjoong'].setText(f"{bill_stats['중증장애']['cnt']}세대 / {int(bill_stats['중증장애']['amt']):>9,}")
-            self.bill_inputs['le_bill_yugong'].setText(f"{bill_stats['유공자']['cnt']}세대 / {int(bill_stats['유공자']['amt']):>9,}")
-            self.bill_inputs['le_bill_overlap'].setText(f"{bill_stats['중복']['cnt']}세대 / {int(bill_stats['중복']['amt']):>9,}")
-            self.bill_inputs['le_bill_total'].setText(f"{bill_stats['총합']['cnt']}세대 / {int(bill_stats['총합']['amt']):>9,}")
+            self.bill_inputs['le_bill_dajanya'].setText(f"{bill_stats['다자녀감면']['cnt']}세대 / {int(bill_stats['다자녀감면']['amt']):9,}")
+            self.bill_inputs['le_bill_kicho'].setText(f"{bill_stats['기초생활']['cnt']}세대 / {int(bill_stats['기초생활']['amt']):9,}")
+            self.bill_inputs['le_bill_jungjoong'].setText(f"{bill_stats['중증장애']['cnt']}세대 / {int(bill_stats['중증장애']['amt']):9,}")
+            self.bill_inputs['le_bill_yugong'].setText(f"{bill_stats['유공자']['cnt']}세대 / {int(bill_stats['유공자']['amt']):9,}")
+            self.bill_inputs['le_bill_overlap'].setText(f"{bill_stats['중복']['cnt']}세대 / {int(bill_stats['중복']['amt']):9,}")
+            self.bill_inputs['le_bill_total'].setText(f"{bill_stats['총합']['cnt']}세대 / {int(bill_stats['총합']['amt']):9,}")
 
             self.list_unapplied.clear()
 
             actual_stats, unapplied_records = self.apply_to_template(f2, f4, df_detail_parsed, code_mapping)
             
-            self.act_inputs['le_act_dajanya'].setText(f"{actual_stats['다자녀감면']['cnt']}세대 / {int(actual_stats['다자녀감면']['amt']):>9,}")
-            self.act_inputs['le_act_kicho'].setText(f"{actual_stats['기초생활']['cnt']}세대 / {int(actual_stats['기초생활']['amt']):>9,}")
-            self.act_inputs['le_act_jungjoong'].setText(f"{actual_stats['중증장애']['cnt']}세대 / {int(actual_stats['중증장애']['amt']):>9,}")
-            self.act_inputs['le_act_yugong'].setText(f"{actual_stats['유공자']['cnt']}세대 / {int(actual_stats['유공자']['amt']):>9,}")
-            self.act_inputs['le_act_overlap'].setText(f"{actual_stats['중복']['cnt']}세대 / {int(actual_stats['중복']['amt']):>9,}")
-            self.act_inputs['le_act_total'].setText(f"{actual_stats['총합']['cnt']}세대 / {int(actual_stats['총합']['amt']):>9,}")
+            self.act_inputs['le_act_dajanya'].setText(f"{actual_stats['다자녀감면']['cnt']}세대 / {int(actual_stats['다자녀감면']['amt']):9,}")
+            self.act_inputs['le_act_kicho'].setText(f"{actual_stats['기초생활']['cnt']}세대 / {int(actual_stats['기초생활']['amt']):9,}")
+            self.act_inputs['le_act_jungjoong'].setText(f"{actual_stats['중증장애']['cnt']}세대 / {int(actual_stats['중증장애']['amt']):9,}")
+            self.act_inputs['le_act_yugong'].setText(f"{actual_stats['유공자']['cnt']}세대 / {int(actual_stats['유공자']['amt']):9,}")
+            self.act_inputs['le_act_overlap'].setText(f"{actual_stats['중복']['cnt']}세대 / {int(actual_stats['중복']['amt']):9,}")
+            self.act_inputs['le_act_total'].setText(f"{actual_stats['총합']['cnt']}세대 / {int(actual_stats['총합']['amt']):9,}")
 
             if unapplied_records:
                 for rec in unapplied_records:
