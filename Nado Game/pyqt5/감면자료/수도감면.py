@@ -10,7 +10,6 @@ from PyQt5.QtWidgets import (
 from PyQt5.QtCore import Qt
 
 import warnings
-
 warnings.filterwarnings('ignore', category=UserWarning, module='openpyxl')
 
 class WaterCalcApp(QMainWindow):
@@ -31,14 +30,14 @@ class WaterCalcApp(QMainWindow):
 
     def init_ui(self):
         self.setWindowTitle('래미안개포루체하임아파트 세대 수도감면 관리 프로그램')
-        self.resize(900, 730)
+        self.resize(900, 620)  # 창 높이 축소
         
         central_widget = QWidget(self)
         self.setCentralWidget(central_widget)
 
         # 타이틀 라벨
         self.label_title = QLabel('래미안개포루체하임아파트 세대 수도감면 관리 프로그램', central_widget)
-        self.label_title.setGeometry(100, 10, 700, 50)
+        self.label_title.setGeometry(100, 10, 700, 45)
         font_title = self.label_title.font()
         font_title.setFamily('HY헤드라인M')
         font_title.setPointSize(15)
@@ -49,80 +48,105 @@ class WaterCalcApp(QMainWindow):
 
         # 1. 수도요금 감면세대 상세조회 파일 선택
         self.gb_file1 = QGroupBox('수도요금 감면세대 상세조회 파일 선택', central_widget)
-        self.gb_file1.setGeometry(30, 75, 841, 80)
+        self.gb_file1.setGeometry(30, 65, 841, 65)
         self.le_file1 = QLineEdit(self.detail_file_path, self.gb_file1)
-        self.le_file1.setGeometry(10, 30, 700, 31)
+        self.le_file1.setGeometry(10, 24, 700, 28)
         self.btn_file1 = QPushButton('상세조회파일', self.gb_file1)
-        self.btn_file1.setGeometry(720, 30, 110, 31)
+        self.btn_file1.setGeometry(720, 24, 110, 28)
         self.btn_file1.clicked.connect(self.select_detail_file)
 
         # 2. Template 파일 선택
         self.gb_file2 = QGroupBox('XPERP Upload용 Template 파일 선택', central_widget)
-        self.gb_file2.setGeometry(30, 165, 841, 80)
+        self.gb_file2.setGeometry(30, 135, 841, 65)
         self.le_file2 = QLineEdit(self.template_file_path, self.gb_file2)
-        self.le_file2.setGeometry(10, 30, 700, 31)
+        self.le_file2.setGeometry(10, 24, 700, 28)
         self.btn_file2 = QPushButton('Template', self.gb_file2)
-        self.btn_file2.setGeometry(720, 30, 110, 31)
+        self.btn_file2.setGeometry(720, 24, 110, 28)
         self.btn_file2.clicked.connect(self.select_template_file)
 
         # 3. 수도용 코드 조견표 파일
         self.gb_file3 = QGroupBox('수도용 코드 조견표 파일', central_widget)
-        self.gb_file3.setGeometry(30, 255, 841, 80)
+        self.gb_file3.setGeometry(30, 205, 841, 65)
         self.le_file3 = QLineEdit(self.code_table_path, self.gb_file3)
-        self.le_file3.setGeometry(10, 30, 700, 31)
+        self.le_file3.setGeometry(10, 24, 700, 28)
         self.btn_file3 = QPushButton('Code Table', self.gb_file3)
-        self.btn_file3.setGeometry(720, 30, 110, 31)
+        self.btn_file3.setGeometry(720, 24, 110, 28)
         self.btn_file3.clicked.connect(self.select_code_file)
 
         # 4. XPERP 할인자료 저장경로
         self.gb_file4 = QGroupBox('XPERP 할인자료 업로드파일 저장경로', central_widget)
-        self.gb_file4.setGeometry(30, 345, 841, 80)
+        self.gb_file4.setGeometry(30, 275, 841, 65)
         self.le_file4 = QLineEdit(self.save_dir_path, self.gb_file4)
-        self.le_file4.setGeometry(10, 30, 700, 31)
+        self.le_file4.setGeometry(10, 24, 700, 28)
         self.btn_file4 = QPushButton('저장경로', self.gb_file4)
-        self.btn_file4.setGeometry(720, 30, 110, 31)
+        self.btn_file4.setGeometry(720, 24, 110, 28)
         self.btn_file4.clicked.connect(self.select_save_dir)
 
-        # 5. 공제 종류별 총 공제요금 합계액 현황표
-        self.gb_summary = QGroupBox('공제 종류별 총 공제요금 합계액 현황표', central_widget)
-        self.gb_summary.setGeometry(30, 435, 841, 120)
+        # 5. 그룹박스 1: 고지서 감면내역 총계 기준 현황표
+        self.gb_summary1 = QGroupBox('공제 종류별 총 공제요금 합계액 현황표 [고지서 기준]', central_widget)
+        self.gb_summary1.setGeometry(30, 345, 841, 95)
         
-        labels_info = [
-            ('다자녀감면', 15, 30, 80, 25), ('le_dajanya', 100, 30, 160, 30),
-            ('기초생활', 280, 30, 80, 25), ('le_kicho', 360, 30, 160, 30),
-            ('중증장애인', 540, 30, 80, 25), ('le_jungjoong', 620, 30, 160, 30),
-            ('유공자감면', 15, 75, 80, 25), ('le_yugong', 100, 75, 160, 30),
-            ('중복할인', 280, 75, 80, 25), ('le_overlap', 360, 75, 160, 30),
-            ('총 합 계', 540, 75, 80, 25), ('le_total', 620, 75, 160, 30)
+        labels_info1 = [
+            ('다자녀감면', 15, 22, 75, 20), ('le_bill_dajanya', 95, 22, 140, 24),
+            ('기초생활', 245, 22, 75, 20), ('le_bill_kicho', 325, 22, 140, 24),
+            ('중증장애인', 475, 22, 75, 20), ('le_bill_jungjoong', 555, 22, 140, 24),
+            ('유공자감면', 15, 57, 75, 20), ('le_bill_yugong', 95, 57, 140, 24),
+            ('중복할인', 245, 57, 75, 20), ('le_bill_overlap', 325, 57, 140, 24),
+            ('총 합 계', 475, 57, 75, 20), ('le_bill_total', 555, 57, 140, 24)
         ]
         
-        self.summary_inputs = {}
-        for item in labels_info:
+        self.bill_inputs = {}
+        for item in labels_info1:
             name, x, y, w, h = item
             if name.startswith('le_'):
-                le = QLineEdit(self.gb_summary)
+                le = QLineEdit(self.gb_summary1)
                 le.setGeometry(x, y, w, h)
                 le.setReadOnly(True)
-                self.summary_inputs[name] = le
+                self.bill_inputs[name] = le
             else:
-                lbl = QLabel(name, self.gb_summary)
+                lbl = QLabel(name, self.gb_summary1)
                 lbl.setGeometry(x, y, w, h)
 
-        # 하단 버튼 및 정보
-        self.lbl_developer = QLabel('프로그램 작성 : 임훈택 Rev 1.6, 2026.10 Issued', central_widget)
-        self.lbl_developer.setGeometry(30, 665, 350, 30)
+        # 6. 그룹박스 2: 실제 템플릿 반영 기준 현황표
+        self.gb_summary2 = QGroupBox('공제 종류별 총 공제요금 합계액 현황표 [실제 반영 기준]', central_widget)
+        self.gb_summary2.setGeometry(30, 445, 841, 95)
+        
+        labels_info2 = [
+            ('다자녀감면', 15, 22, 75, 20), ('le_act_dajanya', 95, 22, 140, 24),
+            ('기초생활', 245, 22, 75, 20), ('le_act_kicho', 325, 22, 140, 24),
+            ('중증장애인', 475, 22, 75, 20), ('le_act_jungjoong', 555, 22, 140, 24),
+            ('유공자감면', 15, 57, 75, 20), ('le_act_yugong', 95, 57, 140, 24),
+            ('중복할인', 245, 57, 75, 20), ('le_act_overlap', 325, 57, 140, 24),
+            ('총 합 계', 475, 57, 75, 20), ('le_act_total', 555, 57, 140, 24)
+        ]
+        
+        self.act_inputs = {}
+        for item in labels_info2:
+            name, x, y, w, h = item
+            if name.startswith('le_'):
+                le = QLineEdit(self.gb_summary2)
+                le.setGeometry(x, y, w, h)
+                le.setReadOnly(True)
+                self.act_inputs[name] = le
+            else:
+                lbl = QLabel(name, self.gb_summary2)
+                lbl.setGeometry(x, y, w, h)
+
+        # 하단 버튼 및 정보 (위치 상향 조정)
+        self.lbl_developer = QLabel('프로그램 작성 : 임훈택 Rev 1.9, 2026.10 Issued', central_widget)
+        self.lbl_developer.setGeometry(30, 560, 350, 25)
 
         self.btn_verify = QPushButton('자료 검증', central_widget)
-        self.btn_verify.setGeometry(380, 660, 140, 40)
+        self.btn_verify.setGeometry(380, 555, 140, 35)
         self.btn_verify.clicked.connect(lambda: QMessageBox.information(self, "안내", "계산 시작을 통해 검증이 반영됩니다."))
 
         self.btn_start = QPushButton('계산 시작', central_widget)
-        self.btn_start.setGeometry(530, 660, 160, 40)
+        self.btn_start.setGeometry(530, 555, 160, 35)
         self.btn_start.setStyleSheet("font-weight: bold; color: blue;")
         self.btn_start.clicked.connect(self.start_calculation)
 
         self.btn_close = QPushButton('종     료', central_widget)
-        self.btn_close.setGeometry(700, 660, 160, 40)
+        self.btn_close.setGeometry(700, 555, 160, 35)
         self.btn_close.clicked.connect(self.close)
 
     def select_detail_file(self):
@@ -130,7 +154,7 @@ class WaterCalcApp(QMainWindow):
         if fname: self.le_file1.setText(fname)
 
     def select_template_file(self):
-        fname, _ = QFileDialog.getOpenFileName(self, 'Template 파일 선택', '', 'Excel Files (*.xlsx *.xls)')
+        fname, _ = QFileDialog.getOpenFileName(self, 'Template 파일 선택', '', 'Excel Files (*.xls *.xlsx)')
         if fname: self.le_file2.setText(fname)
 
     def select_code_file(self):
@@ -142,20 +166,17 @@ class WaterCalcApp(QMainWindow):
         if dname: self.le_file4.setText(dname)
 
     def load_water_code_mapping(self, code_file):
-        """조견표 파일의 하단 수도 감면 영역(D21~D25 범위, 0-indexed 행 20~24)만 정확히 읽어옴"""
         df = pd.read_excel(code_file, sheet_name=0, header=None)
         mapping = {}
         for idx in range(20, min(25, len(df))):
             row = df.iloc[idx]
-            val_cat = row.iloc[2]  # 종류 (기초생활, 다자녀, 유공자, 중증장애, 중복할인1)
-            val_code = row.iloc[3] # 코드 (3, I, 2, T, V)
+            val_cat = row.iloc[2]
+            val_code = row.iloc[3]
             if pd.notna(val_cat) and pd.notna(val_code):
                 mapping[str(val_cat).strip()] = str(val_code).strip()
-        print(f"[DEBUG 수도 조견표 매핑]: {mapping}")
         return mapping
 
     def get_mapped_code(self, cat_name, code_mapping):
-        """상세조회 파일의 감면 카테고리명을 정확히 매칭"""
         cat_str = str(cat_name)
         if '기초생활' in cat_str:
             return code_mapping.get('기초생활', '3')
@@ -180,17 +201,23 @@ class WaterCalcApp(QMainWindow):
         try:
             code_mapping = self.load_water_code_mapping(f3)
 
-            df_detail_parsed, summary_stats = self.parse_detail_file(f1)
+            bill_stats, df_detail_parsed = self.parse_detail_file(f1)
             
-            # UI 현황표 업데이트 (양수 값 표시)
-            self.summary_inputs['le_dajanya'].setText(f"{summary_stats.get('다자녀감면', 0):>10,}")
-            self.summary_inputs['le_kicho'].setText(f"{summary_stats.get('복지감면2 (기초생활수급자)', 0):>10,}")
-            self.summary_inputs['le_jungjoong'].setText(f"{summary_stats.get('복지감면3 (중증장애인)', 0):>10,}")
-            self.summary_inputs['le_yugong'].setText(f"{summary_stats.get('복지감면1 (독립유공자)', 0):>10,}")
-            self.summary_inputs['le_overlap'].setText(f"{summary_stats.get('중복', 0):>10,}")
-            self.summary_inputs['le_total'].setText(f"{summary_stats.get('총합', 0):>10,}")
+            self.bill_inputs['le_bill_dajanya'].setText(f"{bill_stats['다자녀감면']['cnt']}세대 / {bill_stats['다자녀감면']['amt']:>9,}")
+            self.bill_inputs['le_bill_kicho'].setText(f"{bill_stats['기초생활']['cnt']}세대 / {bill_stats['기초생활']['amt']:>9,}")
+            self.bill_inputs['le_bill_jungjoong'].setText(f"{bill_stats['중증장애']['cnt']}세대 / {bill_stats['중증장애']['amt']:>9,}")
+            self.bill_inputs['le_bill_yugong'].setText(f"{bill_stats['유공자']['cnt']}세대 / {bill_stats['유공자']['amt']:>9,}")
+            self.bill_inputs['le_bill_overlap'].setText(f"{bill_stats['중복']['cnt']}세대 / {bill_stats['중복']['amt']:>9,}")
+            self.bill_inputs['le_bill_total'].setText(f"{bill_stats['총합']['cnt']}세대 / {bill_stats['총합']['amt']:>9,}")
 
-            self.apply_to_template(f2, f4, df_detail_parsed, code_mapping)
+            actual_stats = self.apply_to_template(f2, f4, df_detail_parsed, code_mapping)
+            
+            self.act_inputs['le_act_dajanya'].setText(f"{actual_stats['다자녀감면']['cnt']}세대 / {actual_stats['다자녀감면']['amt']:>9,}")
+            self.act_inputs['le_act_kicho'].setText(f"{actual_stats['기초생활']['cnt']}세대 / {actual_stats['기초생활']['amt']:>9,}")
+            self.act_inputs['le_act_jungjoong'].setText(f"{actual_stats['중증장애']['cnt']}세대 / {actual_stats['중증장애']['amt']:>9,}")
+            self.act_inputs['le_act_yugong'].setText(f"{actual_stats['유공자']['cnt']}세대 / {actual_stats['유공자']['amt']:>9,}")
+            self.act_inputs['le_act_overlap'].setText(f"{actual_stats['중복']['cnt']}세대 / {actual_stats['중복']['amt']:>9,}")
+            self.act_inputs['le_act_total'].setText(f"{actual_stats['총합']['cnt']}세대 / {actual_stats['총합']['amt']:>9,}")
 
             QMessageBox.information(self, "완료", "수도감면 계산 및 업로드 파일 생성이 성공적으로 완료되었습니다!")
 
@@ -205,9 +232,16 @@ class WaterCalcApp(QMainWindow):
         wb = openpyxl.load_workbook(detail_file, data_only=True)
         ws = wb.active
 
-        summary_stats = {}
-        summary_units = {}
+        bill_stats = {
+            '다자녀감면': {'cnt': 0, 'amt': 0},
+            '기초생활': {'cnt': 0, 'amt': 0},
+            '중증장애': {'cnt': 0, 'amt': 0},
+            '유공자': {'cnt': 0, 'amt': 0},
+            '중복': {'cnt': 0, 'amt': 0},
+            '총합': {'cnt': 0, 'amt': 0}
+        }
         
+        summary_units = {}
         for c in range(2, 7):
             cat = ws.cell(row=4, column=c).value
             amt_str = ws.cell(row=5, column=c).value
@@ -220,8 +254,20 @@ class WaterCalcApp(QMainWindow):
                 cnt = int(re.sub(r'[^0-9]', '', str(cnt_str))) if cnt_str else 0
                 unit_amt = int(amt / cnt) if cnt > 0 else 0
                 
-                summary_stats[cat_clean] = amt
                 summary_units[cat_clean] = unit_amt
+                
+                if '다자녀' in cat_clean:
+                    bill_stats['다자녀감면'] = {'cnt': cnt, 'amt': amt}
+                elif '기초생활' in cat_clean:
+                    bill_stats['기초생활'] = {'cnt': cnt, 'amt': amt}
+                elif '중증장애' in cat_clean:
+                    bill_stats['중증장애'] = {'cnt': cnt, 'amt': amt}
+                elif '유공자' in cat_clean or '독립유공' in cat_clean:
+                    bill_stats['유공자'] = {'cnt': cnt, 'amt': amt}
+
+        total_cnt = sum([v['cnt'] for k, v in bill_stats.items() if k != '총합'])
+        total_amt = sum([v['amt'] for k, v in bill_stats.items() if k != '총합'])
+        bill_stats['총합'] = {'cnt': total_cnt, 'amt': total_amt}
 
         all_records = []
         current_row = 8
@@ -255,11 +301,7 @@ class WaterCalcApp(QMainWindow):
                 current_row += 1
 
         df_records = pd.DataFrame(all_records)
-        total_sum = sum([v for v in summary_stats.values()])
-        summary_stats['총합'] = total_sum
-        summary_stats['중복'] = 0
-
-        return df_records, summary_stats
+        return bill_stats, df_records
 
     def apply_to_template(self, template_file, save_dir, df_detail, code_mapping):
         df_template = pd.read_excel(template_file, skiprows=0)
@@ -288,15 +330,19 @@ class WaterCalcApp(QMainWindow):
                 final_code = code_mapping.get('중복할인1', 'V') if len(codes) > 1 else (codes[0] if len(codes) == 1 else '')
                 total_unit_amt = sum(unit_amounts)
 
+                primary_cat = cats[0] if len(cats) == 1 else '중복'
+
                 grouped_records.append({
                     '동': dong,
                     '호': ho,
                     '감면구분': final_code,
-                    '수도감면금': total_unit_amt if total_unit_amt != 0 else 0
+                    '수도감면금': total_unit_amt if total_unit_amt != 0 else 0,
+                    '원본카테고리': primary_cat,
+                    '상세항목수': len(cats)
                 })
             df_mapped = pd.DataFrame(grouped_records)
         else:
-            df_mapped = pd.DataFrame(columns=['동', '호', '감면구분', '수도감면금'])
+            df_mapped = pd.DataFrame(columns=['동', '호', '감면구분', '수도감면금', '원본카테고리', '상세항목수'])
 
         if '감면구분' in df_template.columns:
             df_template.drop(columns=['감면구분'], inplace=True, errors='ignore')
@@ -311,6 +357,45 @@ class WaterCalcApp(QMainWindow):
         if '감면구분' in merged_df.columns:
             merged_df['감면구분'] = merged_df['감면구분'].fillna('')
 
+        applied_rows = merged_df[merged_df['수도감면금'] > 0]
+        
+        actual_stats = {
+            '다자녀감면': {'cnt': 0, 'amt': 0},
+            '기초생활': {'cnt': 0, 'amt': 0},
+            '중증장애': {'cnt': 0, 'amt': 0},
+            '유공자': {'cnt': 0, 'amt': 0},
+            '중복': {'cnt': 0, 'amt': 0},
+            '총합': {'cnt': 0, 'amt': 0}
+        }
+        
+        for _, row in applied_rows.iterrows():
+            amt = row['수도감면금']
+            cat = row.get('원본카테고리', '')
+            cnt_items = row.get('상세항목수', 1)
+            
+            actual_stats['총합']['cnt'] += 1
+            actual_stats['총합']['amt'] += amt
+            
+            if cnt_items > 1:
+                actual_stats['중복']['cnt'] += 1
+                actual_stats['중복']['amt'] += amt
+            elif '다자녀' in str(cat):
+                actual_stats['다자녀감면']['cnt'] += 1
+                actual_stats['다자녀감면']['amt'] += amt
+            elif '기초생활' in str(cat):
+                actual_stats['기초생활']['cnt'] += 1
+                actual_stats['기초생활']['amt'] += amt
+            elif '중증장애' in str(cat):
+                actual_stats['중증장애']['cnt'] += 1
+                actual_stats['중증장애']['amt'] += amt
+            elif '유공자' in str(cat) or '독립유공' in str(cat):
+                actual_stats['유공자']['cnt'] += 1
+                actual_stats['유공자']['amt'] += amt
+
+        cols_to_drop = [c for c in ['원본카테고리', '상세항목수'] if c in merged_df.columns]
+        if cols_to_drop:
+            merged_df.drop(columns=cols_to_drop, inplace=True)
+
         for col in merged_df.columns:
             if col != '수도감면금':
                 merged_df[col] = merged_df[col].fillna('')
@@ -324,7 +409,8 @@ class WaterCalcApp(QMainWindow):
             
         save_path = os.path.join(save_dir, file_name)
         merged_df.to_excel(save_path, index=False, header=False)
-        return save_path
+        
+        return actual_stats
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
